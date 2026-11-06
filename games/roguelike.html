@@ -292,7 +292,7 @@ function showCards(){
       if(p.id==="hp"){ maxHp=getMaxHp(); hp=Math.min(hp+25,maxHp); }
       doSave();
       // 连续升级
-      if(xp >= xpNext){ showCards(); } else { state="play"; }
+      if(xp >= xpNext){ showCards(); } else { hideAll(); state="play"; }
     });
     box.appendChild(d);
   });
@@ -724,7 +724,7 @@ document.addEventListener("visibilitychange", function(){ if(document.hidden && 
 // ================= 启动 =================
 resize(); initStars(); xpNext=xpFor(1);
 // 开始菜单显示最佳记录 & 存档信息
-(function(){
+(unction(){
   var rec=document.getElementById("recBox");
   rec.innerHTML =
     '<div class="it"><div class="k">最佳得分</div><div class="v">'+records.bestScore+'</div></div>'+
