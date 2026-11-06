@@ -155,7 +155,7 @@ function sj(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 var rec=lj(REC_KEY)||{bestScore:0,bestLevel:0,bestKills:0,bestTime:0,runs:0};
 
 // ================= 世界 =================
-var WORLD=2600;
+var WORLD=5200;
 var state="menu";
 var time=0,score=0,kills=0,level=1,xp=0,xpNext=0;
 var UP={};
@@ -163,7 +163,7 @@ var cam={x:WORLD/2,y:WORLD/2};
 var shake=0,hitFlash=0;
 var RND=Math.random;
 
-var P={x:WORLD/2,y:WORLD/2,r:15,hp:120,maxHp:120,aim:-Math.PI/2,recoil:0,invul:0};
+var P={x:WORLD/2,y:WORLD/2,r:18,hp:120,maxHp:120,aim:-Math.PI/2,recoil:0,invul:0};
 var enemies=[],bullets=[],gems=[],parts=[],beams=[],orbsDraw=[];
 var fireCd=0,laserCd=0,spawnCd=1,saveT=0;
 
@@ -294,10 +294,10 @@ cv.addEventListener("pointercancel",endStick);
 
 // ================= 敌人 =================
 var TYPES={
-  square:  {r:15,hps:18,sp:72, dmg:9,  col:"#ff5d6c", xp:1, shape:"p4", spin:0.45},
-  runner:  {r:12,hps:10,sp:140,dmg:5,  col:"#ffb84d", xp:1, shape:"tri",spin:0},
-  tank:    {r:28,hps:82,sp:42, dmg:19, col:"#a78bfa", xp:3, shape:"p6", spin:0.2},
-  splitter:{r:14,hps:14,sp:84, dmg:7,  col:"#4dd0a4", xp:1, shape:"dia",spin:0.9}
+  square:  {r:19,hps:18,sp:72, dmg:9,  col:"#ff5d6c", xp:1, shape:"p4", spin:0.45},
+  runner:  {r:16,hps:10,sp:140,dmg:5,  col:"#ffb84d", xp:1, shape:"tri",spin:0},
+  tank:    {r:35,hps:82,sp:42, dmg:19, col:"#a78bfa", xp:3, shape:"p6", spin:0.2},
+  splitter:{r:18,hps:14,sp:84, dmg:7,  col:"#4dd0a4", xp:1, shape:"dia",spin:0.9}
 };
 function spawnOne(type,atX,atY){
   var t=TYPES[type];
