@@ -724,7 +724,7 @@ document.addEventListener("visibilitychange", function(){ if(document.hidden && 
 // ================= 启动 =================
 resize(); initStars(); xpNext=xpFor(1);
 // 开始菜单显示最佳记录 & 存档信息
-(unction(){
+(function(){
   var rec=document.getElementById("recBox");
   rec.innerHTML =
     '<div class="it"><div class="k">最佳得分</div><div class="v">'+records.bestScore+'</div></div>'+
