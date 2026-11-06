@@ -259,28 +259,36 @@ function playSVG(){
 function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
 
 // 加载游戏：先内嵌兜底，再尝试拉取 games/games.json 和 GitHub 自动扫描（GitHub Pages 上生效）
+var CURRENT = DEFAULT_GAMES.slice();
+
 function loadGames(){
-  renderGames(DEFAULT_GAMES);
+  CURRENT = DEFAULT_GAMES.slice();
+  renderGames(CURRENT);
   if(location.protocol === "file:") return; // 本地直接打开无法 fetch
   fetch("games/games.json", {cache:"no-store"})
     .then(function(r){ if(!r.ok) throw 0; return r.json(); })
     .then(function(data){
       var merged = mergeGames(data ? data.games : []);
       renderGames(merged);
+      autoScanGitHub();
     })
-    .catch(function(){ /* 用默认列表即可 */ });
-  autoScanGitHub();
+    .catch(function(){ autoScanGitHub(); /* 用默认列表即可 */ });
 }
 
-// 合并：以现有列表为底，追加新游戏
+// 合并：按 file 路径去重（忽略大小写），避免同一文件被扫描重复添加
 function mergeGames(extra){
   var seen = {};
-  var merged = DEFAULT_GAMES.slice();
-  DEFAULT_GAMES.forEach(function(g){ seen[g.id]=1; });
+  CURRENT.forEach(function(g){ seen[String(g.file||"").toLowerCase()]=1; seen[String(g.id||"").toLowerCase()]=1; });
+  var merged = CURRENT.slice();
   (extra||[]).forEach(function(g){
-    if(!g || !g.id || seen[g.id]) return;
-    seen[g.id]=1; merged.push(g);
+    if(!g || !g.file) return;
+    var k = String(g.file).toLowerCase();
+    if(seen[k]) return;
+    seen[k]=1;
+    if(g.id) seen[String(g.id).toLowerCase()]=1;
+    merged.push(g);
   });
+  CURRENT = merged;
   return merged;
 }
 
