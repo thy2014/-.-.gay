@@ -74,6 +74,16 @@
   .go .row i{color:var(--dim);font-style:normal}
   .go .row b{color:var(--ink)}
   .go .best{text-align:center;color:var(--am);font-size:12px;margin-top:13px}
+
+  .aimbox{margin:14px 0 2px;text-align:left}
+  .aimq{font-size:11px;color:var(--dim);margin-bottom:6px;letter-spacing:.5px}
+  .aimbtns{display:flex;gap:6px}
+  .aimbtn{flex:1;padding:10px 4px;border-radius:9px;border:1px solid #1a2a23;background:rgba(255,255,255,.02);
+    color:var(--dim);font-size:11.5px;line-height:1.4;cursor:pointer;font-weight:600}
+  .aimbtn.on{border-color:var(--gr);color:var(--gr);background:rgba(61,220,132,.09)}
+  .aimhint{font-size:10.5px;color:#4a6a5c;margin-top:7px;line-height:1.55;min-height:16px}
+  .stick .ring.am{border-color:rgba(255,199,95,.42);background:radial-gradient(circle,rgba(255,199,95,.10),transparent 70%)}
+  .stick .dot.am{background:rgba(255,199,95,.5);box-shadow:0 0 18px rgba(255,199,95,.6)}
   /* ===== 移动端适配 ===== */
   @media (max-width:820px), (pointer:coarse){
     .hp{top:calc(10px + env(safe-area-inset-top));left:calc(10px + env(safe-area-inset-left));width:40vw}
@@ -132,6 +142,7 @@
 </div>
 
 <div class="stick" id="stick"><div class="ring"></div><div class="dot"></div></div>
+<div class="stick" id="stick2"><div class="ring am"></div><div class="dot am"></div></div>
 
 <div class="ov show" id="menu">
   <div class="panel">
@@ -157,6 +168,11 @@
 <div class="ov" id="pause">
   <div class="panel" style="max-width:330px;text-align:center">
     <h1 style="font-size:20px">已暂停</h1>
+    <div class="aimbox">
+      <div class="aimq">瞄准方式</div>
+      <div class="aimbtns" id="aimBtns"></div>
+      <div class="aimhint" id="aimHint"></div>
+    </div>
     <button class="btn main" id="resumeBtn">继续</button>
     <button class="btn g2" id="quitBtn">结束本局</button>
   </div>
@@ -201,6 +217,38 @@ var SAVE_KEY="gr_roguelike_save_"+user, REC_KEY="gr_roguelike_rec_"+user;
 function lj(k){try{var v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}}
 function sj(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 var rec=lj(REC_KEY)||{bestScore:0,bestLevel:0,bestKills:0,bestTime:0,runs:0};
+
+var AIM_MODES=[
+  {id:"auto",  n:"全自动瞄准", d:"始终锁定最近的敌人，你只管跑位躲怪"},
+  {id:"manual",n:"自己瞄准",   d:"电脑用鼠标指哪打哪；手机在右半屏拖动瞄准"},
+  {id:"hybrid",n:"远距自动",   d:"近处自己瞄，超出 340 距离自动锁敌"}
+];
+var AIM_KEY="gr_roguelike_aim";
+var aimMode=(function(){try{var v=localStorage.getItem(AIM_KEY);return v||"auto";}catch(e){return "auto";}})();
+var AUTO_RANGE=340;
+var aimLocked=false;
+var moveDir=0,hasMove=false;
+var mousePos=null;
+function setAimMode(id){
+  aimMode=id;
+  try{localStorage.setItem(AIM_KEY,id);}catch(e){}
+  renderAimUI();
+}
+function renderAimUI(){
+  var box=document.getElementById("aimBtns"); if(!box) return;
+  box.innerHTML="";
+  for(var i=0;i<AIM_MODES.length;i++){
+    (function(m){
+      var b=document.createElement("button");
+      b.className="aimbtn"+(aimMode===m.id?" on":"");
+      b.textContent=m.n;
+      b.onclick=function(){setAimMode(m.id);};
+      box.appendChild(b);
+    })(AIM_MODES[i]);
+  }
+  var hint=document.getElementById("aimHint");
+  for(var j=0;j<AIM_MODES.length;j++) if(AIM_MODES[j].id===aimMode) hint.textContent=AIM_MODES[j].d;
+}
 
 // ================= 世界 =================
 var WORLD=5200;
@@ -318,18 +366,42 @@ window.addEventListener("keydown",function(e){
 window.addEventListener("keyup",function(e){keys[e.key.toLowerCase()]=false;});
 
 var stick={on:false,ox:0,oy:0,dx:0,dy:0,id:-1};
+var aimStick={on:false,ox:0,oy:0,ang:0,id:-1};
+function showStick(elId,x,y){
+  var el=document.getElementById(elId);
+  el.style.display="block";el.style.left=x+"px";el.style.top=y+"px";
+  el.querySelector(".dot").style.left="0px";el.querySelector(".dot").style.top="0px";
+}
 cv.addEventListener("pointerdown",function(e){
-  if(e.pointerType!=="touch"&&e.pointerType!=="pen") return;
-  if(stick.on) return;
-  {
-    stick.on=true;stick.ox=e.clientX;stick.oy=e.clientY;stick.dx=0;stick.dy=0;stick.id=e.pointerId;
-    try{cv.setPointerCapture(e.pointerId);}catch(_e){}
-    var el=document.getElementById("stick");
-    el.style.display="block";el.style.left=stick.ox+"px";el.style.top=stick.oy+"px";
-    el.querySelector(".dot").style.left="0px";el.querySelector(".dot").style.top="0px";
+  if(e.pointerType==="mouse"){
+    mousePos={x:e.clientX,y:e.clientY};
+    return;
   }
+  if(aimMode!=="auto" && e.clientX>W*0.58 && !aimStick.on){
+    aimStick.on=true;aimStick.ox=e.clientX;aimStick.oy=e.clientY;aimStick.ang=P.aim;aimStick.id=e.pointerId;
+    try{cv.setPointerCapture(e.pointerId);}catch(_e){}
+    showStick("stick2",aimStick.ox,aimStick.oy);
+    return;
+  }
+  if(stick.on) return;
+  stick.on=true;stick.ox=e.clientX;stick.oy=e.clientY;stick.dx=0;stick.dy=0;stick.id=e.pointerId;
+  try{cv.setPointerCapture(e.pointerId);}catch(_e){}
+  showStick("stick",stick.ox,stick.oy);
 });
 cv.addEventListener("pointermove",function(e){
+  if(e.pointerType==="mouse"){
+    mousePos={x:e.clientX,y:e.clientY};
+    return;
+  }
+  if(aimStick.on&&e.pointerId===aimStick.id){
+    var ax=e.clientX-aimStick.ox,ay=e.clientY-aimStick.oy,ad=Math.hypot(ax,ay);
+    if(ad>9) aimStick.ang=Math.atan2(ay,ax);
+    var am=MOBILE?54:40;
+    if(ad>am){ax=ax/ad*am;ay=ay/ad*am;}
+    var el2=document.getElementById("stick2");
+    el2.querySelector(".dot").style.left=ax+"px";el2.querySelector(".dot").style.top=ay+"px";
+    return;
+  }
   if(!stick.on||e.pointerId!==stick.id) return;
   var dx=e.clientX-stick.ox,dy=e.clientY-stick.oy,d=Math.hypot(dx,dy),m=(MOBILE?62:45);
   if(d>m){dx=dx/d*m;dy=dy/d*m;}
@@ -337,8 +409,15 @@ cv.addEventListener("pointermove",function(e){
   var el=document.getElementById("stick");
   el.querySelector(".dot").style.left=dx+"px";el.querySelector(".dot").style.top=dy+"px";
 });
-function endStick(e){ if(e&&e.pointerId!==stick.id)return; stick.on=false;stick.dx=0;stick.dy=0;
-  document.getElementById("stick").style.display="none"; }
+function endStick(e){
+  if(e&&aimStick.on&&e.pointerId===aimStick.id){
+    aimStick.on=false;
+    document.getElementById("stick2").style.display="none";
+  }
+  if(e&&e.pointerId!==stick.id) return;
+  stick.on=false;stick.dx=0;stick.dy=0;
+  document.getElementById("stick").style.display="none";
+}
 cv.addEventListener("pointerup",endStick);
 cv.addEventListener("pointercancel",endStick);
 
@@ -400,13 +479,29 @@ function nearestEnemy(){
   return best;
 }
 function angDiff(a,b){var d=a-b;while(d>Math.PI)d-=6.28318;while(d<-Math.PI)d+=6.28318;return d;}
+function manualAim(){
+  if(aimStick.on) return aimStick.ang;
+  if(mousePos) return Math.atan2(mousePos.y-sy(P.y),mousePos.x-sx(P.x));
+  if(hasMove) return moveDir;
+  return null;
+}
 function updateTurret(dt){
   var t=nearestEnemy();
-  var want = t? Math.atan2(t.y-P.y,t.x-P.x) : P.aim;
+  var dist=t?Math.hypot(t.x-P.x,t.y-P.y):1e9;
+  var want=P.aim;
+  aimLocked=false;
+  if(t && (aimMode==="auto" || (aimMode==="hybrid" && dist>AUTO_RANGE))){
+    want=Math.atan2(t.y-P.y,t.x-P.x); aimLocked=true;
+  } else {
+    var ma=manualAim();
+    if(ma!==null) want=ma;
+  }
   P.aim += angDiff(want,P.aim)*Math.min(1,turnRate()*dt);
   if(P.recoil>0) P.recoil=Math.max(0,P.recoil-dt*3.4);
   fireCd-=dt;
-  if(fireCd<=0 && t){ fireCd=intervalNow(); shoot(t); }
+  if(fireCd<=0 && (aimLocked || t || aimMode!=="auto")){
+    fireCd=intervalNow(); shoot(t);
+  }
 }
 function shoot(t){
   P.recoil=1;
@@ -529,10 +624,11 @@ function update(dt){
   if(stick.on){mx+=stick.dx;my+=stick.dy;}
   if(mx||my){
     var ml=Math.hypot(mx,my);mx/=ml;my/=ml;
+    moveDir=Math.atan2(my,mx);hasMove=true;
     var sp=moveSpeed();
     P.x+=mx*sp*dt;P.y+=my*sp*dt;
     P.x=clamp(P.x,P.r,WORLD-P.r);P.y=clamp(P.y,P.r,WORLD-P.r);
-  }
+  } else { hasMove=false; }
 
   if(regenNow()>0&&P.hp<P.maxHp) P.hp=Math.min(P.maxHp,P.hp+regenNow()*dt);
   if(P.invul>0)P.invul-=dt;
@@ -694,6 +790,14 @@ function render(){
     ctx.shadowBlur=0;
   }
 
+  if(state==="play" && aimMode!=="auto" && !aimLocked){
+    var aA=P.aim, aPx=sx(P.x), aPy=sy(P.y);
+    ctx.strokeStyle="rgba(61,220,132,0.26)";ctx.lineWidth=1.5;ctx.setLineDash([6,7]);
+    ctx.beginPath();
+    ctx.moveTo(aPx+Math.cos(aA)*26,aPy+Math.sin(aA)*26);
+    ctx.lineTo(aPx+Math.cos(aA)*150,aPy+Math.sin(aA)*150);
+    ctx.stroke();ctx.setLineDash([]);
+  }
   drawPlayer();
   ctx.restore();
 
@@ -833,7 +937,7 @@ function gameOver(){
 // ================= 遮罩 & 按钮 =================
 var OV=["menu","levelup","pause","gameover"];
 function hideAll(){OV.forEach(function(id){document.getElementById(id).classList.remove("show");});}
-function showOverlay(id){hideAll();document.getElementById(id).classList.add("show");}
+function showOverlay(id){hideAll();document.getElementById(id).classList.add("show");if(id==="pause")renderAimUI();}
 function togglePause(){
   if(state==="play"){state="pause";showOverlay("pause");saveNow();}
   else if(state==="pause"){hideAll();state="play";}
@@ -842,6 +946,7 @@ document.getElementById("newBtn").addEventListener("click",function(){hideAll();
 document.getElementById("contBtn").addEventListener("click",function(){hideAll();contRun();});
 document.getElementById("againBtn").addEventListener("click",function(){hideAll();newRun();});
 document.getElementById("pauseBtn").addEventListener("click",togglePause);
+renderAimUI();
 document.getElementById("resumeBtn").addEventListener("click",function(){hideAll();state="play";});
 document.getElementById("quitBtn").addEventListener("click",function(){hideAll();gameOver();});
 document.getElementById("backBtn").addEventListener("click",goHome);
