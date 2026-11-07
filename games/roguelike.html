@@ -265,6 +265,8 @@ function renderAimUI(){
 
 // ================= 世界 =================
 var WORLD=5200;
+var TTL_FULL=26,FADE_T=2.2;   // 敌人存活时长 / 淡出时长
+var aimTarget=null,bgGrad=null,bgW=0,bgH=0;
 var state="menu";
 var time=0,score=0,kills=0,level=1,xp=0,xpNext=0;
 var UP={};
@@ -332,6 +334,7 @@ function newRun(){
   P.maxHp=maxHpNow();P.hp=P.maxHp;
   P.x=WORLD/2;P.y=WORLD/2;P.aim=-Math.PI/2;P.recoil=0;P.invul=0;
   cam.x=P.x;cam.y=P.y;
+  aimTarget=null;
   enemies=[];bullets=[];gems=[];parts=[];beams=[];bms=[];missiles=[];novas=[];
   fireCd=0;laserCd=0;spawnCd=1;shake=0;boomCd=0;missileCd=0;novaCd=0;
   localStorage.removeItem(SAVE_KEY);
@@ -347,6 +350,7 @@ function contRun(){
   P.x=Math.min(Math.max(s.px||WORLD/2,40),WORLD-40);
   P.y=Math.min(Math.max(s.py||WORLD/2,40),WORLD-40);
   cam.x=P.x;cam.y=P.y;
+  aimTarget=null;
   enemies=[];bullets=[];gems=[];parts=[];beams=[];bms=[];missiles=[];novas=[];
   fireCd=0;laserCd=0;spawnCd=0.6;boomCd=0;missileCd=0;novaCd=0;
   beginPlay();
@@ -463,7 +467,7 @@ function spawnOne(type,atX,atY){
     sp:t.sp*(1+Math.min(0.45,time*0.002)),
     dmg:t.dmg,col:t.col,xp:t.xp,
     rot:RND()*6.28,spin:t.spin*(RND()<0.5?-1:1),
-    flash:0,orbCd:0,weCd:0,pulse:RND()*6.28});
+    flash:0,orbCd:0,weCd:0,pulse:RND()*6.28,ttl:TTL_FULL*(0.85+RND()*0.3),fade:0});
 }
 function spawnWave(){
   var r=RND();
@@ -474,6 +478,8 @@ function spawnWave(){
   for(var i=0;i<n;i++) spawnOne(type);
 }
 function hurtEnemy(e,d){
+  if(e.fade>0) e.fade=0;
+  e.ttl=TTL_FULL;
   e.hp-=d; e.flash=0.10;
   spark(e.x,e.y,e.col,2);
   if(e.hp<=0) killEnemy(e);
@@ -507,8 +513,21 @@ function manualAim(){
   if(hasMove) return moveDir;
   return null;
 }
+function pickTarget(){
+  var best=null,bs=1e18;
+  for(var i=0;i<enemies.length;i++){
+    var e=enemies[i];
+    if(e.fade>0) continue;
+    var d=Math.hypot(e.x-P.x,e.y-P.y);
+    if(d>880) continue;
+    var sc=d*(e===aimTarget?0.72:1)+e.hp*0.55;
+    if(sc<bs){bs=sc;best=e;}
+  }
+  aimTarget=best;
+  return best;
+}
 function updateTurret(dt){
-  var t=nearestEnemy();
+  var t=pickTarget();
   var dist=t?Math.hypot(t.x-P.x,t.y-P.y):1e9;
   var want=P.aim;
   aimLocked=false;
@@ -681,8 +700,9 @@ function spark(x,y,col,n){
     var a=RND()*6.283,s=45+RND()*130;
     parts.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
       life:0.35+RND()*0.35,max:0.7,col:col,
-      r:1.6+RND()*2.4,rot:RND()*6.283,vr:(RND()-.5)*8});
+      rot:RND()*6.283,vr:(RND()-.5)*8});
   }
+  while(parts.length>240) parts.shift();
 }
 
 // ================= 升级 =================
@@ -769,6 +789,13 @@ function update(dt){
     if(e.flash>0)e.flash-=dt;
     if(e.orbCd>0)e.orbCd-=dt;
     if(e.weCd>0)e.weCd-=dt;
+    if(e.fade>0){
+      e.fade-=dt;
+      if(e.fade<=0){ enemies.splice(i,1); continue; }
+      e.rot+=e.spin*dt*0.35;
+      continue;
+    }
+    if(e.ttl>0){ e.ttl-=dt; if(e.ttl<=0) e.fade=FADE_T; }
     e.rot+=e.spin*dt; e.pulse+=dt*4;
     var dx=P.x-e.x,dy=P.y-e.y,d=Math.hypot(dx,dy)||1;
     e.x+=dx/d*e.sp*dt;e.y+=dy/d*e.sp*dt;
@@ -780,21 +807,15 @@ function update(dt){
     }
   }
 
+  var homeTg=nearestEnemy();
   for(var b=bullets.length-1;b>=0;b--){
     var bl=bullets[b];
     bl.life-=dt; bl.px=bl.x; bl.py=bl.y;
-    if(enemies.length){
-      var ne=null,nd=1e18;
-      for(var k=0;k<enemies.length;k++){
-        var e2=enemies[k],ddx=e2.x-bl.x,ddy=e2.y-bl.y,dd=ddx*ddx+ddy*ddy;
-        if(dd<nd){nd=dd;ne=e2;}
-      }
-      if(ne){
-        var ca=Math.atan2(bl.vy,bl.vx);
-        ca+=Math.max(-2.4*dt,Math.min(2.4*dt,angDiff(Math.atan2(ne.y-bl.y,ne.x-bl.x),ca)));
-        var s2=Math.hypot(bl.vx,bl.vy);
-        bl.vx=Math.cos(ca)*s2;bl.vy=Math.sin(ca)*s2;
-      }
+    if(homeTg){
+      var ca=Math.atan2(bl.vy,bl.vx);
+      ca+=Math.max(-1.8*dt,Math.min(1.8*dt,angDiff(Math.atan2(homeTg.y-bl.y,homeTg.x-bl.x),ca)));
+      var s2=Math.hypot(bl.vx,bl.vy);
+      bl.vx=Math.cos(ca)*s2;bl.vy=Math.sin(ca)*s2;
     }
     bl.x+=bl.vx*dt;bl.y+=bl.vy*dt;
     if(bl.life<=0||bl.x<-40||bl.x>WORLD+40||bl.y<-40||bl.y>WORLD+40){bullets.splice(b,1);continue;}
@@ -837,9 +858,12 @@ function update(dt){
 function render(){
   ctx.setTransform(DPR,0,0,DPR,0,0);
 
-  var bg=ctx.createLinearGradient(0,0,W,H);
-  bg.addColorStop(0,"#040a07"); bg.addColorStop(.5,"#060e0b"); bg.addColorStop(1,"#04080a");
-  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  if(!bgGrad||bgW!==W||bgH!==H){
+    bgGrad=ctx.createLinearGradient(0,0,W,H);
+    bgGrad.addColorStop(0,"#040a07"); bgGrad.addColorStop(.5,"#060e0b"); bgGrad.addColorStop(1,"#04080a");
+    bgW=W; bgH=H;
+  }
+  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
 
   var gs=84;
   ctx.strokeStyle="rgba(61,220,132,0.055)"; ctx.lineWidth=1;
@@ -960,8 +984,10 @@ function poly(ctx,n,r,phase){
 }
 function drawEnemy(en,gx,gy){
   var r=en.r,col=en.col,flash=en.flash>0;
-  ctx.save();ctx.translate(gx,gy);ctx.rotate(en.rot);
-  ctx.shadowColor=col;ctx.shadowBlur=14;
+  var fa=en.fade>0?Math.max(0.12,Math.min(1,en.fade/FADE_T)):1;
+  ctx.save();
+  ctx.globalAlpha=fa;
+  ctx.translate(gx,gy);ctx.rotate(en.rot);
   ctx.lineWidth=2.4;
   ctx.strokeStyle=flash?"#ffffff":col;
   ctx.fillStyle="rgba(2,8,6,0.62)";
@@ -973,16 +999,15 @@ function drawEnemy(en,gx,gy){
   ctx.fill();ctx.stroke();
 
   var pulse=1+Math.sin(en.pulse)*0.12;
-  ctx.shadowBlur=8;
-  ctx.globalAlpha=0.32;
+  ctx.globalAlpha=fa*0.32;
   ctx.fillStyle=flash?"#ffffff":col;
   ctx.beginPath();ctx.arc(0,0,r*0.60*pulse,0,6.283);ctx.fill();
-  ctx.globalAlpha=0.95;
+  ctx.globalAlpha=fa*0.95;
   ctx.beginPath();ctx.arc(0,0,r*0.24*pulse,0,6.283);ctx.fill();
-  ctx.globalAlpha=1;ctx.shadowBlur=0;
+  ctx.globalAlpha=1;
   ctx.restore();
 
-  if(en.hp<en.maxHp){
+  if(en.hp<en.maxHp&&en.fade<=0){
     var w=r*2.1,ratio=Math.max(0,en.hp/en.maxHp);
     ctx.fillStyle="rgba(255,255,255,0.10)";ctx.fillRect(gx-w/2,gy-r-11,w,3.5);
     ctx.fillStyle=col;ctx.fillRect(gx-w/2,gy-r-11,w*ratio,3.5);
@@ -1037,8 +1062,10 @@ function drawMinimap(){
   var k=size/WORLD;
   ctx.strokeStyle="rgba(255,255,255,0.16)";
   ctx.strokeRect(mx+(cam.x-W/2)*k,my+(cam.y-H/2)*k,W*k,H*k);
-  for(var i=0;i<enemies.length;i++){
+  var step=enemies.length>120?2:1;
+  for(var i=0;i<enemies.length;i+=step){
     var e=enemies[i];
+    if(e.fade>0) continue;
     ctx.fillStyle=e.col;
     ctx.fillRect(mx+e.x*k-1,my+e.y*k-1,2,2);
   }
