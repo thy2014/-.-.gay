@@ -1,0 +1,26 @@
+name: sync-mc-tweak
+on:
+  push:
+    paths:
+      - '.github/workflows/sync-mc.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and verify
+        run: |
+          curl -fsSL -o /tmp/mc.html "https://aka.doubaocdn.com/s/VuA0DW0ne1"
+          echo "e1317717dce6552801a7b09a033fbb8effcb3ee8b3fc2eab5a713cb9e5a9c939  /tmp/mc.html" | sha256sum -c -
+          mkdir -p games
+          cp /tmp/mc.html games/mc-id-check.html
+      - name: Commit
+        run: |
+          git config user.name "mc-sync"
+          git config user.email "actions@users.noreply.github.com"
+          git add games/mc-id-check.html
+          git commit -m "tweak landscape layout" || echo "no change"
+          git push
