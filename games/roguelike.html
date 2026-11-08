@@ -180,12 +180,17 @@
 </div>
 
 <div class="ov" id="pause">
-  <div class="panel" style="max-width:330px;text-align:center">
+  <div class="panel" style="max-width:min(380px,92vw);text-align:center">
     <h1 style="font-size:20px">已暂停</h1>
     <div class="aimbox">
       <div class="aimq">瞄准方式</div>
       <div class="aimbtns" id="aimBtns"></div>
       <div class="aimhint" id="aimHint"></div>
+    </div>
+    <div class="aimbox">
+      <div class="aimq">特效时长</div>
+      <div class="aimbtns" id="fxBtns"></div>
+      <div class="aimhint" id="fxHint"></div>
     </div>
     <button class="btn main" id="resumeBtn">继续</button>
     <button class="btn g2" id="quitBtn">结束本局</button>
@@ -239,6 +244,37 @@ var AIM_MODES=[
 ];
 var AIM_KEY="gr_roguelike_aim";
 var aimMode=(function(){try{var v=localStorage.getItem(AIM_KEY);return v||"auto";}catch(e){return "auto";}})();
+var FX_MODES=[
+  {id:"short", n:"短",  v:0.6, d:"闪电、粒子等特效快速消失，画面最清爽"},
+  {id:"normal",n:"标准",v:1.0, d:"默认节奏，特效停留适中"},
+  {id:"long",  n:"长",  v:2.0, d:"闪电与粒子停留更久，看得更清楚"}
+];
+var FX_KEY="gr_roguelike_fx";
+var fxMode=(function(){try{var v=localStorage.getItem(FX_KEY);return v||"normal";}catch(e){return "normal";}})();
+function fxMul(){
+  for(var i=0;i<FX_MODES.length;i++) if(FX_MODES[i].id===fxMode) return FX_MODES[i].v;
+  return 1;
+}
+function setFxMode(id){
+  fxMode=id;
+  try{localStorage.setItem(FX_KEY,id);}catch(e){}
+  renderFxUI();
+}
+function renderFxUI(){
+  var box=document.getElementById("fxBtns"); if(!box) return;
+  box.innerHTML="";
+  for(var i=0;i<FX_MODES.length;i++){
+    (function(m){
+      var b=document.createElement("button");
+      b.className="aimbtn"+(fxMode===m.id?" on":"");
+      b.textContent=m.n;
+      b.onclick=function(){setFxMode(m.id);};
+      box.appendChild(b);
+    })(FX_MODES[i]);
+  }
+  var hint=document.getElementById("fxHint");
+  for(var j=0;j<FX_MODES.length;j++) if(FX_MODES[j].id===fxMode) hint.textContent=FX_MODES[j].d;
+}
 var AUTO_RANGE=340;
 var aimLocked=false;
 var moveDir=0,hasMove=false;
@@ -262,6 +298,7 @@ function renderAimUI(){
   }
   var hint=document.getElementById("aimHint");
   for(var j=0;j<AIM_MODES.length;j++) if(AIM_MODES[j].id===aimMode) hint.textContent=AIM_MODES[j].d;
+  renderFxUI();
 }
 
 // ================= 世界 =================
@@ -740,7 +777,7 @@ function updateChain(dt){
     hurtEnemy(hit,dmg); dmg*=0.78;
     cur=hit;
   }
-  bolts.push({pts:boltPath(pts),life:0.32});
+  var blife=0.5*fxMul(); bolts.push({pts:boltPath(pts),life:blife,max:blife});
 }
 function boltPath(src){
   var out=[],SEG=4;
@@ -822,7 +859,7 @@ function spark(x,y,col,n){
   for(var i=0;i<n;i++){
     var a=RND()*6.283,s=45+RND()*130;
     parts.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
-      life:0.35+RND()*0.35,max:0.7,col:col,
+      life:(0.35+RND()*0.35)*fxMul(),max:0.7*fxMul(),col:col,
       rot:RND()*6.283,vr:(RND()-.5)*8});
   }
   while(parts.length>240) parts.shift();
@@ -1097,7 +1134,7 @@ function render(){
   }
   ctx.lineCap="round";
   for(var bt=0;bt<bolts.length;bt++){
-    var bolt=bolts[bt],bal=Math.max(0,bolt.life/0.32),bpt=bolt.pts;
+    var bolt=bolts[bt],bal=Math.max(0,bolt.life/(bolt.max||0.5)),bpt=bolt.pts;
     ctx.beginPath();
     ctx.moveTo(sx(bpt[0].x),sy(bpt[0].y));
     for(var si=1;si<bpt.length;si++) ctx.lineTo(sx(bpt[si].x),sy(bpt[si].y));
