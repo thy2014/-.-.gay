@@ -48,6 +48,76 @@
       "desc": "经典贪吃蛇：控制小蛇吃食物变长，别撞墙别咬自己，高分自动保存。",
       "file": "games/snake.html",
       "tag": "经典"
+    },
+    {
+      "id": "breakout",
+      "title": "打砖块",
+      "desc": "移动挡板接住小球，把上方彩色砖块全部打光，球掉底扣命，共三关，支持键盘与触屏。",
+      "file": "games/breakout.html",
+      "tag": "益智"
+    },
+    {
+      "id": "tetris",
+      "title": "俄罗斯方块",
+      "desc": "经典俄罗斯方块：移动旋转七种方块，一次消多行得高分，等级越高下落越快，带落点投影。",
+      "file": "games/tetris.html",
+      "tag": "益智"
+    },
+    {
+      "id": "minesweeper",
+      "title": "扫雷",
+      "desc": "16×16 共 40 颗雷，数字提示周围雷数，首次点击安全，挖光安全格获胜，手机可切插旗模式。",
+      "file": "games/minesweeper.html",
+      "tag": "益智"
+    },
+    {
+      "id": "memory",
+      "title": "记忆翻牌",
+      "desc": "8 对图案盖在牌面下，每次翻两张，相同配对、不同翻回，比拼步数与用时。",
+      "file": "games/memory.html",
+      "tag": "益智"
+    },
+    {
+      "id": "shooter",
+      "title": "飞机大战",
+      "desc": "拖动战机自动开火，击落普通敌机与大型敌机，躲避敌弹与撞击，血量归零结束。",
+      "file": "games/shooter.html",
+      "tag": "射击"
+    },
+    {
+      "id": "catch",
+      "title": "接金币",
+      "desc": "左右移动篮子接住金币和绿宝石，躲开炸弹，时间越久掉得越快。",
+      "file": "games/catch.html",
+      "tag": "休闲"
+    },
+    {
+      "id": "sokoban",
+      "title": "推箱子",
+      "desc": "把木箱逐个推到发光目标点，只能推不能拉，共 5 关，支持撤销。",
+      "file": "games/sokoban.html",
+      "tag": "益智"
+    },
+    {
+      "id": "whack",
+      "title": "打地鼠",
+      "desc": "30 秒内点打冒头的地鼠，金鼠高分、炸弹扣分，节奏越来越快。",
+      "file": "games/whack.html",
+      "tag": "休闲"
+    },
+    {
+      "id": "slide",
+      "title": "数字华容道",
+      "desc": "4×4 滑块，把 1 到 15 按顺序排好、空格归右下，记录步数与用时。",
+      "file": "games/slide.html",
+      "tag": "益智"
+    },
+    {
+      "id": "runner",
+      "title": "恐龙跑酷",
+      "desc": "恐龙自动奔跑，跳过仙人掌与翼龙，速度越来越快，最高分自动保存。",
+      "file": "games/runner.html",
+      "tag": "跑酷"
     }
   ]
 }

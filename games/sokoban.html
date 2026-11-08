@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>推箱子</title>
+<style>
+:root{
+  --bg:#0b0f0d; --line:#2c3a30; --ink:#e7eae4; --dim:#8b978d;
+  --green:#7ef0a0; --gold:#e8c06a; --red:#e4645c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 0%, #14201a 0%, var(--bg) 62%);
+  color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  display:flex;align-items:center;justify-content:center;min-height:100%;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;user-select:none;
+}
+#wrap{position:relative;width:min(96vw,560px)}
+h1{font-size:18px;letter-spacing:.18em;text-align:center;margin-bottom:10px;color:var(--green);font-weight:600}
+#hud{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);margin-bottom:8px}
+#hud b{color:var(--ink)}
+canvas{display:block;margin:0 auto;border-radius:10px;background:#0d1512;border:1px solid var(--line);touch-action:none}
+#overlay{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(9,14,11,.85);border-radius:10px;gap:14px;text-align:center;padding:20px;
+}
+#overlay.off{display:none}
+#overlay h2{font-size:22px;letter-spacing:.1em}
+#overlay p{font-size:13px;color:var(--dim);line-height:1.7}
+#overlay button{
+  min-width:130px;min-height:46px;padding:0 24px;border-radius:10px;cursor:pointer;
+  background:var(--green);color:#0c1710;border:none;font-size:15px;font-weight:700;font-family:inherit;
+}
+#pad{display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(3,56px);gap:6px;justify-content:center;margin-top:14px}
+#pad button{background:#15211a;color:var(--green);border:1px solid var(--line);border-radius:9px;font-size:16px;font-family:inherit;cursor:pointer;min-height:0}
+#pad .blank{visibility:hidden}
+#tools{display:flex;gap:8px;justify-content:center;margin-top:10px}
+#tools button{min-height:44px;padding:0 18px;background:#15211a;color:var(--green);border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:13px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>推 箱 子</h1>
+  <div id="hud">
+    <span>关卡 <b id="lv">1/5</b></span>
+    <span>步数 <b id="moves">0</b></span>
+    <span>目标 <b id="goals">0</b></span>
+  </div>
+  <canvas id="cv" width="500" height="380"></canvas>
+  <div id="pad">
+    <button class="blank"></button><button data-d="up">↑</button><button class="blank"></button>
+    <button data-d="left">←</button><button class="blank"></button><button data-d="right">→</button>
+    <button class="blank"></button><button data-d="down">↓</button><button class="blank"></button>
+  </div>
+  <div id="tools">
+    <button id="undo">撤销</button>
+    <button id="restart">重开本关</button>
+  </div>
+  <div id="overlay">
+    <h2 id="ovTitle">推箱子</h2>
+    <p id="ovText">把所有木箱推到发光的目标点上。箱子只能推不能拉，一次推一个，别把箱子推进死角。</p>
+    <button id="startBtn">开始游戏</button>
+  </div>
+</div>
+<script>
+(function(){
+  var cv=document.getElementById("cv"),cx=cv.getContext("2d");
+  var lvEl=document.getElementById("lv"),movesEl=document.getElementById("moves"),goalsEl=document.getElementById("goals");
+  var ov=document.getElementById("overlay"),ovTitle=document.getElementById("ovTitle"),ovText=document.getElementById("ovText"),startBtn=document.getElementById("startBtn");
+
+  var LEVELS=[
+    ["#######","#     #","# .$@ #","#     #","#######"],
+    ["#######","#  .  #","#  $  #","#  @  #","#     #","#######"],
+    ["#######","#.    #","#  $  #","#  @  #","#     #","#######"],
+    ["########","# ..   #","# $$   #","# @    #","#      #","########"],
+    ["########","#      #","# .  . #","# $  $ #","#  @   #","########"]
+  ];
+
+  var levelIdx, walls, goals, boxes, player, moves, history, rows, cols, cell;
+
+  function loadLevel(i){
+    var map=LEVELS[i];
+    rows=map.length; cols=0;
+    map.forEach(function(r){cols=Math.max(cols,r.length);});
+    walls={};goals={};boxes={};player=null;
+    for(var r=0;r<rows;r++){
+      for(var c=0;c<cols;c++){
+        var ch=map[r][c]||"#", k=r+"_"+c;
+        if(ch==="#")walls[k]=true;
+        if(ch==="."||ch==="*"||ch==="+")goals[k]=true;
+        if(ch==="$"||ch==="*")boxes[k]=true;
+        if(ch==="@"||ch==="+")player={r:r,c:c};
+      }
+    }
+    moves=0;history=[];
+    cell=Math.min(46,Math.floor((cv.width-20)/cols),Math.floor((cv.height-20)/rows));
+    updateHud();
+  }
+  function updateHud(){
+    lvEl.textContent=(levelIdx+1)+"/"+LEVELS.length;
+    movesEl.textContent=moves;
+    var done=0;
+    Object.keys(boxes).forEach(function(k){if(goals[k])done++;});
+    goalsEl.textContent=done;
+  }
+  function snapshot(){
+    return {boxes:Object.assign({},boxes),player:{r:player.r,c:player.c},moves:moves};
+  }
+  function restore(s){
+    boxes=s.boxes;player=s.player;moves=s.moves;
+  }
+  function move(dr,dc){
+    var nr=player.r+dr, nc=player.c+dc, k=nr+"_"+nc;
+    if(walls[k])return;
+    history.push(snapshot());
+    if(boxes[k]){
+      var br=nr+dr, bc=nc+dc, bk=br+"_"+bc;
+      if(walls[bk]||boxes[bk])return;
+      delete boxes[k]; boxes[bk]=true;
+    }
+    player={r:nr,c:nc};
+    moves++;
+    updateHud();
+    if(checkWin())setTimeout(winLevel,350);
+  }
+  function checkWin(){
+    return Object.keys(boxes).every(function(k){return goals[k];});
+  }
+  function winLevel(){
+    if(levelIdx<LEVELS.length-1){
+      levelIdx++; loadLevel(levelIdx);
+    } else {
+      ov.className="";
+      ovTitle.textContent="全部通关";
+      ovText.textContent="5 个关卡都过了，总步数自己看上面记录。";
+      startBtn.textContent="再玩一次";
+      levelIdx=0;
+    }
+  }
+
+  function draw(){
+    cx.clearRect(0,0,cv.width,cv.height);
+    var offX=(cv.width-cols*cell)/2, offY=(cv.height-rows*cell)/2;
+    for(var r=0;r<rows;r++){
+      for(var c=0;c<cols;c++){
+        var k=r+"_"+c, x=offX+c*cell, y=offY+r*cell;
+        if(walls[k]){
+          cx.fillStyle="#26352b";
+          cx.fillRect(x+2,y+2,cell-4,cell-4);
+          cx.fillStyle="rgba(255,255,255,.07)";
+          cx.fillRect(x+4,y+4,cell-8,4);
+        } else {
+          cx.fillStyle="#101a14";
+          cx.fillRect(x+2,y+2,cell-4,cell-4);
+          if(goals[k]){
+            cx.strokeStyle="#7ef0a0";cx.lineWidth=2;
+            cx.beginPath();
+            cx.arc(x+cell/2,y+cell/2,cell*.18,0,Math.PI*2);cx.stroke();
+            cx.fillStyle="rgba(126,240,160,.25)";
+            cx.beginPath();cx.arc(x+cell/2,y+cell/2,cell*.12,0,Math.PI*2);cx.fill();
+          }
+        }
+        if(boxes[k]){
+          var onGoal=goals[k];
+          cx.fillStyle=onGoal?"#7ef0a0":"#c9a06a";
+          cx.fillRect(x+5,y+5,cell-10,cell-10);
+          cx.fillStyle="rgba(255,255,255,.2)";
+          cx.fillRect(x+7,y+7,cell-14,4);
+          cx.strokeStyle="rgba(0,0,0,.3)";
+          cx.strokeRect(x+5.5,y+5.5,cell-11,cell-11);
+        }
+        if(player.r===r&&player.c===c){
+          cx.fillStyle="#6ab8e8";
+          cx.beginPath();
+          cx.arc(x+cell/2,y+cell/2,cell*.3,0,Math.PI*2);cx.fill();
+          cx.fillStyle="rgba(255,255,255,.35)";
+          cx.beginPath();cx.arc(x+cell/2-3,y+cell/2-3,cell*.1,0,Math.PI*2);cx.fill();
+        }
+      }
+    }
+  }
+  function loop(){draw();requestAnimationFrame(loop);}
+
+  var DIRS={up:[-1,0],down:[1,0],left:[0,-1],right:[0,1]};
+  document.querySelectorAll("#pad button[data-d]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var d=DIRS[b.dataset.d]; move(d[0],d[1]);
+    });
+  });
+  document.addEventListener("keydown",function(e){
+    var map2={ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right",w:"up",s:"down",a:"left",d:"right"};
+    var key=map2[e.key];
+    if(key){var d=DIRS[key];move(d[0],d[1]);}
+  });
+  document.getElementById("undo").addEventListener("click",function(){
+    if(history.length){restore(history.pop());updateHud();}
+  });
+  document.getElementById("restart").addEventListener("click",function(){loadLevel(levelIdx);});
+
+  startBtn.addEventListener("click",function(){
+    ov.className="off";
+    levelIdx=0; loadLevel(0);
+  });
+
+  levelIdx=0; loadLevel(0);
+  loop();
+})();
+</script>
+</body>
+</html>

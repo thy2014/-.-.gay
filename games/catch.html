@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>接金币</title>
+<style>
+:root{
+  --bg:#0b0f0d; --line:#2c3a30; --ink:#e7eae4; --dim:#8b978d;
+  --green:#7ef0a0; --gold:#e8c06a; --red:#e4645c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 0%, #1a2014 0%, var(--bg) 62%);
+  color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  display:flex;align-items:center;justify-content:center;min-height:100%;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;user-select:none;
+}
+#wrap{position:relative;width:min(94vw,460px)}
+h1{font-size:18px;letter-spacing:.18em;text-align:center;margin-bottom:10px;color:var(--green);font-weight:600}
+#hud{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);margin-bottom:8px}
+#hud b{color:var(--ink)}
+canvas{width:100%;display:block;border-radius:10px;background:#0e1510;border:1px solid var(--line);touch-action:none}
+#overlay{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(9,14,11,.85);border-radius:10px;gap:14px;text-align:center;padding:20px;
+}
+#overlay.off{display:none}
+#overlay h2{font-size:22px;letter-spacing:.1em}
+#overlay p{font-size:13px;color:var(--dim);line-height:1.7}
+#overlay button{
+  min-width:130px;min-height:46px;padding:0 24px;border-radius:10px;cursor:pointer;
+  background:var(--green);color:#0c1710;border:none;font-size:15px;font-weight:700;font-family:inherit;
+}
+#tip{margin-top:10px;font-size:12px;color:var(--dim);text-align:center;line-height:1.7}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>接 金 币</h1>
+  <div id="hud">
+    <span>分数 <b id="score">0</b></span>
+    <span>生命 <b id="lives">3</b></span>
+    <span>时间 <b id="time">0s</b></span>
+  </div>
+  <canvas id="cv" width="420" height="560"></canvas>
+  <div id="overlay">
+    <h2 id="ovTitle">接金币</h2>
+    <p id="ovText">移动篮子接住金币和绿宝石，躲开黑色炸弹。漏掉金币不扣命，接到炸弹会失去一条生命。</p>
+    <button id="btn">开始游戏</button>
+  </div>
+  <div id="tip">方向键 / 鼠标 / 手指 移动篮子</div>
+</div>
+<script>
+(function(){
+  var cv=document.getElementById("cv"),cx=cv.getContext("2d");
+  var W=cv.width,H=cv.height;
+  var scoreEl=document.getElementById("score"),livesEl=document.getElementById("lives"),timeEl=document.getElementById("time");
+  var ov=document.getElementById("overlay"),ovTitle=document.getElementById("ovTitle"),ovText=document.getElementById("ovText"),btn=document.getElementById("btn");
+
+  var basket,items,score,lives,running,keys,spawnCd,time,floatTexts;
+
+  function reset(){
+    basket={x:W/2-40,y:H-46,w:80,h:26,spd:7};
+    items=[];floatTexts=[];
+    score=0;lives=3;spawnCd=0;time=0;
+    running=true;updateHud();
+  }
+  function updateHud(){scoreEl.textContent=score;livesEl.textContent=lives;timeEl.textContent=time+"s";}
+
+  function spawn(){
+    var r=Math.random();
+    var type=r<.15?"gem":(r<.32?"bomb":"coin");
+    items.push({
+      x:16+Math.random()*(W-48),y:-24,r:type==="bomb"?14:12,
+      type:type,vy:2.4+Math.random()*1.4+time*.025
+    });
+  }
+  function floatText(x,y,txt,color){
+    floatTexts.push({x:x,y:y,txt:txt,color:color,life:40});
+  }
+
+  function update(){
+    if(!running)return;
+    if(Math.floor(time)===time){}
+    time+=1/60;
+    if(keys.left)basket.x-=basket.spd;
+    if(keys.right)basket.x+=basket.spd;
+    basket.x=Math.max(4,Math.min(W-basket.w-4,basket.x));
+
+    spawnCd--;
+    if(spawnCd<=0){spawn();spawnCd=Math.max(26,60-time*.2);}
+
+    for(var i=items.length-1;i>=0;i--){
+      var it=items[i];
+      it.y+=it.vy;
+      // 接住
+      if(it.y+it.r>=basket.y && it.y-it.r<=basket.y+basket.h &&
+         it.x>=basket.x && it.x<=basket.x+basket.w){
+        if(it.type==="bomb"){
+          lives--; floatText(it.x,basket.y-10,"-1 命","#e4645c");
+          if(lives<=0){items.splice(i,1);endGame();return;}
+        } else {
+          var pts=it.type==="gem"?25:10;
+          score+=pts;
+          floatText(it.x,basket.y-10,"+"+pts,it.type==="gem"?"#7ef0a0":"#e8c06a");
+        }
+        items.splice(i,1); updateHud();
+        continue;
+      }
+      if(it.y-it.r>H){
+        if(it.type==="coin"){/* 漏掉不扣命 */}
+        items.splice(i,1);
+      }
+    }
+    for(var f=floatTexts.length-1;f>=0;f--){
+      floatTexts[f].y-=.8; floatTexts[f].life--;
+      if(floatTexts[f].life<=0)floatTexts.splice(f,1);
+    }
+    if(time%1<1/60)updateHud();
+  }
+  function endGame(){
+    running=false;
+    ov.className="";
+    ovTitle.textContent="游戏结束";
+    ovText.textContent="坚持 "+time+" 秒，得分 "+score+"。";
+    btn.textContent="再玩一次";
+  }
+
+  function draw(){
+    cx.clearRect(0,0,W,H);
+    cx.strokeStyle="rgba(126,240,160,.05)";
+    for(var x=0;x<W;x+=40){cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke();}
+    for(var y=0;y<H;y+=40){cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke();}
+
+    for(var i=0;i<items.length;i++){
+      var it=items[i];
+      if(it.type==="bomb"){
+        cx.fillStyle="#1c1f22";
+        cx.beginPath();cx.arc(it.x,it.y,it.r,0,Math.PI*2);cx.fill();
+        cx.strokeStyle="#e4645c";cx.lineWidth=2;
+        cx.beginPath();cx.moveTo(it.x,it.y-it.r);cx.lineTo(it.x+4,it.y-it.r-6);cx.stroke();
+        cx.fillStyle="#e4645c";cx.beginPath();cx.arc(it.x+4,it.y-it.r-7,2.4,0,Math.PI*2);cx.fill();
+      } else if(it.type==="gem"){
+        cx.fillStyle="#7ef0a0";
+        cx.beginPath();
+        cx.moveTo(it.x,it.y-it.r);cx.lineTo(it.x+it.r,it.y);cx.lineTo(it.x,it.y+it.r);cx.lineTo(it.x-it.r,it.y);
+        cx.closePath();cx.fill();
+      } else {
+        cx.fillStyle="#e8c06a";
+        cx.beginPath();cx.arc(it.x,it.y,it.r,0,Math.PI*2);cx.fill();
+        cx.fillStyle="rgba(255,255,255,.35)";
+        cx.beginPath();cx.arc(it.x-3,it.y-3,3,0,Math.PI*2);cx.fill();
+        cx.fillStyle="rgba(0,0,0,.3)";
+        cx.font="bold 11px Georgia";cx.textAlign="center";
+        cx.fillText("$",it.x,it.y+4);cx.textAlign="left";
+      }
+    }
+
+    // 篮子
+    cx.fillStyle="#9fb6a8";
+    cx.beginPath();
+    cx.moveTo(basket.x,basket.y);
+    cx.lineTo(basket.x+basket.w,basket.y);
+    cx.lineTo(basket.x+basket.w-10,basket.y+basket.h);
+    cx.lineTo(basket.x+10,basket.y+basket.h);
+    cx.closePath();cx.fill();
+    cx.strokeStyle="rgba(255,255,255,.25)";
+    cx.beginPath();cx.moveTo(basket.x+6,basket.y+6);cx.lineTo(basket.x+basket.w-6,basket.y+6);cx.stroke();
+
+    for(var f=0;f<floatTexts.length;f++){
+      cx.globalAlpha=Math.max(0,floatTexts[f].life/40);
+      cx.fillStyle=floatTexts[f].color;
+      cx.font="bold 13px Georgia";cx.textAlign="center";
+      cx.fillText(floatTexts[f].txt,floatTexts[f].x,floatTexts[f].y);
+      cx.textAlign="left";
+    }
+    cx.globalAlpha=1;
+  }
+  function loop(){update();draw();requestAnimationFrame(loop);}
+
+  keys={left:false,right:false};
+  document.addEventListener("keydown",function(e){
+    if(e.key==="ArrowLeft"||e.key==="a")keys.left=true;
+    if(e.key==="ArrowRight"||e.key==="d")keys.right=true;
+  });
+  document.addEventListener("keyup",function(e){
+    if(e.key==="ArrowLeft"||e.key==="a")keys.left=false;
+    if(e.key==="ArrowRight"||e.key==="d")keys.right=false;
+  });
+  function move(clientX){
+    var r=cv.getBoundingClientRect();
+    var nx=(clientX-r.left)*(W/r.width);
+    basket.x=Math.max(4,Math.min(W-basket.w-4,nx-basket.w/2));
+  }
+  cv.addEventListener("mousemove",function(e){if(running)move(e.clientX);});
+  cv.addEventListener("touchmove",function(e){
+    e.preventDefault();if(running)move(e.touches[0].clientX);
+  },{passive:false});
+  cv.addEventListener("touchstart",function(e){
+    e.preventDefault();if(running)move(e.touches[0].clientX);
+  },{passive:false});
+
+  btn.addEventListener("click",function(){ov.className="off";reset();});
+
+  reset();running=false;
+  loop();
+})();
+</script>
+</body>
+</html>

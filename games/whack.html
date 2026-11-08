@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>打地鼠</title>
+<style>
+:root{
+  --bg:#0b0f0d; --line:#2c3a30; --ink:#e7eae4; --dim:#8b978d;
+  --green:#7ef0a0; --gold:#e8c06a; --red:#e4645c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 0%, #1a2014 0%, var(--bg) 62%);
+  color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  display:flex;align-items:center;justify-content:center;min-height:100%;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;user-select:none;
+}
+#wrap{position:relative;width:min(96vw,520px)}
+h1{font-size:18px;letter-spacing:.18em;text-align:center;margin-bottom:10px;color:var(--green);font-weight:600}
+#hud{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);margin-bottom:10px}
+#hud b{color:var(--ink)}
+canvas{width:100%;display:block;border-radius:10px;background:#122016;border:1px solid var(--line);touch-action:none}
+#overlay{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(9,14,11,.85);border-radius:10px;gap:14px;text-align:center;padding:20px;
+}
+#overlay.off{display:none}
+#overlay h2{font-size:22px;letter-spacing:.1em}
+#overlay p{font-size:13px;color:var(--dim);line-height:1.7}
+#overlay button{
+  min-width:130px;min-height:46px;padding:0 24px;border-radius:10px;cursor:pointer;
+  background:var(--green);color:#0c1710;border:none;font-size:15px;font-weight:700;font-family:inherit;
+}
+#tip{margin-top:10px;font-size:12px;color:var(--dim);text-align:center;line-height:1.7}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>打 地 鼠</h1>
+  <div id="hud">
+    <span>分数 <b id="score">0</b></span>
+    <span>命中 <b id="hits">0</b></span>
+    <span>剩余 <b id="time">30s</b></span>
+  </div>
+  <canvas id="cv" width="480" height="440"></canvas>
+  <div id="overlay">
+    <h2 id="ovTitle">打地鼠</h2>
+    <p id="ovText">地鼠冒头就点它。普通地鼠 +1，金色地鼠 +3，点到黑色炸弹倒扣 5 分。30 秒内尽量多打。</p>
+    <button id="btn">开始游戏</button>
+  </div>
+  <div id="tip">鼠标点击 / 手指点按 地鼠</div>
+</div>
+<script>
+(function(){
+  var cv=document.getElementById("cv"),cx=cv.getContext("2d");
+  var W=cv.width,H=cv.height;
+  var scoreEl=document.getElementById("score"),hitsEl=document.getElementById("hits"),timeEl=document.getElementById("time");
+  var ov=document.getElementById("overlay"),ovTitle=document.getElementById("ovTitle"),ovText=document.getElementById("ovText"),btn=document.getElementById("btn");
+
+  var holes, score, hits, timeLeft, running, spawnCd, popups;
+  var COLS=3, ROWS=3;
+
+  function holePositions(){
+    var arr=[], mx=70, my=90, gapX=(W-2*mx)/2, gapY=(H-2*my)/2;
+    for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++){
+      arr.push({x:mx+c*gapX,y:my+r*gapY,r:42,type:null,timer:0,pop:0});
+    }
+    return arr;
+  }
+  function reset(){
+    holes=holePositions();
+    score=0;hits=0;timeLeft=30;spawnCd=0;popups=[];
+    running=true;
+    updateHud();
+  }
+  function updateHud(){
+    scoreEl.textContent=score;hitsEl.textContent=hits;timeEl.textContent=Math.ceil(timeLeft)+"s";
+  }
+  function spawn(){
+    var empty=holes.filter(function(h){return !h.type;});
+    if(!empty.length)return;
+    var h=empty[Math.floor(Math.random()*empty.length)];
+    var r=Math.random();
+    h.type=r<.16?"gold":(r<.34?"bomb":"mole");
+    h.timer=Math.max(.5,1.1-timeLeft*.012);
+    h.pop=0;
+  }
+
+  function update(dt){
+    if(!running)return;
+    timeLeft-=dt;
+    if(timeLeft<=0){endGame();return;}
+    spawnCd-=dt;
+    if(spawnCd<=0){
+      spawn();
+      spawnCd=Math.max(.28,.9-timeLeft*.018);
+    }
+    holes.forEach(function(h){
+      if(h.type){
+        h.pop=Math.min(1,h.pop+dt*6);
+        h.timer-=dt;
+        if(h.timer<=0){h.type=null;h.pop=0;}
+      }
+    });
+    for(var i=popups.length-1;i>=0;i--){
+      popups[i].y-=dt*40;popups[i].life-=dt;
+      if(popups[i].life<=0)popups.splice(i,1);
+    }
+  }
+  function endGame(){
+    running=false;
+    ov.className="";
+    ovTitle.textContent="时间到";
+    ovText.textContent="命中 "+hits+" 次，得分 "+score+"。";
+    btn.textContent="再玩一次";
+  }
+
+  function drawMole(h){
+    var up=h.r*h.pop, y=h.y-up*.7;
+    // 地洞
+    cx.fillStyle="#0a120d";
+    cx.beginPath();cx.ellipse(h.x,h.y,h.r,h.r*.42,0,0,Math.PI*2);cx.fill();
+    if(h.type){
+      var color=h.type==="bomb"?"#22262b":(h.type==="gold"?"#e8c06a":"#9fb68a");
+      cx.fillStyle=color;
+      cx.beginPath();
+      cx.ellipse(h.x,y,up*h.r*.7,up*h.r*.78,0,0,Math.PI*2);cx.fill();
+      // 眼睛
+      cx.fillStyle=h.type==="bomb"?"#e4645c":"#14181a";
+      cx.beginPath();cx.arc(h.x-10,y-6,4,0,Math.PI*2);cx.fill();
+      cx.beginPath();cx.arc(h.x+10,y-6,4,0,Math.PI*2);cx.fill();
+      if(h.type==="bomb"){
+        cx.strokeStyle="#e4645c";cx.lineWidth=2;
+        cx.beginPath();cx.moveTo(h.x,y-up*h.r*.7);cx.lineTo(h.x+6,y-up*h.r-8);cx.stroke();
+      } else {
+        cx.fillStyle="rgba(0,0,0,.3)";
+        cx.beginPath();cx.ellipse(h.x,y+6,8,5,0,0,Math.PI*2);cx.fill();
+      }
+    }
+  }
+  function draw(){
+    cx.clearRect(0,0,W,H);
+    // 草地
+    cx.fillStyle="#16281c";
+    cx.fillRect(0,0,W,H);
+    cx.strokeStyle="rgba(126,240,160,.06)";
+    for(var x=0;x<W;x+=36){cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke();}
+    holes.forEach(drawMole);
+    popups.forEach(function(p){
+      cx.globalAlpha=Math.max(0,p.life);
+      cx.fillStyle=p.color;cx.font="bold 16px Georgia";cx.textAlign="center";
+      cx.fillText(p.txt,p.x,p.y);cx.textAlign="left";
+    });
+    cx.globalAlpha=1;
+  }
+  function loop(ts){
+    if(!loop.last)loop.last=ts;
+    var dt=Math.min(.05,(ts-loop.last)/1000);loop.last=ts;
+    update(dt);draw();
+    requestAnimationFrame(loop);
+  }
+
+  function click(clientX,clientY){
+    if(!running)return;
+    var r=cv.getBoundingClientRect();
+    var nx=(clientX-r.left)*(W/r.width), ny=(clientY-r.top)*(H/r.height);
+    for(var i=0;i<holes.length;i++){
+      var h=holes[i];
+      if(!h.type)continue;
+      var cy2=h.y-up(h);
+      var dx=nx-h.x, dy=ny-cy2;
+      if(dx*dx+dy*dy<(h.r*h.pop+10)*(h.r*h.pop+10)){
+        if(h.type==="bomb"){score-=5;popups.push({x:h.x,y:h.y-30,txt:"-5",color:"#e4645c",life:1});}
+        else {
+          var pts=h.type==="gold"?3:1;
+          score+=pts;hits++;
+          popups.push({x:h.x,y:h.y-30,txt:"+"+pts,color:h.type==="gold"?"#e8c06a":"#7ef0a0",life:1});
+        }
+        h.type=null;h.pop=0;
+        updateHud();
+        return;
+      }
+    }
+  }
+  function up(h){return h.r*h.pop*.7;}
+  cv.addEventListener("mousedown",function(e){click(e.clientX,e.clientY);});
+  cv.addEventListener("touchstart",function(e){
+    e.preventDefault();
+    var t=e.touches[0];click(t.clientX,t.clientY);
+  },{passive:false});
+
+  btn.addEventListener("click",function(){ov.className="off";reset();});
+
+  reset();running=false;
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

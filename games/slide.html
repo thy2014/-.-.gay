@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数字华容道</title>
+<style>
+:root{
+  --bg:#0b0f0d; --line:#2c3a30; --ink:#e7eae4; --dim:#8b978d;
+  --green:#7ef0a0; --gold:#e8c06a; --red:#e4645c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 0%, #14201a 0%, var(--bg) 62%);
+  color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  display:flex;align-items:center;justify-content:center;min-height:100%;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;user-select:none;
+}
+#wrap{position:relative;width:min(94vw,440px)}
+h1{font-size:18px;letter-spacing:.18em;text-align:center;margin-bottom:10px;color:var(--green);font-weight:600}
+#hud{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);margin-bottom:10px}
+#hud b{color:var(--ink)}
+#board{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+  background:#0d1512;border:1px solid var(--line);border-radius:10px;padding:10px;
+  aspect-ratio:1;
+}
+.tile{
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(150deg,#1d2b22,#16241b);border:1px solid #2c3a30;border-radius:9px;
+  font-family:Georgia,serif;font-size:clamp(22px,7vw,32px);font-weight:700;color:var(--green);
+  cursor:pointer;transition:transform .12s;
+}
+.tile.empty{background:transparent;border-color:transparent;cursor:default}
+.tile.movable:active{transform:scale(.94)}
+#controls{display:flex;gap:8px;justify-content:center;margin-top:12px}
+#controls button{
+  min-height:44px;padding:0 20px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:14px;
+  background:#15211a;color:var(--green);border:1px solid var(--line);
+}
+#overlay{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(9,14,11,.85);border-radius:10px;gap:14px;text-align:center;padding:20px;
+}
+#overlay.off{display:none}
+#overlay h2{font-size:22px;letter-spacing:.1em}
+#overlay p{font-size:13px;color:var(--dim);line-height:1.7}
+#overlay .big{min-width:130px;min-height:46px;padding:0 24px;border-radius:10px;cursor:pointer;
+  background:var(--green);color:#0c1710;border:none;font-size:15px;font-weight:700;font-family:inherit}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>数 字 华 容 道</h1>
+  <div id="hud">
+    <span>步数 <b id="moves">0</b></span>
+    <span>时间 <b id="timer">0s</b></span>
+  </div>
+  <div id="board"></div>
+  <div id="controls">
+    <button id="shuffleBtn">重新打乱</button>
+  </div>
+  <div id="overlay">
+    <h2>数字华容道</h2>
+    <p>把 1 到 15 按顺序排好，空格留在右下角。点击与空格相邻的数字滑动，也可以用方向键。</p>
+    <button class="big" id="startBtn">开始游戏</button>
+  </div>
+</div>
+<script>
+(function(){
+  var board=document.getElementById("board");
+  var movesEl=document.getElementById("moves"),timerEl=document.getElementById("timer");
+  var ov=document.getElementById("overlay"),startBtn=document.getElementById("startBtn");
+  var N=4;
+  var tiles, moves, timer, timerInt, started, solved;
+
+  function init(){
+    tiles=[];
+    for(var i=1;i<=15;i++)tiles.push(i);
+    tiles.push(0);
+    moves=0;timer=0;started=false;solved=false;
+    movesEl.textContent=0;timerEl.textContent="0s";
+    clearInterval(timerInt);
+    render();
+  }
+  function emptyPos(){return tiles.indexOf(0);}
+  function posRC(p){return {r:Math.floor(p/N),c:p%N};}
+  function movable(p){
+    var e=emptyPos(), a=posRC(p), b=posRC(e);
+    return (a.r===b.r&&Math.abs(a.c-b.c)===1)||(a.c===b.c&&Math.abs(a.r-b.r)===1);
+  }
+  function tryMove(p){
+    if(!movable(p)||solved)return;
+    startTimer();
+    var e=emptyPos();
+    tiles[e]=tiles[p];tiles[p]=0;
+    moves++;movesEl.textContent=moves;
+    render();
+    if(isSolved())win();
+  }
+  function isSolved(){
+    for(var i=0;i<15;i++)if(tiles[i]!==i+1)return false;
+    return tiles[15]===0;
+  }
+  function moveDir(dr,dc){
+    var e=emptyPos(), er=posRC(e);
+    var tr=er.r-dr, tc=er.c-dc;
+    if(tr<0||tr>=N||tc<0||tc>=N)return;
+    tryMove(tr*N+tc);
+  }
+  function shuffle(){
+    init();
+    var prev=-1;
+    for(var k=0;k<160;k++){
+      var e=emptyPos(), er=posRC(e), cand=[];
+      var dirs=[[-1,0],[1,0],[0,-1],[0,1]];
+      dirs.forEach(function(d){
+        var tr=er.r+d[0],tc=er.c+d[1];
+        if(tr>=0&&tr<N&&tc>=0&&tc<N){
+          var p=tr*N+tc;
+          if(p!==prev)cand.push(p);
+        }
+      });
+      var pick=cand[Math.floor(Math.random()*cand.length)];
+      prev=e;
+      tiles[e]=tiles[pick];tiles[pick]=0;
+    }
+    moves=0;movesEl.textContent=0;
+    render();
+  }
+  function startTimer(){
+    if(started)return;started=true;
+    timerInt=setInterval(function(){timer++;timerEl.textContent=timer+"s";},1000);
+  }
+  function win(){
+    solved=true;clearInterval(timerInt);
+    setTimeout(function(){
+      ov.className="";
+      ov.querySelector("h2").textContent="排好啦";
+      ov.querySelector("p").textContent=moves+" 步，用时 "+timer+" 秒。";
+      startBtn.textContent="再玩一次";
+    },300);
+  }
+
+  function render(){
+    board.innerHTML="";
+    tiles.forEach(function(v,p){
+      var d=document.createElement("button");
+      d.className="tile"+(v===0?" empty":"")+(movable(p)&&v?" movable":"");
+      d.textContent=v||"";
+      if(v)d.addEventListener("click",function(){tryMove(p);});
+      board.appendChild(d);
+    });
+  }
+
+  document.addEventListener("keydown",function(e){
+    var m={ArrowUp:[1,0],ArrowDown:[-1,0],ArrowLeft:[0,1],ArrowRight:[0,-1]};
+    if(m[e.key]){moveDir(m[e.key][0],m[e.key][1]);}
+  });
+  document.getElementById("shuffleBtn").addEventListener("click",shuffle);
+  startBtn.addEventListener("click",function(){
+    ov.className="off";shuffle();
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>

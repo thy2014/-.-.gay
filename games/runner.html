@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>恐龙跑酷</title>
+<style>
+:root{
+  --bg:#0b0f0d; --line:#2c3a30; --ink:#e7eae4; --dim:#8b978d;
+  --green:#7ef0a0; --gold:#e8c06a; --red:#e4645c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 0%, #14201a 0%, var(--bg) 62%);
+  color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  display:flex;align-items:center;justify-content:center;min-height:100%;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;user-select:none;
+}
+#wrap{position:relative;width:min(96vw,680px)}
+h1{font-size:18px;letter-spacing:.18em;text-align:center;margin-bottom:10px;color:var(--green);font-weight:600}
+#hud{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);margin-bottom:8px}
+#hud b{color:var(--ink)}
+canvas{width:100%;display:block;border-radius:10px;background:#0e1512;border:1px solid var(--line);touch-action:none}
+#overlay{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(9,14,11,.82);border-radius:10px;gap:14px;text-align:center;padding:20px;
+}
+#overlay.off{display:none}
+#overlay h2{font-size:22px;letter-spacing:.1em}
+#overlay p{font-size:13px;color:var(--dim);line-height:1.7}
+#overlay button{
+  min-width:130px;min-height:46px;padding:0 24px;border-radius:10px;cursor:pointer;
+  background:var(--green);color:#0c1710;border:none;font-size:15px;font-weight:700;font-family:inherit;
+}
+#tip{margin-top:10px;font-size:12px;color:var(--dim);text-align:center;line-height:1.7}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>恐 龙 跑 酷</h1>
+  <div id="hud">
+    <span>分数 <b id="score">0</b></span>
+    <span>最高 <b id="best">0</b></span>
+    <span>速度 <b id="spd">1</b></span>
+  </div>
+  <canvas id="cv" width="640" height="300"></canvas>
+  <div id="overlay">
+    <h2 id="ovTitle">恐龙跑酷</h2>
+    <p id="ovText">恐龙自动向前跑，跳过仙人掌和翼龙。速度会越来越快，撞到障碍物就结束。</p>
+    <button id="btn">开始游戏</button>
+  </div>
+  <div id="tip">空格 / ↑ / 点击 跳跃</div>
+</div>
+<script>
+(function(){
+  var cv=document.getElementById("cv"),cx=cv.getContext("2d");
+  var W=cv.width,H=cv.height, GROUND=H-46;
+  var scoreEl=document.getElementById("score"),bestEl=document.getElementById("best"),spdEl=document.getElementById("spd");
+  var ov=document.getElementById("overlay"),ovTitle=document.getElementById("ovTitle"),ovText=document.getElementById("ovText"),btn=document.getElementById("btn");
+
+  var dino, obstacles, clouds, speed, score, running, spawnCd, groundOff, best;
+  var GRAV=2200, JUMPV=720;
+
+  best=Number(localStorage.getItem("runner_best")||0);
+  bestEl.textContent=best;
+
+  function reset(){
+    dino={x:60,y:GROUND,w:40,h:46,vy:0,onGround:true,duck:false,runFrame:0};
+    obstacles=[];clouds=[];
+    for(var i=0;i<4;i++)clouds.push({x:Math.random()*W,y:40+Math.random()*90,v:14+Math.random()*10});
+    speed=300;score=0;spawnCd=1;groundOff=0;
+    running=true;
+  }
+  function jump(){
+    if(dino.onGround){
+      dino.vy=-JUMPV;dino.onGround=false;
+    }
+  }
+  function spawn(){
+    var r=Math.random();
+    if(r<.3){
+      // 翼龙
+      var high=Math.random()<.5;
+      obstacles.push({type:"bird",x:W+20,y:high?GROUND-78:GROUND-40,w:42,h:28,frame:0});
+    } else {
+      var n=Math.random()<.3?2:1;
+      var w=18*n;
+      obstacles.push({type:"cactus",x:W+20,y:GROUND-40,w:w,h:40});
+    }
+  }
+  function hit(a,b){
+    return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+  }
+
+  function update(dt){
+    if(!running)return;
+    score+=dt*10;
+    speed=300+score*1.4;
+    spdEl.textContent=(speed/300).toFixed(1);
+
+    // 恐龙物理
+    dino.vy+=GRAV*dt;
+    dino.y+=dino.vy*dt;
+    if(dino.y>=GROUND){dino.y=GROUND;dino.vy=0;dino.onGround=true;}
+    dino.runFrame+=dt*12;
+
+    groundOff=(groundOff+speed*dt)%40;
+
+    clouds.forEach(function(c){
+      c.x-=c.v*dt;
+      if(c.x<-40){c.x=W+40;c.y=40+Math.random()*90;}
+    });
+
+    spawnCd-=dt;
+    if(spawnCd<=0){
+      spawn();
+      spawnCd=.8+Math.random()*.9;
+    }
+    for(var i=obstacles.length-1;i>=0;i--){
+      var o=obstacles[i];
+      o.x-=speed*dt;
+      if(o.frame!==undefined)o.frame+=dt*8;
+      if(o.x+o.w<-20){obstacles.splice(i,1);continue;}
+      var dh=dino.duck?{x:dino.x,y:dino.y+18,w:dino.w,h:dino.h-18}:dino;
+      if(hit(dh,o)){endGame();return;}
+    }
+    scoreEl.textContent=Math.floor(score);
+  }
+  function endGame(){
+    running=false;
+    var s=Math.floor(score);
+    if(s>best){best=s;localStorage.setItem("runner_best",best);bestEl.textContent=best;}
+    ov.className="";
+    ovTitle.textContent="撞上了";
+    ovText.textContent="得分 "+s+"，最高 "+best+"。";
+    btn.textContent="再玩一次";
+  }
+
+  function drawDino(){
+    var x=dino.x,y=dino.y;
+    cx.fillStyle="#7ef0a0";
+    if(dino.duck){
+      cx.fillRect(x,y+18,dino.w+8,dino.h-22);
+    } else {
+      cx.fillRect(x+6,y,26,dino.h-10);
+      cx.fillRect(x,y+8,14,20);
+      // 头
+      cx.fillRect(x+18,y-6,22,20);
+      cx.fillStyle="#0c1710";
+      cx.fillRect(x+32,y,4,4);
+      cx.fillStyle="#7ef0a0";
+      // 腿（奔跑动画）
+      var leg=Math.floor(dino.runFrame)%2;
+      cx.fillRect(x+10,y+dino.h-10,7,leg?10:6);
+      cx.fillRect(x+22,y+dino.h-10,7,leg?6:10);
+    }
+  }
+  function draw(){
+    cx.clearRect(0,0,W,H);
+    // 云
+    cx.fillStyle="rgba(200,230,215,.5)";
+    clouds.forEach(function(c){
+      cx.fillRect(c.x,c.y,26,7);
+      cx.fillRect(c.x+6,c.y-5,14,6);
+    });
+    // 地面
+    cx.strokeStyle="#8b978d";cx.lineWidth=2;
+    cx.beginPath();cx.moveTo(0,GROUND+dino.h);cx.lineTo(W,GROUND+dino.h);cx.stroke();
+    cx.strokeStyle="rgba(126,240,160,.3)";
+    for(var gx=-groundOff;gx<W;gx+=40){
+      cx.beginPath();cx.moveTo(gx,GROUND+dino.h+6);cx.lineTo(gx+14,GROUND+dino.h+6);cx.stroke();
+    }
+    // 障碍
+    obstacles.forEach(function(o){
+      if(o.type==="cactus"){
+        cx.fillStyle="#5aa878";
+        cx.fillRect(o.x,o.y,o.w,o.h);
+        cx.fillRect(o.x-5,o.y+10,6,16);
+        cx.fillRect(o.x+o.w-1,o.y+6,6,14);
+      } else {
+        cx.fillStyle="#b08ce0";
+        var wing=Math.floor(o.frame)%2;
+        cx.fillRect(o.x+8,o.y+10,26,10);
+        cx.fillRect(o.x,o.y+(wing?2:12),14,8);
+        cx.fillRect(o.x+28,o.y+(wing?12:2),14,8);
+        cx.fillStyle="#0c1710";cx.fillRect(o.x+28,o.y+12,4,4);
+      }
+    });
+    drawDino();
+  }
+  function loop(ts){
+    if(!loop.last)loop.last=ts;
+    var dt=Math.min(.04,(ts-loop.last)/1000);loop.last=ts;
+    update(dt);draw();
+    requestAnimationFrame(loop);
+  }
+
+  document.addEventListener("keydown",function(e){
+    if(e.key===" "||e.key==="ArrowUp"||e.key==="w"){e.preventDefault();if(running)jump();}
+    if(e.key==="ArrowDown"||e.key==="s")dino.duck=true;
+  });
+  document.addEventListener("keyup",function(e){
+    if(e.key==="ArrowDown"||e.key==="s")dino.duck=false;
+  });
+  cv.addEventListener("mousedown",function(){if(running)jump();});
+  cv.addEventListener("touchstart",function(e){
+    e.preventDefault();if(running)jump();
+  },{passive:false});
+
+  btn.addEventListener("click",function(){ov.className="off";reset();});
+
+  reset();running=false;
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

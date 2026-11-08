@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>扫雷</title>
+<style>
+:root{
+  --bg:#0b0f0d; --line:#2c3a30; --ink:#e7eae4; --dim:#8b978d;
+  --green:#7ef0a0; --gold:#e8c06a; --red:#e4645c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 0%, #14201a 0%, var(--bg) 62%);
+  color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  display:flex;align-items:center;justify-content:center;min-height:100%;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;user-select:none;
+}
+#wrap{position:relative;width:min(96vw,560px)}
+h1{font-size:18px;letter-spacing:.18em;text-align:center;margin-bottom:10px;color:var(--green);font-weight:600}
+#hud{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--dim);margin-bottom:10px;gap:8px}
+#hud b{color:var(--ink)}
+#status{font-size:22px}
+#board{
+  display:grid;grid-template-columns:repeat(16,1fr);gap:2px;
+  background:#0d1512;border:1px solid var(--line);border-radius:8px;padding:6px;
+}
+.cell{
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  background:#1d2b22;border:1px solid #2c3a30;border-radius:3px;
+  font-size:clamp(11px,3.4vw,16px);font-weight:700;cursor:pointer;
+  font-family:Georgia,serif;padding:0;min-width:0;
+}
+.cell.revealed{background:#101a14;border-color:#16201a;cursor:default}
+.cell.flag{background:#2a3a26}
+.cell.mine{background:#5c201c}
+.n1{color:#6ab8e8}.n2{color:#7ef0a0}.n3{color:#e4645c}.n4{color:#b08ce0}
+.n5{color:#e89a6a}.n6{color:#5fd0c0}.n7{color:#e7eae4}.n8{color:#8b978d}
+#controls{display:flex;gap:8px;justify-content:center;margin-top:12px}
+#controls button{
+  min-height:44px;padding:0 20px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:14px;
+  background:#15211a;color:var(--green);border:1px solid var(--line);
+}
+#controls button.active{background:var(--green);color:#0c1710;font-weight:700}
+#overlay{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(9,14,11,.85);border-radius:10px;gap:14px;text-align:center;padding:20px;
+}
+#overlay.off{display:none}
+#overlay h2{font-size:22px;letter-spacing:.1em}
+#overlay p{font-size:13px;color:var(--dim);line-height:1.7}
+#overlay .big{min-width:130px;min-height:46px;padding:0 24px;border-radius:10px;cursor:pointer;
+  background:var(--green);color:#0c1710;border:none;font-size:15px;font-weight:700;font-family:inherit}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>扫 雷</h1>
+  <div id="hud">
+    <span>雷 <b id="mineCount">40</b></span>
+    <span id="status">🙂</span>
+    <span>旗 <b id="flagCount">0</b></span>
+  </div>
+  <div id="board"></div>
+  <div id="controls">
+    <button id="modeDig" class="active">挖开</button>
+    <button id="modeFlag">插旗</button>
+    <button id="resetBtn">重开</button>
+  </div>
+  <div id="overlay">
+    <h2>扫雷</h2>
+    <p>点格子挖开，数字代表周围 8 格的雷数。电脑右键插旗，手机切到「插旗」模式再点。挖光所有安全格就赢。</p>
+    <button class="big" id="startBtn">开始游戏</button>
+  </div>
+</div>
+<script>
+(function(){
+  var ROWS=16, COLS=16, MINES=40;
+  var board=document.getElementById("board");
+  var mineCount=document.getElementById("mineCount"), flagCount=document.getElementById("flagCount"), status=document.getElementById("status");
+  var ov=document.getElementById("overlay"), startBtn=document.getElementById("startBtn");
+  var cells, mines, revealed, flags, started, over, win, flagMode;
+
+  function idx(r,c){return r*COLS+c;}
+  function inB(r,c){return r>=0&&r<ROWS&&c>=0&&c<COLS;}
+
+  function build(){
+    board.innerHTML="";
+    cells=[]; mines={}; revealed={}; flags={};
+    started=false; over=false; win=false;
+    for(var r=0;r<ROWS;r++){
+      for(var c=0;c<COLS;c++){
+        var b=document.createElement("button");
+        b.className="cell";
+        b.dataset.r=r; b.dataset.c=c;
+        (function(btn,rr,cc){
+          btn.addEventListener("click",function(){handle(rr,cc);});
+          btn.addEventListener("contextmenu",function(e){e.preventDefault();toggleFlag(rr,cc);});
+        })(b,r,c);
+        board.appendChild(b);
+        cells.push(b);
+      }
+    }
+    mineCount.textContent=MINES; flagCount.textContent=0; status.textContent="🙂";
+  }
+
+  function placeMines(sr,sc){
+    var safe={};
+    for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++){
+      var nr=sr+dr,nc=sc+dc;
+      if(inB(nr,nc)) safe[idx(nr,nc)]=true;
+    }
+    var placed=0;
+    while(placed<MINES){
+      var r=Math.floor(Math.random()*ROWS), c=Math.floor(Math.random()*COLS);
+      var k=idx(r,c);
+      if(safe[k]||mines[k])continue;
+      mines[k]=true; placed++;
+    }
+  }
+  function countAround(r,c){
+    var n=0;
+    for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++){
+      if(!dr&&!dc)continue;
+      var nr=r+dr,nc=c+dc;
+      if(inB(nr,nc)&&mines[idx(nr,nc)])n++;
+    }
+    return n;
+  }
+  function reveal(r,c){
+    var k=idx(r,c);
+    if(revealed[k]||flags[k])return;
+    var b=cells[k];
+    revealed[k]=true;
+    b.classList.add("revealed");
+    if(mines[k]){
+      b.classList.add("mine"); b.textContent="✹";
+      return;
+    }
+    var n=countAround(r,c);
+    if(n>0){ b.textContent=n; b.classList.add("n"+n); }
+    else {
+      for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++){
+        var nr=r+dr,nc=c+dc;
+        if(inB(nr,nc)) reveal(nr,nc);
+      }
+    }
+  }
+  function toggleFlag(r,c){
+    if(over)return;
+    var k=idx(r,c);
+    if(revealed[k])return;
+    var b=cells[k];
+    if(flags[k]){
+      delete flags[k]; b.classList.remove("flag"); b.textContent="";
+    } else {
+      flags[k]=true; b.classList.add("flag"); b.textContent="⚑";
+    }
+    flagCount.textContent=Object.keys(flags).length;
+  }
+  function handle(r,c){
+    if(over)return;
+    if(flagMode){toggleFlag(r,c);return;}
+    var k=idx(r,c);
+    if(flags[k]||revealed[k])return;
+    if(!started){placeMines(r,c);started=true;}
+    if(mines[k]){
+      reveal(r,c); lose(); return;
+    }
+    reveal(r,c);
+    checkWin();
+  }
+  function lose(){
+    over=true; status.textContent="😵";
+    Object.keys(mines).forEach(function(k){
+      if(!flags[k]){
+        cells[k].classList.add("revealed","mine"); cells[k].textContent="✹";
+      }
+    });
+  }
+  function checkWin(){
+    var safeTotal=ROWS*COLS-MINES, done=0;
+    for(var k in revealed){if(!mines[k])done++;}
+    if(done>=safeTotal){
+      over=true; win=true; status.textContent="😎";
+      Object.keys(mines).forEach(function(k){
+        if(!flags[k]){cells[k].classList.add("flag");cells[k].textContent="⚑";}
+      });
+      flagCount.textContent=MINES;
+    }
+  }
+
+  document.getElementById("modeDig").addEventListener("click",function(){
+    flagMode=false;
+    this.classList.add("active");
+    document.getElementById("modeFlag").classList.remove("active");
+  });
+  document.getElementById("modeFlag").addEventListener("click",function(){
+    flagMode=true;
+    this.classList.add("active");
+    document.getElementById("modeDig").classList.remove("active");
+  });
+  document.getElementById("resetBtn").addEventListener("click",build);
+  startBtn.addEventListener("click",function(){
+    ov.className="off"; build();
+  });
+
+  build();
+})();
+</script>
+</body>
+</html>

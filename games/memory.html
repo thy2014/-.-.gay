@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>记忆翻牌</title>
+<style>
+:root{
+  --bg:#0b0f0d; --line:#2c3a30; --ink:#e7eae4; --dim:#8b978d;
+  --green:#7ef0a0; --gold:#e8c06a; --red:#e4645c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 0%, #14201a 0%, var(--bg) 62%);
+  color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  display:flex;align-items:center;justify-content:center;min-height:100%;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;user-select:none;
+}
+#wrap{position:relative;width:min(96vw,520px)}
+h1{font-size:18px;letter-spacing:.18em;text-align:center;margin-bottom:10px;color:var(--green);font-weight:600}
+#hud{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);margin-bottom:12px}
+#hud b{color:var(--ink)}
+#board{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.card{
+  aspect-ratio:3/4;perspective:700px;cursor:pointer;border:none;background:none;padding:0;
+}
+.inner{
+  position:relative;width:100%;height:100%;transform-style:preserve-3d;
+  transition:transform .4s cubic-bezier(.4,.2,.2,1);
+}
+.card.flipped .inner{transform:rotateY(180deg)}
+.face{
+  position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  display:flex;align-items:center;justify-content:center;border-radius:10px;
+}
+.front{
+  background:linear-gradient(150deg,#1d2b22,#13201a);border:1px solid var(--line);
+}
+.front::after{
+  content:"";width:26px;height:26px;border-radius:7px;
+  border:2px solid rgba(126,240,160,.4);
+}
+.back{
+  transform:rotateY(180deg);background:#101a14;border:1px solid #2c3a30;
+}
+.card.matched .back{background:#16281d;border-color:rgba(126,240,160,.5)}
+.back svg{width:52%;height:52%}
+#overlay{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(9,14,11,.85);border-radius:10px;gap:14px;text-align:center;padding:20px;
+}
+#overlay.off{display:none}
+#overlay h2{font-size:22px;letter-spacing:.1em}
+#overlay p{font-size:13px;color:var(--dim);line-height:1.7}
+#overlay button{
+  min-width:130px;min-height:46px;padding:0 24px;border-radius:10px;cursor:pointer;
+  background:var(--green);color:#0c1710;border:none;font-size:15px;font-weight:700;font-family:inherit;
+}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>记 忆 翻 牌</h1>
+  <div id="hud">
+    <span>步数 <b id="moves">0</b></span>
+    <span>配对 <b id="pairs">0/8</b></span>
+    <span>时间 <b id="timer">0s</b></span>
+  </div>
+  <div id="board"></div>
+  <div id="overlay">
+    <h2>记忆翻牌</h2>
+    <p>每次翻开两张牌，图案相同就配对成功，不同会翻回去。用最少步数、最快时间配完 8 对。</p>
+    <button id="startBtn">开始游戏</button>
+  </div>
+</div>
+<script>
+(function(){
+  var board=document.getElementById("board");
+  var movesEl=document.getElementById("moves"), pairsEl=document.getElementById("pairs"), timerEl=document.getElementById("timer");
+  var ov=document.getElementById("overlay"), startBtn=document.getElementById("startBtn");
+
+  var ICONS=[
+    {c:"#e4645c",d:"M12 3l9 16H3z"},
+    {c:"#e8c06a",d:"M12 2a10 10 0 100 20 10 10 0 000-20zm0 4v12M6 12h12"},
+    {c:"#7ef0a0",d:"M12 2l2.6 6.4L21 9l-5 4.3L17.5 20 12 16.5 6.5 20 8 13.3 3 9l6.4-.6z"},
+    {c:"#6ab8e8",d:"M4 4h16v16H4z M4 12h16 M12 4v16"},
+    {c:"#b08ce0",d:"M12 21s-7-4.6-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.4-7 10-7 10z"},
+    {c:"#e89a6a",d:"M12 3v18 M5 8l7-5 7 5 M5 16l7 5 7-5"},
+    {c:"#5fd0c0",d:"M12 2a10 10 0 100 20 10 10 0 000-20z M8 12l3 3 5-6"},
+    {c:"#8aa0e8",d:"M12 2l9 5v10l-9 5-9-5V7z M12 12l9-5 M12 12L3 7 M12 12v10"}
+  ];
+
+  var first, lock, moves, matched, timer, timerInt, started;
+
+  function svg(icon){
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="'+icon.c+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="'+icon.d+'"/></svg>';
+  }
+  function shuffle(arr){
+    for(var i=arr.length-1;i>0;i--){
+      var j=Math.floor(Math.random()*(i+1));
+      var t=arr[i];arr[i]=arr[j];arr[j]=t;
+    }
+    return arr;
+  }
+  function build(){
+    board.innerHTML="";
+    var deck=[];
+    ICONS.forEach(function(ic,i){deck.push(i);deck.push(i);});
+    shuffle(deck);
+    first=null; lock=false; moves=0; matched=0;
+    movesEl.textContent=0; pairsEl.textContent="0/8"; timerEl.textContent="0s";
+    clearInterval(timerInt); timer=0; started=false;
+
+    deck.forEach(function(iconIdx){
+      var card=document.createElement("button");
+      card.className="card";
+      card.dataset.icon=iconIdx;
+      card.innerHTML='<div class="inner"><div class="face front"></div><div class="face back">'+svg(ICONS[iconIdx])+'</div>';
+      card.addEventListener("click",function(){flip(card);});
+      board.appendChild(card);
+    });
+  }
+  function startTimer(){
+    if(started)return; started=true;
+    timerInt=setInterval(function(){
+      timer++; timerEl.textContent=timer+"s";
+    },1000);
+  }
+  function flip(card){
+    if(lock||card.classList.contains("flipped"))return;
+    startTimer();
+    card.classList.add("flipped");
+    if(!first){first=card;return;}
+    moves++; movesEl.textContent=moves;
+    if(first.dataset.icon===card.dataset.icon){
+      first.classList.add("matched"); card.classList.add("matched");
+      first=null; matched++; pairsEl.textContent=matched+"/8";
+      if(matched===8) win();
+    } else {
+      lock=true;
+      var a=first, b=card; first=null;
+      setTimeout(function(){
+        a.classList.remove("flipped"); b.classList.remove("flipped"); lock=false;
+      },750);
+    }
+  }
+  function win(){
+    clearInterval(timerInt);
+    setTimeout(function(){
+      ov.className="";
+      ov.querySelector("h2").textContent="全部配对";
+      ov.querySelector("p").textContent="用了 "+moves+" 步，耗时 "+timer+" 秒。";
+      startBtn.textContent="再玩一次";
+    },600);
+  }
+
+  startBtn.addEventListener("click",function(){
+    ov.className="off"; build();
+  });
+
+  build();
+})();
+</script>
+</body>
+</html>
