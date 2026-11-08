@@ -799,33 +799,50 @@ function drawCounter(g,W,H){
 function drawScene(){
   var W=1000,H=620;
   var dpr=SC.dpr, k=SC.scale;
-  var ox=(CV.width/dpr - W*k)/2, oy=(CV.height/dpr - H*k)/2;
+  var sh=GAME.shake*8;
+  var ox=(CV.width/dpr - W*k)/2 + (sh>0?rnd(-sh,sh):0);
+  var oy=(CV.height/dpr - H*k)/2 + (sh>0?rnd(-sh,sh):0);
   CX.setTransform(dpr*k,0,0,dpr*k, ox*dpr, oy*dpr);
   CX.imageSmoothingEnabled=false;
-  CX.clearRect(-160,-160,W+320,H+320);
+  CX.clearRect(-200,-200,W+400,H+400);
 
   var phase=GAME.phase||"day";
   drawSky(CX,W,H,phase);
   drawVillage(CX,W,H);
 
-  /* 客人：站在柜台后 */
   if(GAME.guest){
     var cxp=W*0.5, footY=H*0.610;
+    var pin=Math.min(1,GAME.inT/0.55); pin=1-Math.pow(1-pin,3);
+    var gdx=(1-pin)*W*0.17;
     CX.save();
-    CX.fillStyle="rgba(0,0,0,.24)";
-    CX.beginPath(); CX.ellipse(cxp,footY-2,46,9,0,0,Math.PI*2); CX.fill();
+    CX.globalAlpha=.26*pin; CX.fillStyle="#000";
+    CX.beginPath(); CX.ellipse(cxp+gdx,footY-2,46,9,0,0,Math.PI*2); CX.fill();
+    CX.globalAlpha=pin;
+    drawChar(CX,CHARS[GAME.guest.who.art]||CHARS.steve,cxp+gdx,footY,6.2,SC.t);
     CX.restore();
-    drawChar(CX,CHARS[GAME.guest.who.art]||CHARS.steve,cxp,footY,6.2,SC.t);
   }
 
   drawCounter(CX,W,H);
 
+  /* 飘字 */
+  for(var i=0;i<GAME.pops.length;i++){
+    var q=GAME.pops[i], a=1-q.t/q.life;
+    CX.globalAlpha=a>.15?a:.15*(a/.15);
+    CX.font="bold 22px system-ui,'PingFang SC','Microsoft YaHei',sans-serif";
+    CX.textAlign="center";
+    CX.lineWidth=4; CX.strokeStyle="rgba(20,10,4,.72)";
+    CX.strokeText(q.txt,q.x,q.y);
+    CX.fillStyle=q.c; CX.fillText(q.txt,q.x,q.y);
+    CX.globalAlpha=1;
+  }
+  CX.textAlign="left";
+
   /* 暗角 */
   var vg=CX.createRadialGradient(W*0.5,H*0.42,H*0.25,W*0.5,H*0.45,W*0.72);
   vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,"rgba(10,6,2,.42)");
-  CX.fillStyle=vg; CX.fillRect(-160,-160,W+320,H+320);
-  if(phase==="night"){ CX.fillStyle="rgba(18,26,52,.38)"; CX.fillRect(-160,-160,W+320,H+320); }
-  if(phase==="dusk"){ CX.fillStyle="rgba(214,116,58,.12)"; CX.fillRect(-160,-160,W+320,H+320); }
+  CX.fillStyle=vg; CX.fillRect(-200,-200,W+400,H+400);
+  if(GAME.light>0.01){ CX.fillStyle="rgba(18,26,52,"+(0.40*GAME.light)+")"; CX.fillRect(-200,-200,W+400,H+400); }
+  if(phase==="dusk"){ CX.fillStyle="rgba(214,116,58,.12)"; CX.fillRect(-200,-200,W+400,H+400); }
 }
 
 /* ============ 数据 ============ */
@@ -869,8 +886,13 @@ var GAME={
   flags:{look:false,qual:false,orig:false},
   clues:[], lensUsed:false,
   correct:0, wrong:0, penal:0, sold:0,
-  running:false, over:false
+  running:false, over:false,
+  inT:9, pops:[], shake:0, light:0
 };
+
+function popText(txt,c,x,y){
+  GAME.pops.push({txt:txt,c:c||"#ffd66a",x:(x==null?500:x),y:(y==null?330:y),t:0,life:1.15});
+}
 
 function makeGood(){
   var it=pick(ITEMS);
@@ -885,6 +907,7 @@ function makeGood(){
 }
 
 function nextGuest(){
+  GAME.inT=0;
   var c=pick(CUSTOMERS);
   var g=makeGood();
   GAME.guest={who:c,good:g};
@@ -1121,6 +1144,8 @@ function settleDeal(p){
   GAME.correct++;
   tone(660,0.10,"triangle",0.06);
   setTimeout(()=>tone(880,0.14,"triangle",0.05),90);
+  popText("\u2212"+p+" 颗","#ffb27a",500,214);
+  popText("已入货架","#8fe3a5",500,258);
   toast("成交，"+G.name+" 归你了。");
   advanceGuest();
 }
@@ -1138,11 +1163,14 @@ function callGolem(){
     GAME.gems+=8; GAME.net+=8;
     GAME.correct++;
     tone(180,0.3,"square",0.05);
+    popText("+8 谢礼","#8fe3a5",500,222);
     toast("铁傀儡把人带走了，村庄给了你 8 颗谢礼。");
   }else{
     GAME.gems-=6; GAME.net-=6;
     GAME.wrong++;
     tone(140,0.3,"sawtooth",0.05);
+    GAME.shake=.7;
+    popText("\u22126 赔礼","#ff8f7a",500,222);
     toast("查过了来路正常。你赔了客人 6 颗绿宝石。");
   }
   advanceGuest();
@@ -1387,8 +1415,19 @@ function restart(){
 })();
 
 /* ============ 主循环 ============ */
+var _lastTs=0;
 function loop(ts){
+  var dt=_lastTs?Math.min(0.06,(ts-_lastTs)/1000):0.016;
+  _lastTs=ts;
   SC.t=ts/1000;
+  GAME.inT+=dt;
+  GAME.shake=Math.max(0,GAME.shake-dt*3.0);
+  for(var i=GAME.pops.length-1;i>=0;i--){
+    var q=GAME.pops[i]; q.t+=dt; q.y-=dt*34;
+    if(q.t>=q.life) GAME.pops.splice(i,1);
+  }
+  var lt=GAME.phase==="night"?1:(GAME.phase==="dusk"?0.32:0);
+  GAME.light+=(lt-GAME.light)*Math.min(1,dt*4.5);
   drawScene();
   requestAnimationFrame(loop);
 }

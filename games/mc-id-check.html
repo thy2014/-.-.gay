@@ -157,6 +157,19 @@ canvas.face{display:block; width:100%; max-width:272px; height:auto; filter:drop
   pointer-events:none;
 }
 .seal.ok{color:var(--green)}
+#visCv{animation:visIn .5s cubic-bezier(.2,.9,.3,1) both;}
+@keyframes visIn{
+  0%{opacity:0; transform:translateY(16px) scale(.97);}
+  100%{opacity:1; transform:none;}
+}
+.doc.bad{animation:docShake .38s ease-out;}
+@keyframes docShake{
+  0%,100%{transform:none}
+  15%{transform:translateX(-7px) rotate(-.6deg)}
+  35%{transform:translateX(6px) rotate(.5deg)}
+  55%{transform:translateX(-4px)}
+  75%{transform:translateX(3px)}
+}
 .seal.no{color:var(--red)}
 .seal.show{animation:stampIn .28s ease-out forwards;}
 @keyframes stampIn{
@@ -322,6 +335,7 @@ canvas.face{display:block; width:100%; max-width:272px; height:auto; filter:drop
       <div class="cell">得分 <b id="scoreTag">0</b></div>
       <div class="cell">失误 <b id="failTag" class="hot">0</b>/3</div>
       <div class="cell">待检 <b id="leftTag">6</b> 人</div>
+      <div class="cell">连对 <b id="comboTagNum">0</b></div>
       <div class="spacer"></div>
       <div class="file">CHECKPOINT · EAST GATE</div>
     </div>
@@ -391,7 +405,7 @@ function allowVisitor(v,d){
   return rulesForDay(d).every(function(r){ return r.opt || r.allow(v); });
 }
 
-var state={day:1,idx:0,score:0,fail:0,locked:false};
+var state={ combo:0, comboBest:0, day:1,idx:0,score:0,fail:0,locked:false};
 var cur=null, best=0;
 try{best=parseInt(localStorage.getItem("mc_id_best")||"0",10)||0;}catch(e){}
 
@@ -1058,6 +1072,7 @@ function refreshHud(){
   document.getElementById("scoreTag").textContent=state.score;
   document.getElementById("failTag").textContent=state.fail;
   document.getElementById("leftTag").textContent=(VIS_PER_DAY-state.idx);
+  var ct=document.getElementById("comboTagNum"); if(ct) ct.textContent=state.combo;
   document.getElementById("docDay").textContent=state.day;
 }
 function renderRules(){
@@ -1097,6 +1112,23 @@ function renderVisitor(){
 function row(k,v,warn){
   return '<div class="row"><i>'+k+'</i><b class="'+(warn?"warn":"")+'">'+v+'</b></div>';
 }
+function showCombo(n){
+  var el=document.getElementById("comboTag");
+  if(!el){
+    el=document.createElement("div");
+    el.id="comboTag";
+    el.style.cssText="position:fixed;left:50%;top:96px;transform:translateX(-50%);z-index:30;"+
+      "font:700 20px/1.2 Georgia,'Songti SC',serif;color:#ffd98a;letter-spacing:1px;"+
+      "text-shadow:0 2px 10px rgba(0,0,0,.75);pointer-events:none;opacity:0;transition:opacity .2s,transform .25s";
+    document.body.appendChild(el);
+  }
+  el.textContent="连对 "+n;
+  el.style.opacity="1";
+  el.style.transform="translateX(-50%) translateY(-6px)";
+  clearTimeout(el._t);
+  el._t=setTimeout(function(){ el.style.opacity="0"; el.style.transform="translateX(-50%)"; },900);
+}
+
 function showSeal(ok){
   var s=document.getElementById("seal");
   s.className="seal "+(ok?"ok":"no")+" show";
@@ -1118,6 +1150,8 @@ function nextVisitor(){
   cur=makeVisitor();
   state.locked=false;
   refreshHud(); renderRules(); renderVisitor();
+  var _vc=document.getElementById("visCv");
+  _vc.style.animation="none"; void _vc.offsetWidth; _vc.style.animation="";
   document.getElementById("passBtn").disabled=false;
   document.getElementById("denyBtn").disabled=false;
   paper();
@@ -1131,9 +1165,16 @@ function judge(allow){
   var right=(allow===should);
   showSeal(allow);
   if(right){
-    state.score+=100; stampSnd(true);
-    toast("核对无误 · +100",false);
+    state.combo++;
+    if(state.combo>state.comboBest) state.comboBest=state.combo;
+    var bonus=state.combo>=3?Math.min(60,(state.combo-2)*20):0;
+    state.score+=100+bonus; stampSnd(true);
+    if(bonus>0){
+      toast("核对无误 · +100 连对"+state.combo+" · 再+"+bonus,false);
+      showCombo(state.combo);
+    }else toast("核对无误 · +100",false);
   }else{
+    state.combo=0;
     state.fail++; stampSnd(false);
     document.getElementById("card").className="doc bad";
     toast(should?"错了 · 他的证件是合格的":"错了 · 他证件不合格",true);
@@ -1190,7 +1231,7 @@ function gameOver(){
   document.getElementById("restart").onclick=function(){ov.classList.remove("on"); newGame();};
 }
 function newGame(){
-  state={day:1,idx:0,score:0,fail:0,locked:false};
+  state={combo:0,comboBest:0,day:1,idx:0,score:0,fail:0,locked:false};
   refreshHud(); renderRules(); nextVisitor();
 }
 
