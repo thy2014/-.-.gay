@@ -1,0 +1,24 @@
+name: sync-ps
+on: push
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: fetch
+        run: |
+          curl -sL -m 60 -o /tmp/p.html "https://aka.doubaocdn.com/s/kCMdyLRRrl"
+          curl -sL -m 60 -o /tmp/g.json "https://aka.doubaocdn.com/s/KpJi5IzCsq"
+          echo "cef8b7b23825490ab47acf063ce6b1b0d8014e106d79c04bd50df0a32a9967d8  /tmp/p.html" | sha256sum -c
+          echo "31846189db0438ee7c635624f9af95263c4855facf348e776a3eb68e93627b62  /tmp/g.json" | sha256sum -c
+          cp /tmp/p.html games/pawnshop.html
+          cp /tmp/g.json games/games.json
+      - name: push
+        run: |
+          git config user.email bot@local
+          git config user.name bot
+          git add games/pawnshop.html games/games.json
+          git commit -m "add pawnshop game"
+          git push
