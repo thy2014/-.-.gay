@@ -1,0 +1,25 @@
+name: sync-mc3
+on: push
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: fetch and verify
+        run: |
+          curl -sL -m 60 -o /tmp/mc.html "https://aka.doubaocdn.com/s/PwUmvVaWbh"
+          echo "8cb104c0b77dc765a81384bbb1fb8d0d63b3e009520dc46b8c8e20d935ce8cc6  /tmp/mc.html" | sha256sum -c
+          curl -sL -m 60 -o /tmp/games.json "https://aka.doubaocdn.com/s/UWufEyRodM"
+          echo "4269a1d3306360b727e841971cc7d53abb703e9c8b821296ea2cd8b9ab61e09b  /tmp/games.json" | sha256sum -c
+          cp /tmp/mc.html games/mc-id-check.html
+          cp /tmp/games.json games/games.json
+          sha256sum games/mc-id-check.html games/games.json
+      - name: commit and push
+        run: |
+          git config user.name "thy2014"
+          git config user.email "thy2014@users.noreply.github.com"
+          git add games/mc-id-check.html games/games.json
+          git commit -m "mc-id-check: non-pixel rebuild" || echo nothing-to-commit
+          git push
