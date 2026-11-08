@@ -1,0 +1,24 @@
+name: sync-two
+on: push
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: fetch
+        run: |
+          curl -sL -m 60 -o /tmp/p.html "https://aka.doubaocdn.com/s/247orGUZTz"
+          curl -sL -m 60 -o /tmp/m.html "https://aka.doubaocdn.com/s/6Tz5sU3XiF"
+          echo "dcc451ef3d46d006970a90c59bc8e15e7226817fa97d6288d7b67e675a690742  /tmp/p.html" | sha256sum -c
+          echo "15a092658da2922eb862bcf32c8d6bafe9a2146c27f0a124f4aa74ca1e03e241  /tmp/m.html" | sha256sum -c
+          cp /tmp/p.html games/pawnshop.html
+          cp /tmp/m.html games/mc-id-check.html
+      - name: push
+        run: |
+          git config user.email bot@local
+          git config user.name bot
+          git add games/pawnshop.html games/mc-id-check.html
+          git commit -m "polish pawnshop and id-check"
+          git push
