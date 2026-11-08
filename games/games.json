@@ -8,6 +8,13 @@
       "tag": "肉鸽"
     },
     {
+      "id": "mc-id-check",
+      "title": "请出示你的证件",
+      "desc": "我的世界风格像素门卫小游戏：核对访客证件，按每日规定放行或拒绝，三天通关联赛，失误三次被撤职。",
+      "file": "games/mc-id-check.html",
+      "tag": "像素"
+    },
+    {
       "id": "geometry-survivor",
       "title": "几何幸存者",
       "desc": "CCW 的几何幸存者：控制几何图形在几何怪海中割草生存，越久越强。",

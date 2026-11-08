@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>请出示你的证件 · MC 门卫</title>
+<style>
+:root{
+  --grass:#4f8f3a; --dirt:#7a5533; --wood:#6b4a26; --wood2:#8a6135;
+  --stone:#8d8d8d; --ink:#151a12; --paper:#e8dfc4; --gold:#ffd166;
+  --ok:#5ec46a; --no:#e2565f;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  margin:0; background:#2b2b2b;
+  background-image:
+    linear-gradient(45deg,#232323 25%,transparent 25%,transparent 75%,#232323 75%),
+    linear-gradient(45deg,#232323 25%,transparent 25%,transparent 75%,#232323 75%);
+  background-size:32px 32px; background-position:0 0,16px 16px;
+  color:#e9e9e9; font-family:"Courier New",ui-monospace,monospace;
+  display:flex; align-items:center; justify-content:center;
+  padding:12px; overflow-x:hidden;
+}
+.screen{width:100%; max-width:760px;}
+.pixbox{position:relative;
+  background:#3a2c1c; border:4px solid #20160c;
+  box-shadow:inset 0 0 0 4px #6b4a26, 0 6px 0 #14100a;
+  padding:10px;
+}
+.bar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-bottom:8px;}
+.tag{
+  background:#20160c; border:3px solid #6b4a26; color:var(--paper);
+  padding:4px 8px; font-size:13px; white-space:nowrap;
+}
+.tag b{color:var(--gold);}
+
+/* 场景 */
+.stage{
+  position:relative; display:grid; gap:10px;
+  grid-template-columns:96px 1fr minmax(190px,230px);
+  grid-template-areas:"guard vis card" "rules rules rules";
+  align-items:end;
+  background:linear-gradient(#8fd0f0,#b8e2f7 58%,#5fae52 58%,#4f8f3a 100%);
+  border:4px solid #20160c; min-height:260px; padding:10px;
+}
+.guardWrap{grid-area:guard; align-self:end;}
+.visWrap{grid-area:vis; align-self:end; display:flex; flex-direction:column; align-items:center; gap:6px;}
+.visWrap .nm{font-size:11px; background:#20160c; color:#cfe8ff; padding:2px 6px;}
+.cardWrap{grid-area:card; align-self:center;}
+.rules{grid-area:rules;}
+.guardWrap{display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px;}
+.guardWrap .nm{font-size:11px; background:#20160c; color:#cfe8ff; padding:2px 6px;}
+canvas.px{image-rendering:pixelated; display:block; width:96px; height:96px;}
+
+.visitorWrap{display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap;}
+.card{
+  background:var(--paper); color:#2a2417; border:3px solid #b9ad8a;
+  box-shadow:0 4px 0 #6d6350; padding:8px 10px; min-width:190px; font-size:13px;
+  transform:rotate(-1.2deg);
+}
+.card h3{margin:0 0 6px; font-size:13px; letter-spacing:1px; border-bottom:2px dashed #a99d7c; padding-bottom:4px;}
+.card .rw{display:flex; justify-content:space-between; gap:8px; padding:2px 0;}
+.card .rw i{color:#6d6350; font-style:normal;}
+.card .rw b{color:#1f1a10;}
+.card.bad{border-color:#d9a3a3;}
+
+.rules{ background:var(--paper); color:#2a2417; border:3px solid #b9ad8a;
+  padding:8px 10px; font-size:13px; line-height:1.6;
+}
+.rules h4{margin:0 0 4px; font-size:12px; color:#6d6350; letter-spacing:2px;}
+.rules li{list-style:none; margin:2px 0;}
+.rules li:before{content:"▪ "; color:#8a7b57;}
+
+.btns{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;}
+.btn{
+  min-height:56px; border:4px solid #20160c; font-family:inherit; font-weight:bold;
+  font-size:16px; cursor:pointer; color:#0f1508; letter-spacing:1px;
+  box-shadow:inset 0 -6px 0 rgba(0,0,0,.28);
+  transition:transform .06s;
+}
+.btn:active{transform:translateY(3px);}
+.btn.ok{background:var(--ok);}
+.btn.no{background:var(--no); color:#fff;}
+.btn:disabled{filter:grayscale(.7); opacity:.55; cursor:default;}
+
+.toast{
+  position:absolute; left:50%; top:14px; transform:translateX(-50%);
+  padding:6px 14px; font-size:15px; font-weight:bold; color:#10160c;
+  border:3px solid #20160c; background:var(--gold); opacity:0; pointer-events:none;
+  transition:opacity .18s;
+}
+.toast.on{opacity:1;}
+.toast.bad{background:#ff8080;}
+
+/* 覆盖层 */
+.ov{
+  position:absolute; inset:0; background:rgba(12,12,12,.82); display:none;
+  align-items:center; justify-content:center; padding:16px; z-index:20;
+}
+.ov.on{display:flex;}
+.ovcard{
+  max-width:420px; width:100%; background:#3a2c1c; border:4px solid #20160c;
+  box-shadow:inset 0 0 0 4px #6b4a26; padding:16px; text-align:center;
+}
+.ovcard h2{margin:0 0 6px; font-size:20px; color:var(--gold);}
+.ovcard p{margin:6px 0; font-size:14px; line-height:1.6; color:#ddd;}
+.ovcard .btn{width:100%; margin-top:12px;}
+
+@media (max-height:520px){
+  body{padding:6px;}
+  canvas.px{width:64px; height:64px;}
+  .stage{min-height:150px; padding:6px; gap:6px;}
+  .rules{font-size:12px; padding:6px 8px;}
+  .btn{min-height:46px; font-size:15px;}
+  .card{padding:6px 8px; font-size:12px;}
+}
+@media (max-width:520px){
+  canvas.px{width:72px; height:72px;}
+  .stage{grid-template-columns:1fr 1fr; grid-template-areas:"guard vis" "card card" "rules rules"; min-height:auto; justify-items:center;}
+  .guardWrap,.visWrap{flex-direction:column;}
+  .visWrap{gap:4px;}
+  .card{min-width:0; width:100%;}
+  .btns{grid-template-columns:1fr; gap:8px;}
+}
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="pixbox" id="app">
+    <div class="bar">
+      <div class="tag">第 <b id="dayTag">1</b> 天</div>
+      <div class="tag">得分 <b id="scoreTag">0</b></div>
+      <div class="tag">失误 <b id="failTag">0</b>/3</div>
+      <div class="tag">今日 <b id="leftTag">6</b> 人</div>
+    </div>
+
+    <div class="stage" id="stage">
+      <div class="guardWrap">
+        <canvas class="px" id="guardCv" width="16" height="16"></canvas>
+        <div class="nm">你</div>
+      </div>
+      <div class="visWrap">
+        <canvas class="px" id="visCv" width="16" height="16"></canvas>
+        <div class="nm" id="visName">访客</div>
+      </div>
+      <div class="cardWrap"><div class="card" id="card"></div></div>
+      <div class="rules">
+        <h4>今日通行规定</h4>
+        <ul id="ruleList"></ul>
+      </div>
+      <div class="toast" id="toast"></div>
+    </div>
+
+    <div class="btns">
+      <button class="btn ok" id="passBtn">准许通行</button>
+      <button class="btn no" id="denyBtn">拒绝入内</button>
+    </div>
+
+    <div class="ov" id="ov">
+      <div class="ovcard" id="ovCard"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var cv=document.getElementById("guardCv"),ctx=cv.getContext("2d");
+var vcv=document.getElementById("visCv"),vctx=vcv.getContext("2d");
+var DAYS=3,VIS_PER_DAY=6,MAX_FAIL=3;
+
+var JOBS=["村民","铁傀儡","僵尸","苦力怕","末影人","流浪商人"];
+var ZONES=["橡木村","沙漠村","下界","末地"];
+var NAMES=["Steve","Alex","Herobrine","Notch","Jeb","Dinnerbone","Grumm","Toast","Ari","Sunny","Makenna","Zuri"];
+var DATES=["今天","昨天","三天前"];
+
+var RULES=[
+  {day:1,lines:["只放行【村民】，其他职业一律拒绝","证件日期必须是今天"],
+   allow:function(v){return v.job==="村民"&&v.date==="今天";}},
+  {day:2,lines:["只放行【村民】和【铁傀儡】","僵尸、苦力怕、末影人一律拒绝","证件日期必须是今天"],
+   allow:function(v){return (v.job==="村民"||v.job==="铁傀儡")&&v.date==="今天";}},
+  {day:3,lines:["只放行村民、铁傀儡、流浪商人","区域必须是【橡木村】","证件日期必须是今天"],
+   allow:function(v){return v.job!=="僵尸"&&v.job!=="苦力怕"&&v.job!=="末影人"&&v.zone==="橡木村"&&v.date==="今天";}}
+];
+
+var state={day:1,idx:0,score:0,fail:0,locked:false};
+var cur=null;
+var best=0;
+try{best=parseInt(localStorage.getItem("mc_id_best")||"0",10)||0;}catch(e){}
+
+/* ---------- 像素人物 ---------- */
+var PAL={
+  "Steve":{head:"#c68a5a",body:"#2e8b8b",arm:"#c68a5a",leg:"#3b2f6b",eye:"#2b2318"},
+  "村民":{head:"#98a583",body:"#6b4a26",arm:"#6b4a26",leg:"#4a3320",eye:"#2b2318"},
+  "铁傀儡":{head:"#d8d8d0",body:"#b9b9b2",arm:"#c8c8c0",leg:"#a9a9a2",eye:"#c0392b"},
+  "僵尸":{head:"#5d8c4a",body:"#2f4a2a",arm:"#5d8c4a",leg:"#26401f",eye:"#111"},
+  "苦力怕":{head:"#5fa84a",body:"#5fa84a",arm:"#4f943f",leg:"#4f943f",eye:"#111"},
+  "末影人":{head:"#1b1b24",body:"#141420",arm:"#1b1b24",leg:"#141420",eye:"#b06cff"},
+  "流浪商人":{head:"#8d6a45",body:"#3b5ea6",arm:"#8d6a45",leg:"#2c3f6b",eye:"#111"}
+};
+function px(g,x,y,w,h,c){g.fillStyle=c;g.fillRect(x,y,w,h);}
+function drawChar(g,job){
+  g.clearRect(0,0,16,16);
+  var p=PAL[job]||PAL["村民"];
+  if(job==="苦力怕"){
+    px(g,3,1,10,12,p.head);
+    px(g,5,4,2,2,p.eye); px(g,9,4,2,2,p.eye);
+    px(g,6,7,1,3,p.eye); px(g,8,8,1,3,p.eye);
+    px(g,7,6,2,2,p.eye);
+    px(g,4,13,3,2,p.leg); px(g,9,13,3,2,p.leg);
+    return;
+  }
+  if(job==="末影人"){
+    px(g,5,0,6,7,p.head);
+    px(g,6,2,1,2,p.eye); px(g,9,2,1,2,p.eye);
+    px(g,5,7,6,7,p.body);
+    px(g,2,7,2,9,p.arm); px(g,12,7,2,9,p.arm);
+    px(g,5,14,2,2,p.leg); px(g,9,14,2,2,p.leg);
+    return;
+  }
+  // 通用方块人
+  px(g,4,1,8,8,p.head);
+  px(g,5,3,2,2, p.eye); px(g,9,3,2,2, p.eye);
+  if(job==="村民"){ px(g,6,5,4,3,"#b0a189"); }     // 大鼻子
+  if(job==="铁傀儡"){ px(g,4,2,8,1,"#b9b9b2"); px(g,8,5,1,3,"#7f7f79"); }
+  px(g,5,9,6,4,p.body);
+  px(g,3,9,2,5,p.arm); px(g,11,9,2,5,p.arm);
+  px(g,5,13,2,3,p.leg); px(g,9,13,2,3,p.leg);
+  if(job==="流浪商人"){ px(g,3,0,10,1,"#2c3f6b"); }
+}
+
+/* ---------- 声音 ---------- */
+var ac=null;
+function beep(freq,dur,type){
+  try{
+    if(!ac) ac=new (window.AudioContext||window.webkitAudioContext)();
+    var o=ac.createOscillator(),g=ac.createGain();
+    o.type=type||"square"; o.frequency.value=freq;
+    g.gain.value=0.06; o.connect(g); g.connect(ac.destination);
+    o.start(); setTimeout(function(){o.stop();},dur||90);
+  }catch(e){}
+}
+
+/* ---------- 逻辑 ---------- */
+function rnd(a){return a[Math.floor(Math.random()*a.length)];}
+function makeVisitor(){
+  var job=rnd(JOBS);
+  return {
+    job:job,
+    name:rnd(NAMES),
+    zone:rnd(ZONES),
+    date:Math.random()<0.62?"今天":rnd(DATES),
+    wear:rnd(["草帽","铁头盔","无","破斗篷"]),
+    idNo:"NO."+(1000+Math.floor(Math.random()*8999))
+  };
+}
+function ruleFor(day){ return RULES[day-1]; }
+function refreshHud(){
+  document.getElementById("dayTag").textContent=state.day;
+  document.getElementById("scoreTag").textContent=state.score;
+  document.getElementById("failTag").textContent=state.fail;
+  document.getElementById("leftTag").textContent=(VIS_PER_DAY-state.idx);
+}
+function renderRules(){
+  var r=ruleFor(state.day),ul=document.getElementById("ruleList");
+  ul.innerHTML="";
+  r.lines.forEach(function(t){ var li=document.createElement("li"); li.textContent=t; ul.appendChild(li); });
+}
+function renderVisitor(){
+  drawChar(vctx,cur.job);
+  document.getElementById("visName").textContent=cur.name+" · "+cur.job;
+  var c=document.getElementById("card");
+  c.className="card";
+  c.innerHTML=
+    '<h3>通关证件</h3>'+
+    '<div class="rw"><i>姓名</i><b>'+cur.name+'</b></div>'+
+    '<div class="rw"><i>职业</i><b>'+cur.job+'</b></div>'+
+    '<div class="rw"><i>区域</i><b>'+cur.zone+'</b></div>'+
+    '<div class="rw"><i>日期</i><b>'+cur.date+'</b></div>'+
+    '<div class="rw"><i>编号</i><b>'+cur.idNo+'</b></div>'+
+    '<div class="rw"><i>头戴</i><b>'+cur.wear+'</b></div>';
+}
+function toast(text,bad){
+  var t=document.getElementById("toast");
+  t.textContent=text; t.className="toast on"+(bad?" bad":"");
+  setTimeout(function(){t.className="toast"+(bad?" bad":"");},900);
+}
+function nextVisitor(){
+  if(state.idx>=VIS_PER_DAY){ endDay(); return; }
+  state.idx++;
+  cur=makeVisitor();
+  refreshHud(); renderVisitor(); renderRules();
+  document.getElementById("passBtn").disabled=false;
+  document.getElementById("denyBtn").disabled=false;
+  state.locked=false;
+}
+function judge(allow){
+  if(state.locked||!cur) return;
+  state.locked=true;
+  document.getElementById("passBtn").disabled=true;
+  document.getElementById("denyBtn").disabled=true;
+  var should=ruleFor(state.day).allow(cur);
+  var right=(allow===should);
+  if(right){
+    state.score+=100; beep(880,80);
+    toast("放行正确！+100",false);
+  }else{
+    state.fail++; beep(220,140,"sawtooth");
+    toast(should?"错了，该放他进去！":"错了，他证件不合格！",true);
+    document.getElementById("card").className="card bad";
+  }
+  refreshHud();
+  setTimeout(function(){
+    if(state.fail>=MAX_FAIL){ gameOver(); return; }
+    nextVisitor();
+  },900);
+}
+function endDay(){
+  state.locked=true;
+  if(state.day>=DAYS){ win(); return; }
+  var ov=document.getElementById("ov");
+  document.getElementById("ovCard").innerHTML=
+    '<h2>第 '+state.day+' 天结束</h2>'+
+    '<p>今日得分 <b>'+state.score+'</b>，失误 '+state.fail+'/3</p>'+
+    '<p>明天规则会变，看仔细规定再放人。</p>'+
+    '<button class="btn ok" id="nextDay">开始第 '+(state.day+1)+' 天</button>';
+  ov.classList.add("on");
+  document.getElementById("nextDay").onclick=function(){
+    ov.classList.remove("on");
+    state.day++; state.idx=0;
+    refreshHud(); renderRules(); nextVisitor();
+  };
+}
+function win(){
+  if(state.score>best){best=state.score; try{localStorage.setItem("mc_id_best",String(best));}catch(e){}}
+  beep(660,120); setTimeout(function(){beep(990,180);},200);
+  var ov=document.getElementById("ov");
+  document.getElementById("ovCard").innerHTML=
+    '<h2>你守住了城门</h2>'+
+    '<p>三天全部通过，最终得分 <b>'+state.score+'</b></p>'+
+    '<p>最高纪录：'+best+'</p>'+
+    '<button class="btn ok" id="again">再来一局</button>';
+  ov.classList.add("on");
+  document.getElementById("again").onclick=function(){ov.classList.remove("on"); newGame();};
+}
+function gameOver(){
+  beep(180,260,"sawtooth");
+  if(state.score>best){best=state.score; try{localStorage.setItem("mc_id_best",String(best));}catch(e){}}
+  var ov=document.getElementById("ov");
+  document.getElementById("ovCard").innerHTML=
+    '<h2>你被撤职了</h2>'+
+    '<p>失误达到 3 次。得分 <b>'+state.score+'</b></p>'+
+    '<p>最高纪录：'+best+'</p>'+
+    '<button class="btn no" id="restart">重新上岗</button>';
+  ov.classList.add("on");
+  document.getElementById("restart").onclick=function(){ov.classList.remove("on"); newGame();};
+}
+function newGame(){
+  state={day:1,idx:0,score:0,fail:0,locked:false};
+  refreshHud(); renderRules(); nextVisitor();
+}
+
+drawChar(ctx,"Steve");
+document.getElementById("passBtn").onclick=function(){judge(true);};
+document.getElementById("denyBtn").onclick=function(){judge(false);};
+document.addEventListener("keydown",function(e){
+  if(e.key==="a"||e.key==="A"||e.key==="ArrowLeft") judge(true);
+  if(e.key==="d"||e.key==="D"||e.key==="ArrowRight") judge(false);
+});
+newGame();
+</script>
+</body>
+</html>
