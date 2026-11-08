@@ -726,10 +726,11 @@ function findNear(from,range,skip){
   return best;
 }
 function updateChain(dt){
+  for(var bi=bolts.length-1;bi>=0;bi--){ bolts[bi].life-=dt; if(bolts[bi].life<=0) bolts.splice(bi,1); }
   var n=Lv("chain"); if(n===0) return;
   chainCd-=dt;
   if(chainCd>0) return;
-  chainCd=1.7;
+  chainCd=1.45;
   var t=pickTarget(); if(!t) return;
   var jumps=2+n, dmg=dmgMult()*(20+n*4), cur={x:P.x,y:P.y}, pts=[{x:P.x,y:P.y}], used=[];
   for(var j=0;j<jumps;j++){
@@ -739,7 +740,21 @@ function updateChain(dt){
     hurtEnemy(hit,dmg); dmg*=0.78;
     cur=hit;
   }
-  bolts.push({pts:pts,life:0.22});
+  bolts.push({pts:boltPath(pts),life:0.32});
+}
+function boltPath(src){
+  var out=[],SEG=4;
+  for(var i=1;i<src.length;i++){
+    var p0=src[i-1],p1=src[i],jig=i===1?14:10;
+    out.push({x:p0.x,y:p0.y});
+    for(var sgi=1;sgi<SEG;sgi++){
+      var tt=sgi/SEG;
+      out.push({x:p0.x+(p1.x-p0.x)*tt+(RND()-.5)*jig,
+                y:p0.y+(p1.y-p0.y)*tt+(RND()-.5)*jig});
+    }
+  }
+  out.push({x:src[src.length-1].x,y:src[src.length-1].y});
+  return out;
 }
 function updateMeteor(dt){
   var n=Lv("meteor"); if(n===0) return;
@@ -1080,24 +1095,16 @@ function render(){
     ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(-7,-5);ctx.lineTo(-7,5);ctx.closePath();ctx.fill();
     ctx.restore();ctx.shadowBlur=0;
   }
+  ctx.lineCap="round";
   for(var bt=0;bt<bolts.length;bt++){
-    var bolt=bolts[bt],bal=Math.max(0,bolt.life/0.22);
-    ctx.strokeStyle="rgba(180,214,255,"+(bal*0.95).toFixed(2)+")";
-    ctx.lineWidth=3;ctx.lineCap="round";
-    for(var si=1;si<bolt.pts.length;si++){
-      var p0=bolt.pts[si-1],p1=bolt.pts[si];
-      ctx.beginPath();
-      ctx.moveTo(sx(p0.x),sy(p0.y));
-      var seg=4;
-      for(var ss=1;ss<seg;ss++){
-        var tt=ss/seg;
-        var jx=(RND()-.5)*16, jy=(RND()-.5)*16;
-        ctx.lineTo(sx(p0.x+(p1.x-p0.x)*tt)+jx,sy(p0.y+(p1.y-p0.y)*tt)+jy);
-      }
-      ctx.lineTo(sx(p1.x),sy(p1.y));
-      ctx.strokeStyle="rgba(180,214,255,"+(bal*0.9).toFixed(2)+")";ctx.lineWidth=3.5;ctx.stroke();
-      ctx.strokeStyle="rgba(255,255,255,"+bal.toFixed(2)+")";ctx.lineWidth=1.4;ctx.stroke();
-    }
+    var bolt=bolts[bt],bal=Math.max(0,bolt.life/0.32),bpt=bolt.pts;
+    ctx.beginPath();
+    ctx.moveTo(sx(bpt[0].x),sy(bpt[0].y));
+    for(var si=1;si<bpt.length;si++) ctx.lineTo(sx(bpt[si].x),sy(bpt[si].y));
+    ctx.strokeStyle="rgba(180,214,255,"+(bal*0.85).toFixed(2)+")";
+    ctx.lineWidth=4;ctx.stroke();
+    ctx.strokeStyle="rgba(255,255,255,"+bal.toFixed(2)+")";
+    ctx.lineWidth=1.6;ctx.stroke();
   }
   for(var mt=0;mt<meteors.length;mt++){
     var me2=meteors[mt],prog=Math.min(1,me2.t/me2.dur);
