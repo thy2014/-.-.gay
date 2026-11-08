@@ -1135,12 +1135,16 @@ function render(){
   ctx.lineCap="round";
   for(var bt=0;bt<bolts.length;bt++){
     var bolt=bolts[bt],bal=Math.max(0,bolt.life/(bolt.max||0.5)),bpt=bolt.pts;
+    var flick=0.82+RND()*0.18;
     ctx.beginPath();
-    ctx.moveTo(sx(bpt[0].x),sy(bpt[0].y));
-    for(var si=1;si<bpt.length;si++) ctx.lineTo(sx(bpt[si].x),sy(bpt[si].y));
-    ctx.strokeStyle="rgba(180,214,255,"+(bal*0.85).toFixed(2)+")";
+    for(var si=0;si<bpt.length;si++){
+      var bx=sx(bpt[si].x),by=sy(bpt[si].y);
+      if(si>0&&si<bpt.length-1){ bx+=(RND()-.5)*9; by+=(RND()-.5)*9; }
+      if(si===0) ctx.moveTo(bx,by); else ctx.lineTo(bx,by);
+    }
+    ctx.strokeStyle="rgba(180,214,255,"+(bal*0.85*flick).toFixed(2)+")";
     ctx.lineWidth=4;ctx.stroke();
-    ctx.strokeStyle="rgba(255,255,255,"+bal.toFixed(2)+")";
+    ctx.strokeStyle="rgba(255,255,255,"+(bal*flick).toFixed(2)+")";
     ctx.lineWidth=1.6;ctx.stroke();
   }
   for(var mt=0;mt<meteors.length;mt++){
