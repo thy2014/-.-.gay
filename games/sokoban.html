@@ -6,7 +6,7 @@
 <title>推箱子</title>
 <style>
 :root{
-  --bg:#0b0f0d; --line:#2c3a30; --ink:#e7eae4; --dim:#8b978d;
+  --bg:#0b0f0d; --line:#2c3a30; --ink:#e7eae4; --dim:#7f978d;
   --green:#7ef0a0; --gold:#e8c06a; --red:#e4645c;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -44,7 +44,7 @@ canvas{display:block;margin:0 auto;border-radius:10px;background:#0d1512;border:
 <div id="wrap">
   <h1>推 箱 子</h1>
   <div id="hud">
-    <span>关卡 <b id="lv">1/5</b></span>
+    <span>关卡 <b id="lv">1/12</b></span>
     <span>步数 <b id="moves">0</b></span>
     <span>目标 <b id="goals">0</b></span>
   </div>
@@ -75,7 +75,14 @@ canvas{display:block;margin:0 auto;border-radius:10px;background:#0d1512;border:
     ["#######","#  .  #","#  $  #","#  @  #","#     #","#######"],
     ["#######","#.    #","#  $  #","#  @  #","#     #","#######"],
     ["########","# ..   #","# $$   #","# @    #","#      #","########"],
-    ["########","#      #","# .  . #","# $  $ #","#  @   #","########"]
+    ["########","#      #","# .  . #","# $  $ #","#  @   #","########"],
+    ["########","#.     #","#      #","#  $   #","#  @   #","#      #","########"],
+    ["########","#@     #","# $    #","#      #","#    . #","########"],
+    ["########","#.     #","#$     #","#  @   #","#     $#","#     .#","########"],
+    ["#########","#  ..   #","#       #","#  $$   #","#  @    #","#       #","#########"],
+    ["#########","# ...   #","#       #","# $$$   #","#  @    #","#########"],
+    ["########","#      #","# .#   #","#  $   #","#  @   #","#      #","########"],
+    ["########","#      #","# .  . #","#      #","# $$@  #","#      #","########"]
   ];
 
   var levelIdx, walls, goals, boxes, player, moves, history, rows, cols, cell;
@@ -114,11 +121,14 @@ canvas{display:block;margin:0 auto;border-radius:10px;background:#0d1512;border:
   function move(dr,dc){
     var nr=player.r+dr, nc=player.c+dc, k=nr+"_"+nc;
     if(walls[k])return;
-    history.push(snapshot());
     if(boxes[k]){
       var br=nr+dr, bc=nc+dc, bk=br+"_"+bc;
       if(walls[bk]||boxes[bk])return;
-      delete boxes[k]; boxes[bk]=true;
+    }
+    history.push(snapshot());
+    if(boxes[k]){
+      var br2=nr+dr, bc2=nc+dc, bk2=br2+"_"+bc2;
+      delete boxes[k]; boxes[bk2]=true;
     }
     player={r:nr,c:nc};
     moves++;
@@ -134,7 +144,7 @@ canvas{display:block;margin:0 auto;border-radius:10px;background:#0d1512;border:
     } else {
       ov.className="";
       ovTitle.textContent="全部通关";
-      ovText.textContent="5 个关卡都过了，总步数自己看上面记录。";
+      ovText.textContent=LEVELS.length+" 个关卡都过了，总步数自己看上面记录。";
       startBtn.textContent="再玩一次";
       levelIdx=0;
     }
@@ -183,7 +193,7 @@ canvas{display:block;margin:0 auto;border-radius:10px;background:#0d1512;border:
   }
   function loop(){draw();requestAnimationFrame(loop);}
 
-  var DIRS={up:[-1,0],down:[1,0],left:[0,-1],right:[0,1]};
+  var DIRS={up:[-1,0],down:[1,0],left:[0,-1],right:[1,0]};
   document.querySelectorAll("#pad button[data-d]").forEach(function(b){
     b.addEventListener("click",function(){
       var d=DIRS[b.dataset.d]; move(d[0],d[1]);
