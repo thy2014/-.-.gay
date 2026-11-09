@@ -57,7 +57,11 @@
     background:var(--panel2); border:1px solid var(--line); border-radius:10px; outline:none;
   }
   .field input:focus{border-color:var(--green); box-shadow:0 0 0 3px rgba(61,220,132,.15)}
-  .field-hint{font-size:11px; color:var(--muted); margin-top:6px; line-height:1.6}
+  .btn-link{
+    width:100%; height:36px; margin-top:12px; background:transparent; border:none;
+    cursor:pointer; color:var(--muted); font-size:13px; font-family:inherit;
+  }
+  .btn-link:hover{color:var(--green)}
   .btn{
     width:100%; height:44px; border:none; border-radius:10px; cursor:pointer; font-size:15px; font-weight:600;
   }
@@ -152,16 +156,12 @@
       <svg viewBox="0 0 24 24" style="color:var(--green)"><path fill="currentColor" d="M7 6h10a4 4 0 0 1 4 4v5a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-5a4 4 0 0 1 4-4z"/><circle cx="9" cy="12.5" r="1.5" fill="#06231a"/><circle cx="15" cy="12.5" r="1.5" fill="#06231a"/><rect x="8.3" y="8" width="1.5" height="2" rx=".75" fill="#06231a"/><rect x="14.2" y="8" width="1.5" height="2" rx=".75" fill="#06231a"/></svg>
       <h1>游戏站</h1>
     </div>
-    <div class="sub">登录后可进入游戏，进度按账号分别存档</div>
     <div class="field"><label>账号</label><input id="inUser" autocomplete="off" autofocus></div>
     <div class="field"><label>密码</label><input id="inPass" type="password"></div>
-    <div class="field">
-      <label>校验码</label>
-      <input id="inCode" autocomplete="off" placeholder="徐杨洋是我儿子时/分">
-      <div class="field-hint">固定填「徐杨洋是我儿子」，后面接当前时间的时/分。例：19:25 就填 徐杨洋是我儿子19/25</div>
-    </div>
-    <button class="btn btn-primary" id="loginBtn">登录</button>
+    <div class="field" id="inviteField" style="display:none"><label>邀请码</label><input id="inInvite" autocomplete="off"></div>
+    <button class="btn btn-primary" id="mainBtn">登录</button>
     <div class="login-err" id="loginErr"></div>
+    <button class="btn-link" id="switchBtn">注册</button>
   </div>
 </div>
 
@@ -191,46 +191,88 @@ var user = localStorage.getItem(SESSION_KEY) || "";
 var GH = {
   owner: "thy2014",            // 你的 GitHub 用户名
   repo:  "-.-.gay",            // 仓库名
-  api:   "https://api.github.com"  // API 域名，境内访问不畅时可换成加速代理，如 https://ghproxy 对应的 api 地址
+  api:   "https://api.github.com"  // 域名，境内访问不畅时可换成加速代理
 };
 
 var $ = function(id){ return document.getElementById(id); };
 
-// 校验并登录
-function tryLogin(){
+var USERS_KEY = "gstation_users";
+var INVITE_CODE = "#include <bits/stdc++.h>";
+var mode = "login";
+
+function loadUsers(){
+  try { return JSON.parse(localStorage.getItem(USERS_KEY) || "{}"); }
+  catch(e){ return {}; }
+}
+function saveUsers(o){ localStorage.setItem(USERS_KEY, JSON.stringify(o)); }
+
+function switchMode(m){
+  mode = m;
+  if(m === "register"){
+    $("inviteField").style.display = "block";
+    $("mainBtn").textContent = "注册";
+    $("switchBtn").textContent = "登录";
+  } else {
+    $("inviteField").style.display = "none";
+    $("mainBtn").textContent = "登录";
+    $("switchBtn").textContent = "注册";
+  }
+  $("loginErr").textContent = "";
+}
+
+function mainAction(){
   var u = $("inUser").value.trim();
   var p = $("inPass").value;
-  var code = $("inCode").value.trim();
   $("loginErr").textContent = "";
   if(!u || !p){ $("loginErr").textContent = "请输入账号和密码"; return; }
-  if(!(u in ACCOUNTS)){ $("loginErr").textContent = "账号不存在"; return; }
-  if(ACCOUNTS[u] !== p){ $("loginErr").textContent = "密码错误"; return; }
-  if(!code){ $("loginErr").textContent = "请输入校验码"; return; }
-  var cm = code.match(/^徐杨洋是我儿子\s*(\d{1,2})\/(\d{1,2})$/);
-  if(!cm){ $("loginErr").textContent = "校验码格式应为：徐杨洋是我儿子 + 时/分"; return; }
-  var ch = parseInt(cm[1],10), cmin = parseInt(cm[2],10);
-  if(ch > 23 || cmin > 59){ $("loginErr").textContent = "校验码里的时间不正确"; return; }
-  var now = new Date();
-  var nowAbs = now.getHours()*60 + now.getMinutes();
-  var inAbs = ch*60 + cmin;
-  if(Math.abs(inAbs - nowAbs) > 2){ $("loginErr").textContent = "校验码时间不是当前时间，请对照现在的时间"; return; }
+  if(mode === "login") doLogin(u, p);
+  else doRegister(u, p);
+}
+
+function doLogin(u, p){
+  var users = loadUsers();
+  var exists = (u in ACCOUNTS) || (u in users);
+  if(!exists){ $("loginErr").textContent = "账号不存在"; return; }
+  var realPw = (u in ACCOUNTS) ? ACCOUNTS[u] : users[u];
+  if(realPw !== p){ $("loginErr").textContent = "密码错误"; return; }
   user = u;
   localStorage.setItem(SESSION_KEY, u);
   enterSite();
 }
-$("loginBtn").addEventListener("click", tryLogin);
-$("inPass").addEventListener("keydown", function(e){ if(e.key==="Enter") $("inCode").focus(); });
-$("inCode").addEventListener("keydown", function(e){ if(e.key==="Enter") tryLogin(); });
+
+function doRegister(u, p){
+  var inv = $("inInvite").value.trim();
+  if(inv !== INVITE_CODE){ $("loginErr").textContent = "邀请码错误"; return; }
+  var users = loadUsers();
+  if((u in ACCOUNTS) || (u in users)){ $("loginErr").textContent = "账号已存在"; return; }
+  users[u] = p;
+  saveUsers(users);
+  user = u;
+  localStorage.setItem(SESSION_KEY, u);
+  enterSite();
+}
+
+$("mainBtn").addEventListener("click", mainAction);
+$("switchBtn").addEventListener("click", function(){
+  switchMode(mode === "login" ? "register" : "login");
+});
 $("inUser").addEventListener("keydown", function(e){ if(e.key==="Enter") $("inPass").focus(); });
+$("inPass").addEventListener("keydown", function(e){
+  if(e.key !== "Enter") return;
+  if(mode === "register") $("inInvite").focus();
+  else mainAction();
+});
+$("inInvite").addEventListener("keydown", function(e){ if(e.key==="Enter") mainAction(); });
 
 $("logoutBtn").addEventListener("click", function(){
   localStorage.removeItem(SESSION_KEY);
   user = "";
+  switchMode("login");
   $("loginMask").style.display = "flex";
   $("topbar").style.display = "none";
   $("main").style.display = "none";
   $("inPass").value = "";
-  $("inCode").value = "";
+  $("inInvite").value = "";
   $("loginErr").textContent = "";
   $("inUser").focus();
 });
@@ -271,20 +313,20 @@ function renderGames(list){
 }
 
 function thumbSVG(g){
-  return '<svg class="badge" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path fill="#070b0a" d="M12 3.2a8.8 8.8 0 1 1 0 17.6 8.8 8.8 0 0 1 0-17.6z"/><path fill="currentColor" d="M8 9l6-3-2 5 3 1-6 3 2-5z"/></svg>';
+  return '<svg class="badge" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path fill="#070b0a" d="M12 3.2a8.8 0 1 1 0 17.6 8.8 0 0 1 0-17.6z"/><path fill="currentColor" d="M8 9l6-3-2 5 3 1-6 3 2-5z"/></svg>';
 }
 function playSVG(){
   return '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>';
 }
 function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
 
-// 加载游戏：先内嵌兜底，再尝试拉取 games/games.json 和 GitHub 自动扫描（GitHub Pages 上生效）
+// 加载游戏：先内嵌兜底，再尝试拉取 games/games.json 和 GitHub 自动扫描
 var CURRENT = DEFAULT_GAMES.slice();
 
 function loadGames(){
   CURRENT = DEFAULT_GAMES.slice();
   renderGames(CURRENT);
-  if(location.protocol === "file:") return; // 本地直接打开无法 fetch
+  if(location.protocol === "file:") return;
   fetch("games/games.json", {cache:"no-store"})
     .then(function(r){ if(!r.ok) throw 0; return r.json(); })
     .then(function(data){
@@ -292,10 +334,9 @@ function loadGames(){
       renderGames(merged);
       autoScanGitHub();
     })
-    .catch(function(){ autoScanGitHub(); /* 用默认列表即可 */ });
+    .catch(function(){ autoScanGitHub(); });
 }
 
-// 合并：按 file 路径去重（忽略大小写），避免同一文件被扫描重复添加
 function mergeGames(extra){
   var seen = {};
   CURRENT.forEach(function(g){ seen[String(g.file||"").toLowerCase()]=1; seen[String(g.id||"").toLowerCase()]=1; });
@@ -312,7 +353,6 @@ function mergeGames(extra){
   return merged;
 }
 
-// 通过 GitHub API 自动扫描 games/ 文件夹：往里丢 .html 文件就会自动显示
 function autoScanGitHub(){
   if(!GH || !GH.owner || !GH.repo) return;
   var url = GH.api.replace(/\/$/,"") + "/repos/" + encodeURIComponent(GH.owner) + "/" + encodeURIComponent(GH.repo) + "/contents/games";
