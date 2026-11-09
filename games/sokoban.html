@@ -6,7 +6,7 @@
 <title>推箱子</title>
 <style>
 :root{
-  --bg:#0b0f0d; --line:#2c3a30; --ink:#e7eae4; --dim:#7f978d;
+  --bg:#0b0f0d; --line:#2c3a30; --ink:#e7eae4; --dim:#8b978d;
   --green:#7ef0a0; --gold:#e8c06a; --red:#e4645c;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -193,7 +193,7 @@ canvas{display:block;margin:0 auto;border-radius:10px;background:#0d1512;border:
   }
   function loop(){draw();requestAnimationFrame(loop);}
 
-  var DIRS={up:[-1,0],down:[1,0],left:[0,-1],right:[1,0]};
+  var DIRS={up:[-1,0],down:[1,0],left:[0,-1],right:[0,1]};
   document.querySelectorAll("#pad button[data-d]").forEach(function(b){
     b.addEventListener("click",function(){
       var d=DIRS[b.dataset.d]; move(d[0],d[1]);
