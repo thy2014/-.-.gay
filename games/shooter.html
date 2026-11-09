@@ -6,7 +6,7 @@
 <title>飞机大战</title>
 <style>
 :root{
-  --bg:#0b0f0d; --line:#2c3a30; --ink:#e7eae4; --dim:#8b978d;
+  --bg:#0b0f0d; --line:#2c3a30; --ink:#e7eae4; --dim:#7f978d;
   --green:#7ef0a0; --gold:#e8c06a; --red:#e4645c;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -162,9 +162,10 @@ canvas{width:100%;display:block;border-radius:10px;background:#0a1218;border:1px
     // 撞机
     for(var fi=foes.length-1;fi>=0;fi--){
       if(hit(foes[fi],player)){
-        boom(foes[fi].x+foes[fi].w/2,foes[fi].y+foes[fi].h/2,"#e8c06a",16);
+        var hitFoe=foes[fi];
+        boom(hitFoe.x+hitFoe.w/2,hitFoe.y+hitFoe.h/2,"#e8c06a",16);
         foes.splice(fi,1);
-        hp-=foes[fi]&&foes[fi].big?34:22; updateHud();
+        hp-=hitFoe.big?34:22; updateHud();
         if(hp<=0)endGame();
       }
     }
