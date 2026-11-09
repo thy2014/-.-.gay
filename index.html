@@ -157,8 +157,8 @@
     <div class="field"><label>密码</label><input id="inPass" type="password"></div>
     <div class="field">
       <label>校验码</label>
-      <input id="inCode" autocomplete="off" placeholder="时/分 账号名">
-      <div class="field-hint">填当前时间的「时/分」，空格后接账号名。例：19:25 登录 thy2014 就填 19/25 thy2014</div>
+      <input id="inCode" autocomplete="off" placeholder="徐杨洋是我儿子时/分">
+      <div class="field-hint">固定填「徐杨洋是我儿子」，后面接当前时间的时/分。例：19:25 就填 徐杨洋是我儿子19/25</div>
     </div>
     <button class="btn btn-primary" id="loginBtn">登录</button>
     <div class="login-err" id="loginErr"></div>
@@ -206,10 +206,9 @@ function tryLogin(){
   if(!(u in ACCOUNTS)){ $("loginErr").textContent = "账号不存在"; return; }
   if(ACCOUNTS[u] !== p){ $("loginErr").textContent = "密码错误"; return; }
   if(!code){ $("loginErr").textContent = "请输入校验码"; return; }
-  var cm = code.match(/^(\d{1,2})\/(\d{1,2})\s+(\S+)$/);
-  if(!cm){ $("loginErr").textContent = "校验码格式应为：时/分 账号名"; return; }
-  var ch = parseInt(cm[1],10), cmin = parseInt(cm[2],10), cname = cm[3];
-  if(cname !== u){ $("loginErr").textContent = "校验码里的账号名与登录账号不一致"; return; }
+  var cm = code.match(/^徐杨洋是我儿子\s*(\d{1,2})\/(\d{1,2})$/);
+  if(!cm){ $("loginErr").textContent = "校验码格式应为：徐杨洋是我儿子 + 时/分"; return; }
+  var ch = parseInt(cm[1],10), cmin = parseInt(cm[2],10);
   if(ch > 23 || cmin > 59){ $("loginErr").textContent = "校验码里的时间不正确"; return; }
   var now = new Date();
   var nowAbs = now.getHours()*60 + now.getMinutes();
