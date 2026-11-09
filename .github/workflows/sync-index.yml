@@ -1,0 +1,22 @@
+name: sync-index
+on:
+  push:
+    paths:
+      - '.github/workflows/sync-index.yml'
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: fetch verify and commit
+        run: |
+          curl -sL -o /tmp/index.html https://aka.doubaocdn.com/s/300F2VVwf2
+          echo "3deb8b214e10b471891b414b05a4c60526bc6aaa5b750df71f1df6195fc8a06f  /tmp/index.html" | sha256sum -c
+          cp /tmp/index.html index.html
+          git config user.name "thy2014"
+          git config user.email "1925690533@qq.com"
+          git add index.html
+          git commit -m "feat: 登录增加当天时间校验码" || echo "no change"
+          git push
