@@ -1,0 +1,23 @@
+name: sync-terraria-fix
+on:
+  push:
+    paths:
+      - .github/workflows/sync-terraria-fix.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: pull-and-commit
+        run: |
+          curl -fsSL -o /tmp/f "https://aka.doubaocdn.com/s/uMBRWTtsqn"
+          echo "ceec9626d76e9bf13af2debb47a8b87398fff0029007c2ba7318c6b87432c02d  /tmp/f" | sha256sum -c -
+          cp /tmp/f games/terraria.html
+          git config user.name "thy2014"
+          git config user.email "1925690533@qq.com"
+          git add games/terraria.html
+          git commit -m "fix terraria sky black, torch support, daytime spawn" || echo "no change"
+          git push
