@@ -361,6 +361,15 @@ function generateWorld(seed){
     var qs=world.surface[bx];
     for(var qy=bs-8;qy<bs;qy++)world.tile[idx(qx,qy)]=T.AIR;
   }
+  /* 8. 清理孤立树叶：出生点清空树干后可能留下悬空树冠，统一回收 */
+  for(var lx=1;lx<WORLD_W-1;lx++)for(var ly=1;ly<WORLD_H-1;ly++){
+    if(world.tile[idx(lx,ly)]!==T.LEAF)continue;
+    var hasLog=0;
+    for(var ox=-3;ox<=3&&!hasLog;ox++)for(var oy=-6;oy<=6;oy++){
+      if(inWorld(lx+ox,ly+oy)&&world.tile[idx(lx+ox,ly+oy)]===T.LOG){hasLog=1;break;}
+    }
+    if(!hasLog)world.tile[idx(lx,ly)]=T.AIR;
+  }
   world.spawn={x:bx,y:bs-3};
 }
 function placeVein(sx,sy,size,oreId,rng){
@@ -442,28 +451,37 @@ function physics(){
   if(keyState.jump&&player.onGround){player.vy=-JUMP_V;player.onGround=0;playSfx("jump");}
   player.vy+=GRAV;if(player.vy>MAX_FALL)player.vy=MAX_FALL;
 
-  /* X 轴 */
-  var nx=player.x+player.vx;
-  if(!boxHitsSolid(nx,player.y,PW,PH))player.x=nx;
-  else {
-    if(player.vx>0)player.x=Math.floor((player.x+PW)/TS)*TS-PW-0.01;
-    else player.x=Math.floor(player.x/TS+1)*TS+0.01;
-    player.vx=0;
-  }
-  /* Y 轴 */
+  /* 分轴推进：按单步最大 6px 拆分，避免高速穿透与错位吸附造成的抖动 */
+  var steps=Math.max(1,Math.ceil(Math.max(Math.abs(player.vx),Math.abs(player.vy))/6));
+  var sxv=player.vx/steps, syv=player.vy/steps;
   player.onGround=0;
-  var ny=player.y+player.vy;
-  if(!boxHitsSolid(player.x,ny,PW,PH)){player.y=ny;}
-  else {
-    if(player.vy>0){
-      player.y=Math.floor((player.y+PH)/TS)*TS-PH-0.01;
-      player.onGround=1;
-      if(player.vy>11.5)fallDamage(player.vy);
-    } else {
-      player.y=Math.floor(player.y/TS+1)*TS+0.01;
+  for(var s=0;s<steps;s++){
+    if(sxv!==0){
+      var nx=player.x+sxv;
+      if(!boxHitsSolid(nx,player.y,PW,PH))player.x=nx;
+      else {
+        if(sxv>0)player.x=Math.floor((nx+PW)/TS)*TS-PW-0.01;
+        else player.x=Math.ceil(nx/TS)*TS+0.01;
+        player.vx=0;sxv=0;
+      }
     }
-    player.vy=0;
+    var ny=player.y+syv;
+    if(!boxHitsSolid(player.x,ny,PW,PH))player.y=ny;
+    else {
+      if(syv>0){
+        var pv=player.vy;
+        player.y=Math.floor((ny+PH)/TS)*TS-PH-0.01;
+        player.onGround=1;
+        if(pv>11.5)fallDamage(pv);
+      } else {
+        player.y=(Math.floor(ny/TS)+1)*TS+0.01;
+      }
+      player.vy=0;syv=0;
+    }
   }
+  /* 兜底：万一被卡进固体（例如被敌人挤入），向上脱出 */
+  for(var g=0;g<4&&boxHitsSolid(player.x,player.y,PW,PH);g++){player.y-=TS/2;}
+
   player.x=Math.max(2,Math.min(WORLD_W*TS-PW-2,player.x));
   if(player.hurtT>0)player.hurtT--;
   if(player.attackAnim>0)player.attackAnim--;
@@ -475,6 +493,9 @@ function fallDamage(vy){
 function damagePlayer(dmg,src){
   if(player.hurtT>0||player.dead)return;
   player.hp-=dmg;player.hurtT=32;playSfx("hurt");
+  /* 受伤反馈：红色碎片 + 上浮伤害数字，明确提示是「被打」而非地形伤害 */
+  for(var i=0;i<7;i++)addParticle({x:player.x+PW/2,y:player.y+PH/2,vx:Math.random()*5-2.5,vy:Math.random()*4-3.5,life:20,max:20,color:"#ff6b78",size:2+Math.random()*3,g:.5});
+  floatTexts.push({x:player.x+PW/2,y:player.y-4,vy:-1.1,life:36,max:36,val:"-"+dmg,color:"#ff8a95"});
   if(player.hp<=0){player.hp=0;killPlayer();}
 }
 function killPlayer(){
@@ -958,8 +979,16 @@ var ENEMY_DEF={
 };
 function isNight(){return dayLight<0.35;}
 function playerUnderground(){
-  var c=playerCenter();var col=Math.floor(c.x/TS);
-  return c.y>world.surface[col]*TS+TS;
+  /* 以「头顶是否有屋顶」判定，而不是与生成期地表高度比较：
+     地表坡坎、树冠下方都仍算露天，只有被固体（树木除外）覆盖才算地下 */
+  var c=playerCenter();
+  var col=Math.floor(c.x/TS), row=Math.floor(c.y/TS);
+  for(var i=1;i<=10;i++){
+    if(!inWorld(col,row-i))return 0;
+    var t=getTile(col,row-i);
+    if(t!==T.AIR&&t!==T.LOG&&t!==T.LEAF&&TDEF[t]&&TDEF[t].s)return 1;
+  }
+  return 0;
 }
 
 /* ---------- 时间 ---------- */
@@ -1104,7 +1133,7 @@ function updatePickups(){
 /* ============================================================
    模块五（上）：渲染 —— 背景 / 瓦片 / 图标 / 角色 / 敌人 / 粒子
    ============================================================ */
-var renderScale=1, frameNo=0, particles=[];
+var renderScale=1, frameNo=0, particles=[], floatTexts=[];
 function rgb(h){var n=parseInt(h.slice(1),16);return [n>>16,(n>>8)&255,n&255];}
 function rgba(h,a){var c=rgb(h);return "rgba("+c[0]+","+c[1]+","+c[2]+","+a+")";}
 function mixHex(h1,h2,t){var a=rgb(h1),b=rgb(h2);var c=[0,1,2].map(function(i){return Math.round(a[i]+(b[i]-a[i])*t);});return "rgb("+c.join(",")+")";}
@@ -1360,6 +1389,10 @@ function updateParticles(){
     p.x+=p.vx;p.y+=p.vy;p.life--;
     if(p.life<=0)particles.splice(i,1);
   }
+  for(var j=floatTexts.length-1;j>=0;j--){
+    var f=floatTexts[j];f.y+=f.vy;f.vy*=.94;f.life--;
+    if(f.life<=0)floatTexts.splice(j,1);
+  }
 }
 function drawParticles(){
   particles.forEach(function(p){
@@ -1420,6 +1453,26 @@ function render(){
         }
       }
     }
+  }
+
+  /* 伤害数字（世界坐标，最后绘制，不受光照压暗） */
+  floatTexts.forEach(function(f){
+    var a=Math.min(1,f.life/18);
+    ctx.globalAlpha=a;ctx.fillStyle=f.color;
+    ctx.font="bold 15px system-ui,sans-serif";ctx.textAlign="center";
+    ctx.fillText(f.val,f.x-camera.x,f.y-camera.y);
+  });
+  ctx.globalAlpha=1;ctx.textAlign="left";
+
+  /* 受伤时屏幕边缘红晕 */
+  if(player.hurtT>0&&!player.dead){
+    var pulse=player.hurtT/32;
+    ctx.setTransform(1,0,0,1,0,0);
+    var g=ctx.createRadialGradient(canvas.width/2,canvas.height/2,Math.min(canvas.width,canvas.height)*.34,
+      canvas.width/2,canvas.height/2,Math.max(canvas.width,canvas.height)*.72);
+    g.addColorStop(0,"rgba(190,30,45,0)");
+    g.addColorStop(1,"rgba(190,30,45,"+(.42*pulse).toFixed(3)+")");
+    ctx.fillStyle=g;ctx.fillRect(0,0,canvas.width,canvas.height);
   }
 }
 
@@ -1680,6 +1733,10 @@ window.__G={
   skyColors:function(){return skyColors();},
   lightAt:function(x,y){return lightAtTile(x,y);},
   surf:function(x){return world.surface[x];},
+  solidAt:function(x,y){return isSolid(x,y)?1:0;},
+  tileAt:function(x,y){return getTile(x,y);},
+  box:function(x,y){return boxHitsSolid(x,y,PW,PH)?1:0;},
+  get PW(){return PW;},get PH(){return PH;},get TS(){return TS;},
   setNight:function(){dayTime=.62;},
   spawn:function(type){var c=playerCenter();spawnEnemy(type,c.x+TS*2,c.y-TS);}
 };
