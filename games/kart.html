@@ -17,12 +17,22 @@
   .hud-right{text-align:right}
   .bar{width:120px;height:8px;background:#1c2a24;border-radius:5px;overflow:hidden;margin-top:4px}
   .bar>i{display:block;height:100%;background:var(--teal);border-radius:5px}
-  .overlay{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:rgba(5,9,8,.7);padding:16px}
+  .overlay{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:rgba(5,9,8,.78);padding:16px;overflow-y:auto}
   .overlay.hidden{display:none}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 24px;max-width:420px;width:100%;text-align:center}
-  .panel h1{font-size:22px;margin-bottom:8px}
-  .panel p{color:var(--muted);font-size:13px;line-height:1.8;margin-bottom:16px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px 22px;max-width:560px;width:100%}
+  .panel h1{font-size:22px;margin-bottom:6px}
+  .panel .sub{color:var(--muted);font-size:13px;line-height:1.8;margin-bottom:16px}
+  .group-label{font-size:12px;color:var(--muted);margin:14px 0 8px;letter-spacing:.5px}
+  .opt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .opt{background:var(--panel2,#111a17);border:1px solid var(--line);border-radius:12px;padding:12px 10px;cursor:pointer;text-align:center;min-height:74px}
+  .opt.sel{border-color:var(--green);background:rgba(61,220,132,.1)}
+  .opt .name{font-size:14px;font-weight:700;margin-bottom:3px}
+  .opt .desc{font-size:11px;color:var(--muted);line-height:1.5}
+  .opt .stat{margin-top:6px;display:flex;flex-direction:column;gap:3px}
+  .opt .stat i{height:4px;border-radius:3px;background:#1c2a24;overflow:hidden}
+  .opt .stat i b{display:block;height:100%;background:var(--teal);border-radius:3px}
   .panel .rank{font-size:30px;font-weight:800;color:var(--amber);margin:6px 0}
+  .panel p.detail{color:var(--muted);font-size:13px;line-height:1.8;margin-bottom:16px}
   .btn{height:44px;padding:0 22px;border:none;border-radius:10px;background:var(--green);color:#06231a;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit}
   .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);margin-left:8px}
   .touch{position:fixed;bottom:18px;left:0;right:0;display:none;justify-content:space-between;padding:0 18px;z-index:6;pointer-events:none}
@@ -33,7 +43,7 @@
   @media (pointer:coarse){.touch{display:flex}}
   .count{position:fixed;top:38%;left:50%;transform:translateX(-50%);font-size:64px;font-weight:800;color:var(--green);z-index:7;pointer-events:none}
   .back{position:fixed;top:12px;right:12px;z-index:8}
-  @media(max-width:520px){.hud-card{font-size:12px;padding:8px 10px}.bar{width:90px}}
+  @media(max-width:520px){.hud-card{font-size:12px;padding:8px 10px}.bar{width:90px}.opt-grid{gap:8px}}
 </style>
 </head>
 <body>
@@ -41,7 +51,7 @@
 
 <div class="hud">
   <div class="hud-card">
-    圈数 <b id="hudLap">1/3</b>　名次 <b id="hudRank">1/4</b><br>
+    圈数 <b id="hudLap">1/4</b>　名次 <b id="hudRank">1/4</b><br>
     金币 <b id="hudCoin">0</b>　用时 <b id="hudTime">0:00</b>
   </div>
   <div class="hud-card hud-right">
@@ -67,9 +77,15 @@
 <div class="overlay" id="startOverlay">
   <div class="panel">
     <h1>卡丁赛车</h1>
-    <p>俯视 2D 竞速，三圈定名次。<br>W/↑ 油门，S/↓ 刹车，A/D 或 ←/→ 转向，空格氮气。<br>吃金币加分，踩青色板回氮气。</p>
-    <button class="btn" id="startBtn">开始比赛</button>
-    <button class="btn ghost" id="backBtn">返回游戏库</button>
+    <div class="sub">俯视 2D 竞速，四圈定名次。W/↑ 油门，S/↓ 刹车，A/D 或 ←/→ 转向，空格氮气。吃金币加分，踩青色板回氮气。</div>
+    <div class="group-label">选择赛车</div>
+    <div class="opt-grid" id="kartGrid"></div>
+    <div class="group-label">选择赛道</div>
+    <div class="opt-grid" id="trackGrid"></div>
+    <div style="margin-top:20px">
+      <button class="btn" id="startBtn">开始比赛</button>
+      <button class="btn ghost" id="backBtn">返回游戏库</button>
+    </div>
   </div>
 </div>
 
@@ -77,7 +93,7 @@
   <div class="panel">
     <h1>比赛结束</h1>
     <div class="rank" id="finRank">第 1 名</div>
-    <p id="finDetail"></p>
+    <p class="detail" id="finDetail"></p>
     <button class="btn" id="againBtn">再来一局</button>
     <button class="btn ghost" id="backBtn2">返回游戏库</button>
   </div>
@@ -106,17 +122,56 @@ var myProf=sessionUser?allProf[sessionUser]:null;
 var hasNitro=!!(myProf&&myProf.perks&&myProf.perks.nitro);
 var rainbow=!!(myProf&&myProf.perks&&myProf.skinRainbow);
 
-// ===== 赛道 =====
-var WP=[[260,620],[520,300],[900,210],[1280,280],[1560,520],[1480,820],[1120,960],[640,920],[320,820]];
-var HALF=95, WL=1800, WH=1100;
-var SEG=[], CUM=[0], TOTAL=0;
+// ===== 赛车与赛道 =====
+var KARTS=[
+  {id:"bal",  name:"疾风号", desc:"均衡稳健", accel:22, maxSp:20,   turn:3.0, weight:1,    color:"#3ddc84"},
+  {id:"swift",name:"闪电号", desc:"转向灵活 极速略低", accel:24, maxSp:18.5, turn:3.9, weight:0.85, color:"#2bd4c0"},
+  {id:"heavy",name:"重装号", desc:"极速更高 转向偏钝", accel:19, maxSp:21.5, turn:2.4, weight:1.2, color:"#ffc75f"}
+];
+var TRACKS=[
+  {id:"meadow", name:"绿地环线", bg:"#0e1712", grass:"#15231a", edge:"#2b322e", road:"#3d4540",
+   WP:[[260,620],[520,300],[900,210],[1280,280],[1560,520],[1480,820],[1120,960],[640,920],[320,820]], WL:1800, WH:1100},
+  {id:"desert", name:"沙漠捷径", bg:"#1a140c", grass:"#231b10", edge:"#3a3126", road:"#52483a",
+   WP:[[300,850],[620,520],[1000,700],[1420,560],[1500,260],[1080,180],[620,240],[260,420]], WL:1700, WH:1000},
+  {id:"snow",   name:"雪山弯道", bg:"#0d141b", grass:"#131f28", edge:"#2c3844", road:"#43515e",
+   WP:[[220,500],[480,260],[900,200],[1240,360],[1380,700],[1080,900],[640,880],[300,760],[560,560],[900,620]], WL:1600, WH:1000}
+];
+var AI_DEF=[
+  {name:"红蜂",color:"#ff5d6c",speed:17.4},
+  {name:"蓝隼",color:"#5d9bff",speed:18.2},
+  {name:"紫电",color:"#b07bff",speed:16.8}
+];
+var selKart=0, selTrack=0;
+var HALF=92, LAPS=4;
 
-for(var i=0;i<WP.length;i++){
-  var a=WP[i],b=WP[(i+1)%WP.length];
-  var len=Math.hypot(b[0]-a[0],b[1]-a[1]);
-  SEG.push(len); CUM.push(CUM[i]+len); TOTAL+=len;
+// ===== 当前赛道几何 =====
+var WP=[],SEG=[],CUM=[0],TOTAL=0,WL=0,WH=0,PAL={};
+var COINS=[],PADS=[],DECOR=[],F=[],D0=[];
+function mulberry(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; var t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function buildTrack(idx){
+  var t=TRACKS[idx];
+  WP=t.WP.slice(); PAL={bg:t.bg,grass:t.grass,edge:t.edge,road:t.road}; WL=t.WL; WH=t.WH;
+  SEG=[];CUM=[0];TOTAL=0;
+  for(var i=0;i<WP.length;i++){
+    var a=WP[i],b=WP[(i+1)%WP.length];
+    var len=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    SEG.push(len);CUM.push(CUM[i]+len);TOTAL+=len;
+  }
+  F=WP[0]; D0=[(WP[1][0]-WP[0][0])/SEG[0],(WP[1][1]-WP[0][1])/SEG[0]];
+  COINS=[0.08,0.22,0.36,0.5,0.64,0.78,0.9].map(function(f,k){
+    var p=pointAt(f,k%2?34:-34); return {x:p[0],y:p[1],got:false};
+  });
+  PADS=[0.2,0.72].map(function(f){ var p=pointAt(f,0); return {x:p[0],y:p[1]}; });
+  var rnd=mulberry(idx*997+13);
+  DECOR=[];
+  for(var d=0;d<46;d++){
+    var x=rnd()*WL, y=rnd()*WH;
+    var n=nearest(x,y);
+    if(Math.hypot(x-n.px,y-n.py)>HALF+26){
+      DECOR.push({x:x,y:y,type:rnd()>0.5?"tree":"rock",s:0.7+rnd()*0.7,rot:rnd()*6.28});
+    }
+  }
 }
-F=WP[0]; D0=[(WP[1][0]-WP[0][0])/SEG[0],(WP[1][1]-WP[0][1])/SEG[0]];
 function nearest(x,y){
   var best={i:0,f:0,d:1e18,px:WP[0][0],py:WP[0][1]};
   for(var i=0;i<WP.length;i++){
@@ -130,44 +185,40 @@ function nearest(x,y){
   return best;
 }
 function progressAt(n){ return CUM[n.i]+n.f*SEG[n.i]; }
-
-// 金币与氮气板
 function pointAt(f,off){
-  var d=f*TOTAL, i=0;
+  var d=f*TOTAL,i=0;
   while(i<SEG.length-1 && CUM[i+1]<d) i++;
   var t=(d-CUM[i])/SEG[i], a=WP[i], b=WP[(i+1)%WP.length];
   var x=a[0]+(b[0]-a[0])*t, y=a[1]+(b[1]-a[1])*t;
   var nx=-(b[1]-a[1])/SEG[i], ny=(b[0]-a[0])/SEG[i];
   return [x+nx*off, y+ny*off];
 }
-var COINS=[0.1,0.24,0.38,0.52,0.66,0.8,0.93].map(function(f,k){
-  var p=pointAt(f,k%2?34:-34); return {x:p[0],y:p[1],got:false};
-});
-var PADS=[0.2,0.72].map(function(f){ var p=pointAt(f,0); return {x:p[0],y:p[1]}; });
+function pointAtProg(d){
+  d=((d%TOTAL)+TOTAL)%TOTAL; var i=0;
+  while(i<SEG.length-1 && CUM[i+1]<d) i++;
+  var t=(d-CUM[i])/SEG[i], a=WP[i], b=WP[(i+1)%WP.length];
+  return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
+}
 
 // ===== 车辆 =====
-var LAPS=3;
-var AI_DEF=[
-  {name:"红蜂",color:"#ff5d6c",speed:11},
-  {name:"蓝隼",color:"#5d9bff",speed:11.8},
-  {name:"紫电",color:"#b07bff",speed:10.5}
-];
-function makeKart(x,y,heading,color,name,isPlayer,ai){
-  return {x:x,y:y,heading:heading,speed:0,color:color,name:name,isPlayer:!!isPlayer,
+var karts=[];
+function makeKart(x,y,heading,color,name,isPlayer,ai,veh){
+  return {x:x,y:y,heading:heading,speed:0,color:color,name:name,isPlayer:!!isPlayer,veh:veh||null,
     lap:1,prog:0,prevProg:0,side:0,ai:ai||null,wp:0,finished:false,finishTime:0,
     nitro:hasNitro&&isPlayer?100:60,coins:0,off:0,_side:0,crossed:false};
 }
-var karts=[];
 function resetRace(){
   karts=[];
+  var v=KARTS[selKart];
   var p0=WP[0], p1=WP[1];
   var ang=Math.atan2(p1[1]-p0[1],p1[0]-p0[0]);
-  karts.push(makeKart(p0[0],p0[1]+30,ang,"#3ddc84","你",true,null));
+  karts.push(makeKart(p0[0],p0[1]+34,ang,v.color,"你",true,null,v));
   AI_DEF.forEach(function(d,k){
-    var off=-40-k*26;
-    karts.push(makeKart(p0[0],p0[1]+off,ang,d.color,d.name,false,{wp:1,base:d.speed}));
+    var off=-44-k*28;
+    karts.push(makeKart(p0[0],p0[1]+off,ang,d.color,d.name,false,{wp:1,base:d.speed},null));
   });
   COINS.forEach(function(c){c.got=false;});
+  particles=[];
   state="countdown"; countT=3.0; raceTime=0;
 }
 
@@ -191,6 +242,7 @@ bindTouch("tLeft","left"); bindTouch("tRight","right"); bindTouch("tGas","up"); 
 
 // ===== 状态 =====
 var state="idle", countT=0, raceTime=0, last=0, camX=0, camY=0;
+var particles=[];
 
 function rankOf(k){
   var sorted=karts.slice().sort(function(a,b){
@@ -202,34 +254,36 @@ function rankOf(k){
 
 function updateKart(k,dt){
   var steer=0,throttle=0,brake=0,boost=false;
+  var veh=k.veh||{accel:20,maxSp:16,turn:2.6,weight:1};
   if(k.isPlayer){
     steer=(keys.left?-1:0)+(keys.right?1:0);
     throttle=keys.up?1:0; brake=keys.down?1:0; boost=keys.boost;
   } else {
-    var tgt=WP[(k.ai.wp+2)%WP.length];
-    var want=Math.atan2(tgt[1]-k.y,tgt[0]-k.x);
+    var tp=pointAtProg(k.prog+230);
+    var want=Math.atan2(tp[1]-k.y,tp[0]-k.x);
     var diff=((want-k.heading+Math.PI*3)%(Math.PI*2))-Math.PI;
-    steer=Math.max(-1,Math.min(1,diff*2.2));
+    steer=Math.max(-1,Math.min(1,diff*3));
     throttle=1;
     var player=karts[0];
     var gap=player.prog-k.prog;
-    k.ai.base+= (gap>400?0.24:gap<-400?-0.24:0)*dt;
-    k.ai.base=Math.max(10.5,Math.min(12.5,k.ai.base));
+    k.ai.base+=(gap>300?0.18:gap<-300?-0.18:0)*dt;
+    k.ai.base=Math.max(16.5,Math.min(19.2,k.ai.base));
   }
-  var maxSp=k.ai?k.ai.base:14;
-  if(boost&&k.nitro>0&&k.speed>1){ maxSp=19; k.nitro=Math.max(0,k.nitro-30*dt); }
-  if(throttle) k.speed+=14*dt;
-  if(brake) k.speed-=14*dt;
+  var maxSp=k.ai?k.ai.base:veh.maxSp;
+  var accel=k.ai?18:veh.accel;
+  if(boost&&k.nitro>0&&k.speed>1){ maxSp=26; k.nitro=Math.max(0,k.nitro-26*dt); }
+  if(throttle) k.speed+=accel*dt;
+  if(brake) k.speed-=accel*dt;
   var near=nearest(k.x,k.y);
   var offD=Math.hypot(k.x-near.px,k.y-near.py);
   var offTrack=offD>HALF-16;
-  k.speed*=Math.pow(offTrack?0.35:0.55,dt);
+  k.speed*=Math.pow(offTrack?0.42:0.62,dt);
   k.speed=Math.max(0,Math.min(maxSp,k.speed));
-  var turn=2.8*Math.min(1,k.speed/maxSp)*steer;
+  var turnRate=k.ai?3.0:veh.turn;
+  var turn=turnRate*Math.min(1,k.speed/maxSp)*steer;
   k.heading+=turn*dt;
   k.x+=Math.cos(k.heading)*k.speed*dt;
   k.y+=Math.sin(k.heading)*k.speed*dt;
-  // 赛道边界约束
   near=nearest(k.x,k.y);
   offD=Math.hypot(k.x-near.px,k.y-near.py);
   if(offD>HALF-16){
@@ -244,10 +298,6 @@ function updateKart(k,dt){
     if(k.lap>LAPS && !k.finished){ k.finished=true; k.finishTime=raceTime; }
   }
   k._side=sf;
-  if(!k.isPlayer){
-    if(near.i!==k.ai.wp && near.i=== (k.ai.wp+1)%WP.length) k.ai.wp=near.i;
-  }
-  // 金币
   if(k.isPlayer){
     COINS.forEach(function(c){
       if(!c.got && Math.hypot(c.x-k.x,c.y-k.y)<26){ c.got=true; k.coins++; }
@@ -255,6 +305,10 @@ function updateKart(k,dt){
     PADS.forEach(function(p){
       if(Math.hypot(p.x-k.x,p.y-k.y)<34){ k.nitro=Math.min(100,k.nitro+45); }
     });
+    if(boost&&k.nitro>0||k.speed>15){
+      var bx=k.x-Math.cos(k.heading)*16, by=k.y-Math.sin(k.heading)*16;
+      particles.push({x:bx,y:by,vx:-Math.cos(k.heading)*20+(Math.random()-0.5)*20,vy:-Math.sin(k.heading)*20+(Math.random()-0.5)*20,life:0.4,max:0.4,color:boost?"#ffc75f":"#9fb8ac"});
+    }
   }
 }
 
@@ -271,23 +325,33 @@ function kartCollide(){
 
 // ===== 渲染 =====
 function drawTrack(){
-  ctx.fillStyle="#101a13"; ctx.fillRect(0,0,WL,WH);
-  ctx.strokeStyle="#1b2a1f"; ctx.lineWidth=1;
+  ctx.fillStyle=PAL.bg; ctx.fillRect(0,0,WL,WH);
+  ctx.strokeStyle=PAL.grass; ctx.lineWidth=1;
   for(var gx=0;gx<WL;gx+=80){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,WH);ctx.stroke();}
   for(var gy=0;gy<WH;gy+=80){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(WL,gy);ctx.stroke();}
+  DECOR.forEach(function(d){
+    ctx.save(); ctx.translate(d.x,d.y); ctx.rotate(d.rot);
+    if(d.type==="tree"){
+      ctx.fillStyle="rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(2,3,10*d.s,7*d.s,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#1f3a26"; ctx.beginPath(); ctx.arc(0,0,10*d.s,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#2b4d33"; ctx.beginPath(); ctx.arc(-3,-3,5*d.s,0,Math.PI*2); ctx.fill();
+    } else {
+      ctx.fillStyle="rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(2,3,9*d.s,6*d.s,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#4a5550"; ctx.beginPath(); ctx.arc(0,0,8*d.s,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  });
   function strokePath(w,color){
     ctx.beginPath();
     WP.forEach(function(p,idx){ idx?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); });
     ctx.closePath();
     ctx.lineWidth=w; ctx.strokeStyle=color; ctx.lineJoin="round"; ctx.lineCap="round"; ctx.stroke();
   }
-  strokePath(HALF*2,"#2b322e");
-  strokePath(HALF*2-18,"#3d4540");
-  // 中线虚线
+  strokePath(HALF*2,PAL.edge);
+  strokePath(HALF*2-18,PAL.road);
   ctx.setLineDash([18,16]); ctx.strokeStyle="rgba(255,255,255,.18)"; ctx.lineWidth=3;
   ctx.beginPath(); WP.forEach(function(p,idx){ idx?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); }); ctx.closePath(); ctx.stroke();
   ctx.setLineDash([]);
-  // 起点格线
   var a=WP[0],b=WP[1],ang=Math.atan2(b[1]-a[1],b[0]-a[0]);
   ctx.save(); ctx.translate(a[0],a[1]); ctx.rotate(ang);
   for(var r=-HALF;r<HALF;r+=14){
@@ -295,13 +359,11 @@ function drawTrack(){
     ctx.fillRect(-6,r,12,14);
   }
   ctx.restore();
-  // 氮气板
   PADS.forEach(function(p){
     ctx.fillStyle="rgba(43,212,192,.28)";
     ctx.beginPath(); ctx.ellipse(p.x,p.y,26,16,0,0,Math.PI*2); ctx.fill();
     ctx.strokeStyle="rgba(43,212,192,.6)"; ctx.lineWidth=2; ctx.stroke();
   });
-  // 金币
   COINS.forEach(function(c){
     if(c.got) return;
     ctx.fillStyle="#ffc75f";
@@ -311,22 +373,22 @@ function drawTrack(){
 }
 
 function drawKart(k,time){
-  ctx.save(); ctx.translate(k.x,k.y); ctx.rotate(k.heading);
-  // 影子
-  ctx.fillStyle="rgba(0,0,0,.3)"; ctx.fillRect(-13,-9,26,18);
-  // 轮子
+  ctx.save(); ctx.translate(k.x,k.y);
+  ctx.fillStyle="rgba(0,0,0,.3)";
+  ctx.beginPath(); ctx.ellipse(3,5,13,9,0,0,Math.PI*2); ctx.fill();
+  ctx.rotate(k.heading);
   ctx.fillStyle="#151817";
   ctx.fillRect(-10,-12,8,5); ctx.fillRect(-10,7,8,5);
   ctx.fillRect(4,-12,8,5); ctx.fillRect(4,7,8,5);
-  // 车身
   var body=k.color;
   if(k.isPlayer&&rainbow){ body="hsl("+((time*120)%360)+",70%,60%)"; }
   ctx.fillStyle=body;
   roundRect(-13,-9,26,18,5); ctx.fill();
   ctx.fillStyle="rgba(255,255,255,.25)"; roundRect(-4,-6,8,12,3); ctx.fill();
+  ctx.fillStyle="#20302a"; ctx.beginPath(); ctx.arc(2,0,5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#d7f5e4"; ctx.beginPath(); ctx.arc(2,-1.5,2.4,0,Math.PI*2); ctx.fill();
   ctx.restore();
-  // 名牌
-  if(!k.isPlayer||k.isPlayer){
+  if(true){
     ctx.fillStyle="rgba(215,245,228,.85)";
     ctx.font="11px sans-serif"; ctx.textAlign="center";
     ctx.fillText(k.name,k.x,k.y-18);
@@ -360,7 +422,9 @@ requestAnimationFrame(frame);
     if(player.finished){ finishRace(); }
   }
 
-  // 相机
+  particles=particles.filter(function(p){ p.life-=dt; return p.life>0; });
+  particles.forEach(function(p){ p.x+=p.vx*dt; p.y+=p.vy*dt; });
+
   if(player){
     camX=Math.max(0,Math.min(WL-VW,player.x-VW/2));
     camY=Math.max(0,Math.min(WH-VH,player.y-VH/2));
@@ -368,10 +432,15 @@ requestAnimationFrame(frame);
   }
   ctx.save(); ctx.translate(-camX,-camY);
   drawTrack();
+  particles.forEach(function(p){
+    ctx.globalAlpha=Math.max(0,p.life/p.max);
+    ctx.fillStyle=p.color;
+    ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill();
+  });
+  ctx.globalAlpha=1;
   karts.forEach(function(k){ drawKart(k,ts/1000); });
   ctx.restore();
 
-  // HUD
   if(player){
     document.getElementById("hudLap").textContent=Math.min(LAPS,player.lap)+"/"+LAPS;
     document.getElementById("hudRank").textContent=rankOf(player)+"/"+karts.length;
@@ -380,6 +449,19 @@ requestAnimationFrame(frame);
     document.getElementById("nitroBar").style.width=player.nitro+"%";
     document.getElementById("hudSpeed").textContent=Math.round(player.speed*30);
   }
+
+  if(player&&player.speed>15){
+    var a=Math.min(.25,(player.speed-15)/20);
+    ctx.strokeStyle="rgba(215,245,228,"+a+")"; ctx.lineWidth=2;
+    for(var s=0;s<6;s++){
+      var ang=s*Math.PI/3+ts*0.0002;
+      var r1=Math.min(VW,VH)*0.32, r2=r1+26;
+      ctx.beginPath();
+      ctx.moveTo(VW/2+Math.cos(ang)*r1,VH/2+Math.sin(ang)*r1);
+      ctx.lineTo(VW/2+Math.cos(ang)*r2,VH/2+Math.sin(ang)*r2);
+      ctx.stroke();
+    }
+  }
 }
 
 function finishRace(){
@@ -387,7 +469,6 @@ function finishRace(){
   var player=karts[0], rank=rankOf(player);
   var bonus=rank===1?15:rank===2?10:rank===3?6:3;
   var earned=bonus+player.coins;
-  // 写入档案
   if(sessionUser){
     var all=loadAll();
     if(all[sessionUser]){
@@ -398,6 +479,35 @@ function finishRace(){
   document.getElementById("finRank").textContent="第 "+rank+" 名";
   document.getElementById("finDetail").textContent="用时 "+fmt(player.finishTime||raceTime)+"，金币 "+player.coins+"，结算 +"+earned+" gay币";
   document.getElementById("finishOverlay").classList.remove("hidden");
+}
+
+// ===== 选车选图 UI =====
+function statBar(v){
+  var sp=Math.round(v.maxSp/22*100), ac=Math.round(v.accel/24*100), tn=Math.round(v.turn/3.9*100);
+  return '<div class="stat">'
+    +'<i><b style="width:'+sp+'%"></b></i>'
+    +'<i><b style="width:'+ac+'%"></b></i>'
+    +'<i><b style="width:'+tn+'%"></b></i></div>';
+}
+function renderSetup(){
+  var kg=document.getElementById("kartGrid");
+  kg.innerHTML="";
+  KARTS.forEach(function(v,i){
+    var d=document.createElement("div");
+    d.className="opt"+(i===selKart?" sel":"");
+    d.innerHTML='<div class="name">'+v.name+'</div><div class="desc">'+v.desc+'</div>'+statBar(v);
+    d.addEventListener("click",function(){ selKart=i; renderSetup(); });
+    kg.appendChild(d);
+  });
+  var tg=document.getElementById("trackGrid");
+  tg.innerHTML="";
+  TRACKS.forEach(function(t,i){
+    var d=document.createElement("div");
+    d.className="opt"+(i===selTrack?" sel":"");
+    d.innerHTML='<div class="name">'+t.name+'</div><div class="desc">'+WP.length+' 段弯道</div>';
+    d.addEventListener("click",function(){ selTrack=i; buildTrack(i); renderSetup(); });
+    tg.appendChild(d);
+  });
 }
 
 document.getElementById("startBtn").addEventListener("click",function(){
@@ -412,6 +522,8 @@ function back(){ location.href="index.html?user="+encodeURIComponent(sessionUser
 document.getElementById("backBtn").addEventListener("click",back);
 document.getElementById("backBtn2").addEventListener("click",back);
 
+buildTrack(selTrack);
+renderSetup();
 resetRace();
 state="idle";
 requestAnimationFrame(frame);
