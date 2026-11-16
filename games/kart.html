@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>卡丁赛车</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='32' height='32' rx='7' fill='%230d1412'/%3E%3Ccircle cx='12' cy='12' r='7' fill='%233ddc84'/%3E%3C/svg%3E">
+<style>
+  :root{--bg:#070b0a;--panel:#0d1412;--line:#1c2a24;--green:#3ddc84;--teal:#2bd4c0;--text:#d7f5e4;--muted:#7f9a8d;--amber:#ffc75f;--danger:#ff5d6c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;overflow:hidden}
+  #wrap{position:fixed;inset:0}
+  canvas{display:block;width:100%;height:100%}
+  .hud{position:fixed;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;gap:10px;pointer-events:none;z-index:5}
+  .hud-card{background:rgba(10,16,13,.82);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.7}
+  .hud-card b{color:var(--green)}
+  .hud-right{text-align:right}
+  .bar{width:120px;height:8px;background:#1c2a24;border-radius:5px;overflow:hidden;margin-top:4px}
+  .bar>i{display:block;height:100%;background:var(--teal);border-radius:5px}
+  .overlay{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:rgba(5,9,8,.7);padding:16px}
+  .overlay.hidden{display:none}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 24px;max-width:420px;width:100%;text-align:center}
+  .panel h1{font-size:22px;margin-bottom:8px}
+  .panel p{color:var(--muted);font-size:13px;line-height:1.8;margin-bottom:16px}
+  .panel .rank{font-size:30px;font-weight:800;color:var(--amber);margin:6px 0}
+  .btn{height:44px;padding:0 22px;border:none;border-radius:10px;background:var(--green);color:#06231a;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);margin-left:8px}
+  .touch{position:fixed;bottom:18px;left:0;right:0;display:none;justify-content:space-between;padding:0 18px;z-index:6;pointer-events:none}
+  .touch .cluster{display:flex;gap:12px;pointer-events:auto}
+  .tbtn{width:60px;height:60px;border-radius:14px;background:rgba(10,16,13,.8);border:1px solid var(--line);color:var(--text);font-size:20px;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none}
+  .tbtn.on{background:rgba(61,220,132,.25);border-color:var(--green)}
+  .tbtn.big{width:72px;height:60px}
+  @media (pointer:coarse){.touch{display:flex}}
+  .count{position:fixed;top:38%;left:50%;transform:translateX(-50%);font-size:64px;font-weight:800;color:var(--green);z-index:7;pointer-events:none}
+  .back{position:fixed;top:12px;right:12px;z-index:8}
+  @media(max-width:520px){.hud-card{font-size:12px;padding:8px 10px}.bar{width:90px}}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="cv"></canvas></div>
+
+<div class="hud">
+  <div class="hud-card">
+    圈数 <b id="hudLap">1/3</b>　名次 <b id="hudRank">1/4</b><br>
+    金币 <b id="hudCoin">0</b>　用时 <b id="hudTime">0:00</b>
+  </div>
+  <div class="hud-card hud-right">
+    氮气
+    <div class="bar"><i id="nitroBar" style="width:100%"></i></div>
+    速度 <b id="hudSpeed">0</b>
+  </div>
+</div>
+
+<div class="touch">
+  <div class="cluster">
+    <div class="tbtn" id="tLeft">◀</div>
+    <div class="tbtn" id="tRight">▶</div>
+  </div>
+  <div class="cluster">
+    <div class="tbtn big" id="tBoost">🔥</div>
+    <div class="tbtn big" id="tGas">▲</div>
+  </div>
+</div>
+
+<div class="count hidden" id="count"></div>
+
+<div class="overlay" id="startOverlay">
+  <div class="panel">
+    <h1>卡丁赛车</h1>
+    <p>俯视 2D 竞速，三圈定名次。<br>W/↑ 油门，S/↓ 刹车，A/D 或 ←/→ 转向，空格氮气。<br>吃金币加分，踩青色板回氮气。</p>
+    <button class="btn" id="startBtn">开始比赛</button>
+    <button class="btn ghost" id="backBtn">返回游戏库</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="finishOverlay">
+  <div class="panel">
+    <h1>比赛结束</h1>
+    <div class="rank" id="finRank">第 1 名</div>
+    <p id="finDetail"></p>
+    <button class="btn" id="againBtn">再来一局</button>
+    <button class="btn ghost" id="backBtn2">返回游戏库</button>
+  </div>
+</div>
+
+<script>
+(function(){
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var VW=0,VH=0,DPR=1;
+function resize(){
+  DPR=Math.min(2,window.devicePixelRatio||1);
+  VW=window.innerWidth; VH=window.innerHeight;
+  cv.width=VW*DPR; cv.height=VH*DPR;
+  cv.style.width=VW+"px"; cv.style.height=VH+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener("resize",resize); resize();
+
+// ===== 档案读取 =====
+var sessionUser=localStorage.getItem("gstation_session")||"";
+var qp=new URLSearchParams(location.search).get("user");
+if(qp) sessionUser=qp;
+function loadAll(){ try{return JSON.parse(localStorage.getItem("gstation_profiles")||"{}");}catch(e){return{};} }
+var allProf=loadAll();
+var myProf=sessionUser?allProf[sessionUser]:null;
+var hasNitro=!!(myProf&&myProf.perks&&myProf.perks.nitro);
+var rainbow=!!(myProf&&myProf.perks&&myProf.skinRainbow);
+
+// ===== 赛道 =====
+var WP=[[260,620],[520,300],[900,210],[1280,280],[1560,520],[1480,820],[1120,960],[640,920],[320,820]];
+var HALF=95, WL=1800, WH=1100;
+var SEG=[], CUM=[0], TOTAL=0;
+
+for(var i=0;i<WP.length;i++){
+  var a=WP[i],b=WP[(i+1)%WP.length];
+  var len=Math.hypot(b[0]-a[0],b[1]-a[1]);
+  SEG.push(len); CUM.push(CUM[i]+len); TOTAL+=len;
+}
+F=WP[0]; D0=[(WP[1][0]-WP[0][0])/SEG[0],(WP[1][1]-WP[0][1])/SEG[0]];
+function nearest(x,y){
+  var best={i:0,f:0,d:1e18,px:WP[0][0],py:WP[0][1]};
+  for(var i=0;i<WP.length;i++){
+    var a=WP[i],b=WP[(i+1)%WP.length];
+    var vx=b[0]-a[0],vy=b[1]-a[1],l2=vx*vx+vy*vy;
+    var t=l2?((x-a[0])*vx+(y-a[1])*vy)/l2:0;
+    t=Math.max(0,Math.min(1,t));
+    var px=a[0]+vx*t,py=a[1]+vy*t,d=(x-px)*(x-px)+(y-py)*(y-py);
+    if(d<best.d) best={i:i,f:t,d:d,px:px,py:py};
+  }
+  return best;
+}
+function progressAt(n){ return CUM[n.i]+n.f*SEG[n.i]; }
+
+// 金币与氮气板
+function pointAt(f,off){
+  var d=f*TOTAL, i=0;
+  while(i<SEG.length-1 && CUM[i+1]<d) i++;
+  var t=(d-CUM[i])/SEG[i], a=WP[i], b=WP[(i+1)%WP.length];
+  var x=a[0]+(b[0]-a[0])*t, y=a[1]+(b[1]-a[1])*t;
+  var nx=-(b[1]-a[1])/SEG[i], ny=(b[0]-a[0])/SEG[i];
+  return [x+nx*off, y+ny*off];
+}
+var COINS=[0.1,0.24,0.38,0.52,0.66,0.8,0.93].map(function(f,k){
+  var p=pointAt(f,k%2?34:-34); return {x:p[0],y:p[1],got:false};
+});
+var PADS=[0.2,0.72].map(function(f){ var p=pointAt(f,0); return {x:p[0],y:p[1]}; });
+
+// ===== 车辆 =====
+var LAPS=3;
+var AI_DEF=[
+  {name:"红蜂",color:"#ff5d6c",speed:11},
+  {name:"蓝隼",color:"#5d9bff",speed:11.8},
+  {name:"紫电",color:"#b07bff",speed:10.5}
+];
+function makeKart(x,y,heading,color,name,isPlayer,ai){
+  return {x:x,y:y,heading:heading,speed:0,color:color,name:name,isPlayer:!!isPlayer,
+    lap:1,prog:0,prevProg:0,side:0,ai:ai||null,wp:0,finished:false,finishTime:0,
+    nitro:hasNitro&&isPlayer?100:60,coins:0,off:0,_side:0,crossed:false};
+}
+var karts=[];
+function resetRace(){
+  karts=[];
+  var p0=WP[0], p1=WP[1];
+  var ang=Math.atan2(p1[1]-p0[1],p1[0]-p0[0]);
+  karts.push(makeKart(p0[0],p0[1]+30,ang,"#3ddc84","你",true,null));
+  AI_DEF.forEach(function(d,k){
+    var off=-40-k*26;
+    karts.push(makeKart(p0[0],p0[1]+off,ang,d.color,d.name,false,{wp:1,base:d.speed}));
+  });
+  COINS.forEach(function(c){c.got=false;});
+  state="countdown"; countT=3.0; raceTime=0;
+}
+
+// ===== 输入 =====
+var keys={};
+var KEYMAP={ArrowUp:"up",KeyW:"up",ArrowDown:"down",KeyS:"down",ArrowLeft:"left",KeyA:"left",ArrowRight:"right",KeyD:"right",Space:"boost",ShiftLeft:"boost",ShiftRight:"boost"};
+window.addEventListener("keydown",function(e){
+  var k=KEYMAP[e.code]; if(k){keys[k]=true; e.preventDefault();}
+});
+window.addEventListener("keyup",function(e){
+  var k=KEYMAP[e.code]; if(k){keys[k]=false; e.preventDefault();}
+});
+function bindTouch(id,key){
+  var el=document.getElementById(id);
+  var on=function(e){e.preventDefault();keys[key]=true;el.classList.add("on");};
+  var off=function(e){e.preventDefault();keys[key]=false;el.classList.remove("on");};
+  el.addEventListener("pointerdown",on); el.addEventListener("pointerup",off);
+  el.addEventListener("pointerleave",off); el.addEventListener("pointercancel",off);
+}
+bindTouch("tLeft","left"); bindTouch("tRight","right"); bindTouch("tGas","up"); bindTouch("tBoost","boost");
+
+// ===== 状态 =====
+var state="idle", countT=0, raceTime=0, last=0, camX=0, camY=0;
+
+function rankOf(k){
+  var sorted=karts.slice().sort(function(a,b){
+    if(b.lap!==a.lap) return b.lap-a.lap;
+    return b.prog-a.prog;
+  });
+  return sorted.indexOf(k)+1;
+}
+
+function updateKart(k,dt){
+  var steer=0,throttle=0,brake=0,boost=false;
+  if(k.isPlayer){
+    steer=(keys.left?-1:0)+(keys.right?1:0);
+    throttle=keys.up?1:0; brake=keys.down?1:0; boost=keys.boost;
+  } else {
+    var tgt=WP[(k.ai.wp+2)%WP.length];
+    var want=Math.atan2(tgt[1]-k.y,tgt[0]-k.x);
+    var diff=((want-k.heading+Math.PI*3)%(Math.PI*2))-Math.PI;
+    steer=Math.max(-1,Math.min(1,diff*2.2));
+    throttle=1;
+    var player=karts[0];
+    var gap=player.prog-k.prog;
+    k.ai.base+= (gap>400?0.24:gap<-400?-0.24:0)*dt;
+    k.ai.base=Math.max(10.5,Math.min(12.5,k.ai.base));
+  }
+  var maxSp=k.ai?k.ai.base:14;
+  if(boost&&k.nitro>0&&k.speed>1){ maxSp=19; k.nitro=Math.max(0,k.nitro-30*dt); }
+  if(throttle) k.speed+=14*dt;
+  if(brake) k.speed-=14*dt;
+  var near=nearest(k.x,k.y);
+  var offD=Math.hypot(k.x-near.px,k.y-near.py);
+  var offTrack=offD>HALF-16;
+  k.speed*=Math.pow(offTrack?0.35:0.55,dt);
+  k.speed=Math.max(0,Math.min(maxSp,k.speed));
+  var turn=2.8*Math.min(1,k.speed/maxSp)*steer;
+  k.heading+=turn*dt;
+  k.x+=Math.cos(k.heading)*k.speed*dt;
+  k.y+=Math.sin(k.heading)*k.speed*dt;
+  // 赛道边界约束
+  near=nearest(k.x,k.y);
+  offD=Math.hypot(k.x-near.px,k.y-near.py);
+  if(offD>HALF-16){
+    var nx=(k.x-near.px)/offD, ny=(k.y-near.py)/offD;
+    k.x=near.px+nx*(HALF-16); k.y=near.py+ny*(HALF-16);
+  }
+  k.prevProg=k.prog; k.prog=progressAt(near);
+  var sf=(k.x-F[0])*D0[0]+(k.y-F[1])*D0[1];
+  if(!k.crossed){ if(sf>=0) k.crossed=true; }
+  else if(k._side<0 && sf>=0){
+    k.lap++;
+    if(k.lap>LAPS && !k.finished){ k.finished=true; k.finishTime=raceTime; }
+  }
+  k._side=sf;
+  if(!k.isPlayer){
+    if(near.i!==k.ai.wp && near.i=== (k.ai.wp+1)%WP.length) k.ai.wp=near.i;
+  }
+  // 金币
+  if(k.isPlayer){
+    COINS.forEach(function(c){
+      if(!c.got && Math.hypot(c.x-k.x,c.y-k.y)<26){ c.got=true; k.coins++; }
+    });
+    PADS.forEach(function(p){
+      if(Math.hypot(p.x-k.x,p.y-k.y)<34){ k.nitro=Math.min(100,k.nitro+45); }
+    });
+  }
+}
+
+function kartCollide(){
+  for(var i=0;i<karts.length;i++) for(var j=i+1;j<karts.length;j++){
+    var a=karts[i],b=karts[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+    if(d<30&&d>0.01){
+      var push=(30-d)/2;
+      var nx=dx/d,ny=dy/d;
+      a.x-=nx*push; a.y-=ny*push; b.x+=nx*push; b.y+=ny*push;
+    }
+  }
+}
+
+// ===== 渲染 =====
+function drawTrack(){
+  ctx.fillStyle="#101a13"; ctx.fillRect(0,0,WL,WH);
+  ctx.strokeStyle="#1b2a1f"; ctx.lineWidth=1;
+  for(var gx=0;gx<WL;gx+=80){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,WH);ctx.stroke();}
+  for(var gy=0;gy<WH;gy+=80){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(WL,gy);ctx.stroke();}
+  function strokePath(w,color){
+    ctx.beginPath();
+    WP.forEach(function(p,idx){ idx?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); });
+    ctx.closePath();
+    ctx.lineWidth=w; ctx.strokeStyle=color; ctx.lineJoin="round"; ctx.lineCap="round"; ctx.stroke();
+  }
+  strokePath(HALF*2,"#2b322e");
+  strokePath(HALF*2-18,"#3d4540");
+  // 中线虚线
+  ctx.setLineDash([18,16]); ctx.strokeStyle="rgba(255,255,255,.18)"; ctx.lineWidth=3;
+  ctx.beginPath(); WP.forEach(function(p,idx){ idx?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); }); ctx.closePath(); ctx.stroke();
+  ctx.setLineDash([]);
+  // 起点格线
+  var a=WP[0],b=WP[1],ang=Math.atan2(b[1]-a[1],b[0]-a[0]);
+  ctx.save(); ctx.translate(a[0],a[1]); ctx.rotate(ang);
+  for(var r=-HALF;r<HALF;r+=14){
+    ctx.fillStyle=((r/14)%2===0)?"#eee":"#222";
+    ctx.fillRect(-6,r,12,14);
+  }
+  ctx.restore();
+  // 氮气板
+  PADS.forEach(function(p){
+    ctx.fillStyle="rgba(43,212,192,.28)";
+    ctx.beginPath(); ctx.ellipse(p.x,p.y,26,16,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle="rgba(43,212,192,.6)"; ctx.lineWidth=2; ctx.stroke();
+  });
+  // 金币
+  COINS.forEach(function(c){
+    if(c.got) return;
+    ctx.fillStyle="#ffc75f";
+    ctx.beginPath(); ctx.arc(c.x,c.y,9,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#ffe6a8"; ctx.beginPath(); ctx.arc(c.x-2,c.y-2,3,0,Math.PI*2); ctx.fill();
+  });
+}
+
+function drawKart(k,time){
+  ctx.save(); ctx.translate(k.x,k.y); ctx.rotate(k.heading);
+  // 影子
+  ctx.fillStyle="rgba(0,0,0,.3)"; ctx.fillRect(-13,-9,26,18);
+  // 轮子
+  ctx.fillStyle="#151817";
+  ctx.fillRect(-10,-12,8,5); ctx.fillRect(-10,7,8,5);
+  ctx.fillRect(4,-12,8,5); ctx.fillRect(4,7,8,5);
+  // 车身
+  var body=k.color;
+  if(k.isPlayer&&rainbow){ body="hsl("+((time*120)%360)+",70%,60%)"; }
+  ctx.fillStyle=body;
+  roundRect(-13,-9,26,18,5); ctx.fill();
+  ctx.fillStyle="rgba(255,255,255,.25)"; roundRect(-4,-6,8,12,3); ctx.fill();
+  ctx.restore();
+  // 名牌
+  if(!k.isPlayer||k.isPlayer){
+    ctx.fillStyle="rgba(215,245,228,.85)";
+    ctx.font="11px sans-serif"; ctx.textAlign="center";
+    ctx.fillText(k.name,k.x,k.y-18);
+  }
+}
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+function fmt(t){
+  var m=Math.floor(t/60), s=Math.floor(t%60);
+  return m+":"+(s<10?"0":"")+s;
+}
+
+function frame(ts){
+requestAnimationFrame(frame);
+  var dt=Math.min(0.05,(ts-last)/1000||0.016); last=ts;
+  var player=karts[0];
+
+  if(state==="countdown"){
+    countT-=dt;
+    var cEl=document.getElementById("count");
+    if(countT<=0){ state="race"; cEl.classList.add("hidden"); }
+    else { cEl.classList.remove("hidden"); cEl.textContent=Math.ceil(countT); }
+  } else if(state==="race"){
+    raceTime+=dt;
+    karts.forEach(function(k){ updateKart(k,dt); });
+    kartCollide();
+    if(player.finished){ finishRace(); }
+  }
+
+  // 相机
+  if(player){
+    camX=Math.max(0,Math.min(WL-VW,player.x-VW/2));
+    camY=Math.max(0,Math.min(WH-VH,player.y-VH/2));
+    if(WL<VW) camX=(WL-VW)/2; if(WH<VH) camY=(WH-VH)/2;
+  }
+  ctx.save(); ctx.translate(-camX,-camY);
+  drawTrack();
+  karts.forEach(function(k){ drawKart(k,ts/1000); });
+  ctx.restore();
+
+  // HUD
+  if(player){
+    document.getElementById("hudLap").textContent=Math.min(LAPS,player.lap)+"/"+LAPS;
+    document.getElementById("hudRank").textContent=rankOf(player)+"/"+karts.length;
+    document.getElementById("hudCoin").textContent=player.coins;
+    document.getElementById("hudTime").textContent=fmt(raceTime);
+    document.getElementById("nitroBar").style.width=player.nitro+"%";
+    document.getElementById("hudSpeed").textContent=Math.round(player.speed*30);
+  }
+}
+
+function finishRace(){
+  state="finished";
+  var player=karts[0], rank=rankOf(player);
+  var bonus=rank===1?15:rank===2?10:rank===3?6:3;
+  var earned=bonus+player.coins;
+  // 写入档案
+  if(sessionUser){
+    var all=loadAll();
+    if(all[sessionUser]){
+      all[sessionUser].coins=(all[sessionUser].coins||0)+earned;
+      localStorage.setItem("gstation_profiles",JSON.stringify(all));
+    }
+  }
+  document.getElementById("finRank").textContent="第 "+rank+" 名";
+  document.getElementById("finDetail").textContent="用时 "+fmt(player.finishTime||raceTime)+"，金币 "+player.coins+"，结算 +"+earned+" gay币";
+  document.getElementById("finishOverlay").classList.remove("hidden");
+}
+
+document.getElementById("startBtn").addEventListener("click",function(){
+  resetRace();
+  document.getElementById("startOverlay").classList.add("hidden");
+});
+document.getElementById("againBtn").addEventListener("click",function(){
+  document.getElementById("finishOverlay").classList.add("hidden");
+  resetRace();
+});
+function back(){ location.href="index.html?user="+encodeURIComponent(sessionUser||""); }
+document.getElementById("backBtn").addEventListener("click",back);
+document.getElementById("backBtn2").addEventListener("click",back);
+
+resetRace();
+state="idle";
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

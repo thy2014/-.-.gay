@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>游戏站</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%233ddc84' d='M7 6h10a4 4 0 0 1 4 4v5a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-5a4 4 0 0 1 4-4z'/%3E%3Ccircle cx='9' cy='12.5' r='1.4' fill='%23070b0a'/%3E%3Ccircle cx='15' cy='12.5' r='1.4' fill='%23070b0a'/%3E%3Crect x='8.4' y='8' width='1.4' height='2' rx='.7' fill='%23070b0a'/%3E%3Crect x='14.2' y='8' width='1.4' height='2' rx='.7' fill='%23070b0a'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='32' height='32' rx='7' fill='%230d1412'/%3E%3Crect x='7' y='8' width='18' height='7' rx='2' fill='%233ddc84'/%3E%3Crect x='7' y='17' width='8' height='8' rx='2' fill='%232bd4c0'/%3E%3Crect x='17' y='17' width='8' height='8' rx='2' fill='%23e8c06a'/%3E%3C/svg%3E">
 <style>
   :root{
     --bg:#070b0a; --panel:#0d1412; --panel2:#111a17; --line:#1c2a24;
     --green:#3ddc84; --teal:#2bd4c0; --text:#d7f5e4; --muted:#7f9a8d;
-    --danger:#ff5d6c; --amber:#ffc75f;
+    --danger:#ff5d6c; --amber:#ffc75f; --gold:#ffd76a;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
@@ -71,20 +71,33 @@
 
   /* ============ 顶部栏 ============ */
   .topbar{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:14px 22px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    padding:12px 22px; border-bottom:1px solid var(--line);
   }
   .brand{display:flex; align-items:center; gap:10px; font-size:18px; font-weight:700; letter-spacing:.5px}
   .brand svg{width:26px;height:26px}
   .brand span{background:linear-gradient(90deg,var(--green),var(--teal)); -webkit-background-clip:text; background-clip:text; color:transparent}
-  .userbox{display:flex; align-items:center; gap:12px}
+  .userbox{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
   .who{font-size:14px; color:var(--text)}
   .who b{color:var(--green)}
+  .coin-chip{
+    display:inline-flex; align-items:center; gap:5px; font-size:13px;
+    background:var(--panel2); border:1px solid var(--line); border-radius:20px; padding:5px 11px;
+  }
+  .coin-chip .ic{font-size:13px}
+  .coin-chip.gold{color:var(--gold)}
+  .coin-chip.teal{color:var(--teal)}
+  .title-badge{
+    display:inline-flex; align-items:center; font-size:12px; font-weight:700;
+    border:1px solid currentColor; border-radius:20px; padding:3px 10px;
+  }
   .btn-mini{
     height:34px; padding:0 14px; font-size:13px; border-radius:8px; cursor:pointer;
-    background:transparent; border:1px solid var(--line); color:var(--muted);
+    background:transparent; border:1px solid var(--line); color:var(--muted); font-family:inherit;
   }
-  .btn-mini:hover{border-color:var(--danger); color:var(--danger)}
+  .btn-mini:hover{border-color:var(--green); color:var(--green)}
+  .btn-mini.danger:hover{border-color:var(--danger); color:var(--danger)}
+  .btn-mini:disabled{opacity:.4; cursor:not-allowed}
 
   /* ============ 主体 ============ */
   .main{flex:1; overflow-y:auto; padding:26px 22px 40px}
@@ -123,6 +136,45 @@
   .game-desc{font-size:13px; color:var(--muted); line-height:1.6; flex:1}
   .empty{color:var(--muted); text-align:center; padding:60px 0; font-size:14px}
   footer{padding:12px 22px; border-top:1px solid var(--line); color:#4c6157; font-size:12px; text-align:center}
+
+  /* ============ 弹窗 ============ */
+  .modal{position:fixed; inset:0; z-index:45; background:rgba(4,8,6,.72); display:flex; align-items:center; justify-content:center; padding:14px}
+  .modal.hidden{display:none}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px; max-width:560px; width:100%; max-height:90vh; overflow:auto}
+  .panel h2{font-size:16px; letter-spacing:.08em; color:var(--green); margin-bottom:12px}
+  .panel-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px}
+  .panel-head h2{margin-bottom:0}
+  .x-btn{background:transparent; border:none; color:var(--muted); font-size:20px; cursor:pointer; font-family:inherit}
+  .x-btn:hover{color:var(--text)}
+  .shop-bal{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px}
+  .ex-row{display:flex; gap:8px; align-items:center; flex-wrap:wrap; background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:14px}
+  .ex-row .spacer{flex:1}
+  .ex-btn{height:38px; padding:0 14px; border-radius:9px; border:1px solid var(--line); background:var(--panel2); color:var(--text); cursor:pointer; font-size:13px; font-family:inherit}
+  .ex-btn:hover{border-color:var(--teal); color:var(--teal)}
+  .ex-btn:disabled{opacity:.4; cursor:not-allowed}
+  .prod-list{display:flex; flex-direction:column; gap:10px}
+  .prod{display:flex; align-items:center; gap:12px; background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:12px}
+  .prod .p-ic{width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex:none}
+  .prod .p-info{flex:1; min-width:0}
+  .prod .p-name{font-size:14px; font-weight:700}
+  .prod .p-desc{font-size:12px; color:var(--muted); line-height:1.5; margin-top:2px}
+  .prod .p-cost{font-size:13px; color:var(--teal); white-space:nowrap}
+  .prod .p-btn{height:36px; padding:0 14px; border-radius:9px; border:none; background:var(--green); color:#06231a; font-weight:700; cursor:pointer; font-size:13px; font-family:inherit; white-space:nowrap}
+  .prod .p-btn:disabled{background:#223028; color:var(--muted); cursor:not-allowed}
+  .prod .p-owned{font-size:12px; color:var(--muted); white-space:nowrap}
+  .title-row{display:flex; align-items:center; gap:12px; background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px}
+  .title-row .t-name{font-size:14px; font-weight:700}
+  .title-row .t-desc{font-size:12px; color:var(--muted); margin-top:2px}
+  .title-row .t-info{flex:1}
+  .t-btn{height:36px; padding:0 14px; border-radius:9px; border:1px solid var(--line); background:transparent; color:var(--text); cursor:pointer; font-size:13px; font-family:inherit}
+  .t-btn.active{background:var(--green); color:#06231a; border-color:var(--green)}
+  .t-btn:disabled{opacity:.4; cursor:not-allowed}
+  .toast{position:fixed; top:64px; left:50%; transform:translateX(-50%); z-index:60; background:rgba(10,16,13,.92); border:1px solid var(--line); border-radius:10px; padding:10px 16px; font-size:13px; opacity:0; transition:opacity .25s; pointer-events:none}
+  .toast.show{opacity:1}
+  @media (max-width:520px){
+    .topbar{padding:10px 14px}
+    .main{padding:18px 14px 30px}
+  }
 </style>
 </head>
 <body>
@@ -135,8 +187,14 @@
       <span>游戏站</span>
     </div>
     <div class="userbox">
+      <span class="coin-chip gold"><span class="ic">🪙</span><span id="coinVal">0</span> gay币</span>
+      <span class="coin-chip teal"><span class="ic">💎</span><span id="pointVal">0</span> gay值</span>
+      <span class="title-badge" id="titleBadge"></span>
       <div class="who">已登录：<b id="who"></b></div>
-      <button class="btn-mini" id="logoutBtn">退出</button>
+      <button class="btn-mini" id="checkinBtn">签到</button>
+      <button class="btn-mini" id="titleBtn">称号</button>
+      <button class="btn-mini" id="shopBtn">商城</button>
+      <button class="btn-mini danger" id="logoutBtn">退出</button>
     </div>
   </header>
 
@@ -146,8 +204,36 @@
     <div class="games" id="games"></div>
   </main>
 
-  <footer>本地游戏站 · 支持 GitHub Pages 部署</footer>
+  <footer>本地游戏站 · 进度与币值保存在本机浏览器</footer>
 </div>
+
+<!-- 称号弹窗 -->
+<div class="modal hidden" id="titleModal">
+  <div class="panel">
+    <div class="panel-head"><h2>我的称号</h2><button class="x-btn" data-close="titleModal">×</button></div>
+    <div id="titleList"></div>
+  </div>
+</div>
+
+<!-- 商城弹窗 -->
+<div class="modal hidden" id="shopModal">
+  <div class="panel">
+    <div class="panel-head"><h2>兑换商城</h2><button class="x-btn" data-close="shopModal">×</button></div>
+    <div class="shop-bal">
+      <span class="coin-chip gold">🪙 <span id="shopCoins">0</span> gay币</span>
+      <span class="coin-chip teal">💎 <span id="shopPoints">0</span> gay值</span>
+    </div>
+    <div class="ex-row">
+      <span style="font-size:13px;color:var(--muted)">gay币 10 枚 = 1 gay值</span>
+      <span class="spacer"></span>
+      <button class="ex-btn" id="ex1">换 1 值（10币）</button>
+      <button class="ex-btn" id="ex5">换 5 值（50币）</button>
+    </div>
+    <div class="prod-list" id="prodList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <!-- 登录遮罩 -->
 <div class="login-mask" id="loginMask">
@@ -166,7 +252,7 @@
 </div>
 
 <script>
-// ===== 内置账号（登录即可，无注册）=====
+// ===== 内置账号（登录即可）=====
 var ACCOUNTS = {
   "thy2014": "thy20141005",
   "GHBQU":   "GHBQU",
@@ -175,23 +261,25 @@ var ACCOUNTS = {
   "66":      "66"
 };
 
-// ===== 默认游戏列表（页面内置兜底，保证 file:// 直开也能显示）=====
+// ===== 默认游戏列表（页面内置兜底）=====
 var DEFAULT_GAMES = [
   { id:"roguelike", title:"割草肉鸽", desc:"类吸血鬼幸存者的割草肉鸽游戏：自动攻击、升级三选一卡牌强化技能，血量与经验值成长，进度可存档。", file:"games/roguelike.html", tag:"肉鸽" },
-  { id:"mc-id-check", title:"请出示你的证件", desc:"我的世界风格像素门卫小游戏：核对访客证件，按每日规定放行或拒绝，三天通关联赛，失误三次被撤职。", file:"games/mc-id-check.html", tag:"像素" },
-  { id:"geometry-survivor", title:"几何幸存者", desc:"CCW 的几何幸存者：控制几何图形在几何怪海中割草生存，越久越强。", file:"games/Geometry-Survivor.html", tag:"幸存者" },
+  { id:"kart", title:"卡丁赛车", desc:"俯视 2D 卡丁车竞速：三条 AI 对手同场竞技，三圈定名次，氮气板加速，键盘与触屏均可操作。", file:"games/kart.html", tag:"竞速" },
+  { id:"terraria", title:"方块世界", desc:"泰拉瑞亚式 2D 开放世界：程序化生成矿洞与矿脉，挖掘放置、工具合成与熔炉冶炼，昼夜刷怪战斗，自动存档。", file:"games/terraria.html", tag:"开放世界" },
   { id:"2048", title:"2048", desc:"经典数字合成游戏：合并相同数字冲向 2048，支持键盘与触屏，高分自动保存。", file:"games/2048.html", tag:"益智" },
   { id:"snake", title:"贪吃蛇", desc:"经典贪吃蛇：控制小蛇吃食物变长，别撞墙别咬自己，高分自动保存。", file:"games/snake.html", tag:"经典" }
 ];
 
 var SESSION_KEY = "gstation_session";
+var PROFILE_KEY = "gstation_profiles";
+var PENDING_KEY = "gstation_pending_session";
 var user = localStorage.getItem(SESSION_KEY) || "";
 
-// ===== GitHub 仓库配置（用于自动扫描 games/ 文件夹里的游戏，改这里）=====
+// ===== GitHub 仓库配置 =====
 var GH = {
-  owner: "thy2014",            // 你的 GitHub 用户名
-  repo:  "-.-.gay",            // 仓库名
-  api:   "https://api.github.com"  // 域名，境内访问不畅时可换成加速代理
+  owner: "thy2014",
+  repo:  "-.-.gay",
+  api:   "https://api.github.com"
 };
 
 var $ = function(id){ return document.getElementById(id); };
@@ -199,6 +287,55 @@ var $ = function(id){ return document.getElementById(id); };
 var USERS_KEY = "gstation_users";
 var INVITE_CODE = "#include <bits/stdc++.h>";
 var mode = "login";
+
+/* ============ 账号档案（币值 / 称号 / 商城）============ */
+var TITLES = {
+  newbie: {name:"新手玩家", color:"#3ddc84", desc:"登录即可领取的默认称号"},
+  cool:   {name:"我最帅",   color:"#ffd76a", gold:true, only:"thy2014", desc:"专属金色称号"},
+  racer:  {name:"极速车手", color:"#2bd4c0", shop:"racer-title", desc:"商城兑换获得"}
+};
+
+var SHOP = [
+  {id:"double", kind:"perk",  name:"双倍收益卡", cost:12, tint:"#ffc75f", icon:"⚡", desc:"24 小时内游戏时长获得的 gay币翻倍"},
+  {id:"nitro",  kind:"perk",  name:"卡丁车氮气", cost:15, tint:"#2bd4c0", icon:"🔥", desc:"卡丁车开局自带满氮气"},
+  {id:"racer-title", kind:"title", name:"称号·极速车手", cost:20, tint:"#3ddc84", icon:"🏁", desc:"解锁称号「极速车手」"},
+  {id:"skin-rainbow", kind:"perk", name:"彩虹涂装", cost:25, tint:"#e88bd0", icon:"🎨", desc:"卡丁车专属彩虹车身"},
+  {id:"hidden", kind:"game",  name:"隐藏小游戏礼包", cost:30, tint:"#8a9adf", icon:"🎁", desc:"兑换后解锁一个隐藏玩法（占位）"}
+];
+
+function defaultProfile(){
+  return { coins:0, points:0, titles:["newbie"], activeTitle:"newbie",
+           lastCheckin:"", redeemed:[], perks:{}, playMin:0 };
+}
+function loadProfiles(){
+  try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}"); }
+  catch(e){ return {}; }
+}
+function saveProfiles(o){ localStorage.setItem(PROFILE_KEY, JSON.stringify(o)); }
+function getProfile(u){
+  var all = loadProfiles();
+  if(!all[u]){ all[u]=defaultProfile(); saveProfiles(all); }
+  if(!Array.isArray(all[u].titles)) all[u].titles=["newbie"];
+  if(!all[u].perks) all[u].perks={};
+  if(!all[u].redeemed) all[u].redeemed=[];
+  return all[u];
+}
+function saveProfile(u, prof){ var all=loadProfiles(); all[u]=prof; saveProfiles(all); }
+function bumpProfile(u, fn){ var all=loadProfiles(); if(!all[u])all[u]=defaultProfile(); fn(all[u]); saveProfiles(all); }
+
+function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); }
+
+function grantSpecialTitles(u, prof){
+  if(u==="thy2014"){
+    if(prof.titles.indexOf("cool")<0) prof.titles.push("cool");
+    if(prof.activeTitle==="newbie") prof.activeTitle="cool";
+  }
+}
+
+function toast(msg){
+  var t=$("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t=setTimeout(function(){t.classList.remove("show");},1600);
+}
 
 function loadUsers(){
   try { return JSON.parse(localStorage.getItem(USERS_KEY) || "{}"); }
@@ -237,6 +374,10 @@ function doLogin(u, p){
   if(realPw !== p){ $("loginErr").textContent = "密码错误"; return; }
   user = u;
   localStorage.setItem(SESSION_KEY, u);
+  var prof=getProfile(u);
+  grantSpecialTitles(u, prof);
+  saveProfile(u, prof);
+  settlePendingSession();
   enterSite();
 }
 
@@ -247,9 +388,15 @@ function doRegister(u, p){
   if((u in ACCOUNTS) || (u in users)){ $("loginErr").textContent = "账号已存在"; return; }
   users[u] = p;
   saveUsers(users);
+  // 注册奖励：50 gay币
+  bumpProfile(u, function(prof){ prof.coins += 50; });
   user = u;
   localStorage.setItem(SESSION_KEY, u);
+  var prof=getProfile(u);
+  grantSpecialTitles(u, prof);
+  saveProfile(u, prof);
   enterSite();
+  toast("注册成功，赠送 50 gay币");
 }
 
 $("mainBtn").addEventListener("click", mainAction);
@@ -285,8 +432,142 @@ function enterSite(){
   $("topbar").style.display = "flex";
   $("main").style.display = "block";
   $("who").textContent = user;
+  refreshProfileUI();
   loadGames();
 }
+
+/* ============ 时长计币：开局记录，回站结算 ============ */
+function settlePendingSession(){
+  var s=null;
+  try{ s=JSON.parse(localStorage.getItem(PENDING_KEY)||"null"); }catch(e){}
+  if(!s || !s.start) return;
+  var mins=Math.max(0,(Date.now()-s.start)/60000);
+  var prof=getProfile(user);
+  var coins=Math.min(30, Math.floor(mins));
+  if(prof.perks.doubleUntil && Date.now() < prof.perks.doubleUntil) coins*=2;
+  if(coins>0){ prof.coins+=coins; prof.playMin+=Math.floor(mins); saveProfile(user, prof); }
+  localStorage.removeItem(PENDING_KEY);
+}
+function startSession(g){
+  localStorage.setItem(PENDING_KEY, JSON.stringify({id:g.id, start:Date.now()}));
+}
+
+/* ============ 档案 UI ============ */
+function refreshProfileUI(){
+  var prof=getProfile(user);
+  $("coinVal").textContent=prof.coins;
+  $("pointVal").textContent=prof.points;
+  var t=TITLES[prof.activeTitle]||TITLES.newbie;
+  var badge=$("titleBadge");
+  badge.textContent=t.name; badge.style.color=t.color;
+  // 签到状态
+  var done=prof.lastCheckin===todayStr();
+  var btn=$("checkinBtn");
+  btn.disabled=done;
+  btn.textContent=done?"已签到":"签到";
+}
+
+function doCheckin(){
+  var prof=getProfile(user);
+  if(prof.lastCheckin===todayStr()){ toast("今天已经签到过了"); return; }
+  prof.lastCheckin=todayStr();
+  prof.coins+=10;
+  saveProfile(user, prof);
+  refreshProfileUI();
+  toast("签到成功 +10 gay币");
+}
+$("checkinBtn").addEventListener("click", doCheckin);
+
+/* ============ 称号弹窗 ============ */
+function renderTitles(){
+  var prof=getProfile(user);
+  var box=$("titleList"); box.innerHTML="";
+  Object.keys(TITLES).forEach(function(id){
+    var t=TITLES[id];
+    var owned=prof.titles.indexOf(id)>=0;
+    var lockedOnly=t.only && t.only!==user;
+    var row=document.createElement("div"); row.className="title-row";
+    var info=document.createElement("div"); info.className="t-info";
+    var nm=document.createElement("div"); nm.className="t-name"; nm.style.color=t.color; nm.textContent=t.name;
+    var ds=document.createElement("div"); ds.className="t-desc";
+    ds.textContent=t.desc+(lockedOnly?"（仅 "+t.only+" 可领取）":"");
+    info.appendChild(nm); info.appendChild(ds);
+    var btn=document.createElement("button"); btn.className="t-btn";
+    if(prof.activeTitle===id){ btn.textContent="使用中"; btn.disabled=true; }
+    else if(owned){ btn.textContent="使用"; btn.addEventListener("click",function(){
+      prof.activeTitle=id; saveProfile(user, prof); refreshProfileUI(); renderTitles();
+    }); }
+    else { btn.textContent="未拥有"; btn.disabled=true; }
+    row.appendChild(info); row.appendChild(btn);
+    box.appendChild(row);
+  });
+}
+$("titleBtn").addEventListener("click", function(){ renderTitles(); $("titleModal").classList.remove("hidden"); });
+
+/* ============ 商城弹窗 ============ */
+function renderShop(){
+  var prof=getProfile(user);
+  $("shopCoins").textContent=prof.coins;
+  $("shopPoints").textContent=prof.points;
+  var list=$("prodList"); list.innerHTML="";
+  SHOP.forEach(function(p){
+    var owned=prof.redeemed.indexOf(p.id)>=0;
+    var row=document.createElement("div"); row.className="prod";
+    var ic=document.createElement("div"); ic.className="p-ic"; ic.style.background=p.tint+"22"; ic.textContent=p.icon;
+    var info=document.createElement("div"); info.className="p-info";
+    var nm=document.createElement("div"); nm.className="p-name"; nm.textContent=p.name;
+    var ds=document.createElement("div"); ds.className="p-desc"; ds.textContent=p.desc;
+    info.appendChild(nm); info.appendChild(ds);
+    var cost=document.createElement("div"); cost.className="p-cost";
+    cost.textContent=owned?"已拥有":p.cost+" gay值";
+    var act=document.createElement("div");
+    if(owned){ act.className="p-owned"; act.textContent="✓ 已兑换"; }
+    else {
+      var b=document.createElement("button"); b.className="p-btn"; b.textContent="兑换";
+      b.disabled=prof.points<p.cost;
+      b.addEventListener("click",function(){ redeemProduct(p); });
+      act.appendChild(b);
+    }
+    row.appendChild(ic); row.appendChild(info); row.appendChild(cost); row.appendChild(act);
+    list.appendChild(row);
+  });
+  $("ex1").disabled=prof.coins<10;
+  $("ex5").disabled=prof.coins<50;
+}
+function exchangePoints(n){
+  var prof=getProfile(user);
+  if(prof.coins<n*10){ toast("gay币不足"); return; }
+  prof.coins-=n*10; prof.points+=n;
+  saveProfile(user, prof); refreshProfileUI(); renderShop();
+  toast("兑换成功 +"+n+" gay值");
+}
+$("ex1").addEventListener("click", function(){ exchangePoints(1); });
+$("ex5").addEventListener("click", function(){ exchangePoints(5); });
+
+function redeemProduct(p){
+  var prof=getProfile(user);
+  if(prof.points<p.cost){ toast("gay值不足"); return; }
+  prof.points-=p.cost;
+  prof.redeemed.push(p.id);
+  if(p.kind==="title" && p.id==="racer-title"){
+    if(prof.titles.indexOf("racer")<0) prof.titles.push("racer");
+  }
+  if(p.id==="double") prof.perks.doubleUntil=Date.now()+24*3600*1000;
+  if(p.id==="nitro") prof.perks.nitro=true;
+  if(p.id==="skin-rainbow") prof.perks.skinRainbow=true;
+  saveProfile(user, prof);
+  refreshProfileUI(); renderShop();
+  toast("已兑换："+p.name);
+}
+$("shopBtn").addEventListener("click", function(){ renderShop(); $("shopModal").classList.remove("hidden"); });
+
+// 弹窗关闭
+document.querySelectorAll("[data-close]").forEach(function(el){
+  el.addEventListener("click", function(){ $(el.dataset.close).classList.add("hidden"); });
+});
+document.querySelectorAll(".modal").forEach(function(m){
+  m.addEventListener("click", function(e){ if(e.target===m) m.classList.add("hidden"); });
+});
 
 // 渲染游戏卡片
 function renderGames(list){
@@ -306,6 +587,7 @@ function renderGames(list){
       '<div class="game-title">' + esc(g.title) + (g.tag?'<span class="tag">'+esc(g.tag)+'</span>':'') + '</div>' +
       '<div class="game-desc">' + esc(g.desc||"") + '</div></div>';
     card.addEventListener("click", function(){
+      startSession(g);
       window.open(g.file + (g.file.indexOf("?")>=0?"&":"?") + "user=" + encodeURIComponent(user), "_self");
     });
     box.appendChild(card);
@@ -313,14 +595,14 @@ function renderGames(list){
 }
 
 function thumbSVG(g){
-  return '<svg class="badge" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path fill="#070b0a" d="M12 3.2a8.8 0 1 1 0 17.6 8.8 0 0 1 0-17.6z"/><path fill="currentColor" d="M8 9l6-3-2 5 3 1-6 3 2-5z"/></svg>';
+  return '<svg class="badge" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path fill="#070b0a" d="M12 3.2a8.8 8.8 0 1 1 0 17.6 8.8 8.8 0 0 1 0-17.6z"/><path fill="currentColor" d="M8 9l6-3-2 5 3 1-6 3 2-5z"/></svg>';
 }
 function playSVG(){
   return '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>';
 }
 function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
 
-// 加载游戏：先内嵌兜底，再尝试拉取 games/games.json 和 GitHub 自动扫描
+// 加载游戏：先内嵌兜底，再拉取 games/games.json 和 GitHub 自动扫描
 var CURRENT = DEFAULT_GAMES.slice();
 
 function loadGames(){
