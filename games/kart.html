@@ -124,9 +124,9 @@ var rainbow=!!(myProf&&myProf.perks&&myProf.skinRainbow);
 
 // ===== 赛车与赛道 =====
 var KARTS=[
-  {id:"bal",  name:"疾风号", desc:"均衡稳健", accel:30, maxSp:30,   turn:3.0, weight:1,    color:"#3ddc84"},
-  {id:"swift",name:"闪电号", desc:"转向灵活 极速略低", accel:33, maxSp:28, turn:3.9, weight:0.85, color:"#2bd4c0"},
-  {id:"heavy",name:"重装号", desc:"极速更高 转向偏钝", accel:26, maxSp:33, turn:2.4, weight:1.2, color:"#ffc75f"}
+  {id:"bal",  name:"疾风号", desc:"均衡稳健", accel:42, maxSp:48,   turn:3.0, weight:1,    color:"#3ddc84"},
+  {id:"swift",name:"闪电号", desc:"转向灵活 极速略低", accel:45, maxSp:44, turn:3.9, weight:0.85, color:"#2bd4c0"},
+  {id:"heavy",name:"重装号", desc:"极速更高 转向偏钝", accel:38, maxSp:52, turn:2.4, weight:1.2, color:"#ffc75f"}
 ];
 var TRACKS=[
   {id:"meadow", name:"绿地环线", bg:"#0e1712", grass:"#15231a", edge:"#2b322e", road:"#3d4540",
@@ -137,9 +137,9 @@ var TRACKS=[
    WP:[[220,500],[480,260],[900,200],[1240,360],[1380,700],[1080,900],[640,880],[300,760],[560,560],[900,620]], WL:1600, WH:1000}
 ];
 var AI_DEF=[
-  {name:"红蜂",color:"#ff5d6c",speed:26},
-  {name:"蓝隼",color:"#5d9bff",speed:27.5},
-  {name:"紫电",color:"#b07bff",speed:25}
+  {name:"红蜂",color:"#ff5d6c",speed:40},
+  {name:"蓝隼",color:"#5d9bff",speed:42},
+  {name:"紫电",color:"#b07bff",speed:38}
 ];
 var selKart=0, selTrack=0;
 var HALF=92, LAPS=4;
@@ -267,17 +267,17 @@ function updateKart(k,dt){
     var player=karts[0];
     var gap=player.prog-k.prog;
     k.ai.base+=(gap>300?0.18:gap<-300?-0.18:0)*dt;
-    k.ai.base=Math.max(24,Math.min(29,k.ai.base));
+    k.ai.base=Math.max(36,Math.min(44,k.ai.base));
   }
   var maxSp=k.ai?k.ai.base:veh.maxSp;
-  var accel=k.ai?24:veh.accel;
-  if(boost&&k.nitro>0&&k.speed>1){ maxSp=38; k.nitro=Math.max(0,k.nitro-26*dt); }
+  var accel=k.ai?34:veh.accel;
+  if(boost&&k.nitro>0&&k.speed>1){ maxSp=62; k.nitro=Math.max(0,k.nitro-26*dt); }
   if(throttle) k.speed+=accel*dt;
   if(brake) k.speed-=accel*dt;
   var near=nearest(k.x,k.y);
   var offD=Math.hypot(k.x-near.px,k.y-near.py);
   var offTrack=offD>HALF-16;
-  k.speed*=Math.pow(offTrack?0.5:0.72,dt);
+  k.speed*=Math.pow(offTrack?0.55:0.8,dt);
   k.speed=Math.max(0,Math.min(maxSp,k.speed));
   var turnRate=k.ai?3.0:veh.turn;
   var turn=turnRate*Math.min(1,k.speed/maxSp)*steer;
@@ -450,8 +450,8 @@ requestAnimationFrame(frame);
     document.getElementById("hudSpeed").textContent=Math.round(player.speed*30);
   }
 
-  if(player&&player.speed>22){
-    var a=Math.min(.25,(player.speed-22)/22);
+  if(player&&player.speed>30){
+    var a=Math.min(.25,(player.speed-30)/22);
     ctx.strokeStyle="rgba(215,245,228,"+a+")"; ctx.lineWidth=2;
     for(var s=0;s<6;s++){
       var ang=s*Math.PI/3+ts*0.0002;
@@ -483,7 +483,7 @@ function finishRace(){
 
 // ===== 选车选图 UI =====
 function statBar(v){
-  var sp=Math.round(v.maxSp/33*100), ac=Math.round(v.accel/33*100), tn=Math.round(v.turn/3.9*100);
+  var sp=Math.round(v.maxSp/52*100), ac=Math.round(v.accel/45*100), tn=Math.round(v.turn/3.9*100);
   return '<div class="stat">'
     +'<i><b style="width:'+sp+'%"></b></i>'
     +'<i><b style="width:'+ac+'%"></b></i>'
