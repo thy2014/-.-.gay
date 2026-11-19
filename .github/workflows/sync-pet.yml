@@ -1,0 +1,26 @@
+name: sync-pet
+on:
+  push:
+    paths:
+      - '.github/workflows/sync-pet.yml'
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: download and verify
+        run: |
+          set -e
+          curl -sL "https://aka.doubaocdn.com/s/Od1mSVxXi4" -o index.html
+          curl -sL "https://aka.doubaocdn.com/s/n8P7NYoAvh" -o games/kart.html
+          echo "b64f83ac06cea7614fa9665766d991f064bbc07a39befa6d9031553740e85098  index.html" | sha256sum -c
+          echo "565e5331810b45889b5f387121ec62637a16ce1a5ca5608caba3faf32f389c7e  games/kart.html" | sha256sum -c
+      - name: commit
+        run: |
+          git config user.name "actions"
+          git config user.email "actions@github.com"
+          git add index.html games/kart.html
+          git commit -m "feat: 宠物系统与卡丁车 AI 升级" || echo "no changes"
+          git push
