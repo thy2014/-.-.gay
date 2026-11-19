@@ -162,6 +162,27 @@
   .prod .p-btn{height:36px; padding:0 14px; border-radius:9px; border:none; background:var(--green); color:#06231a; font-weight:700; cursor:pointer; font-size:13px; font-family:inherit; white-space:nowrap}
   .prod .p-btn:disabled{background:#223028; color:var(--muted); cursor:not-allowed}
   .prod .p-owned{font-size:12px; color:var(--muted); white-space:nowrap}
+  .pet-box{display:flex; gap:16px; align-items:center; flex-wrap:wrap}
+  .pet-avatar{
+    width:84px; height:84px; flex:none; border-radius:22px;
+    background:linear-gradient(160deg,rgba(61,220,132,.18),rgba(43,212,192,.14));
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+  }
+  .pet-avatar svg{width:58px;height:58px}
+  .pet-meta{flex:1; min-width:180px}
+  .pet-name{font-size:18px; font-weight:700}
+  .pet-sub{font-size:12px; color:var(--muted); margin-top:3px}
+  .pet-lv{color:var(--green); font-weight:700}
+  .exp-row{margin:14px 0 6px}
+  .exp-label{display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:6px}
+  .exp-bar{height:10px; border-radius:6px; background:var(--panel2); border:1px solid var(--line); overflow:hidden}
+  .exp-fill{height:100%; border-radius:6px; background:linear-gradient(90deg,var(--green),var(--teal)); transition:width .25s ease}
+  .pet-bonus{font-size:13px; color:var(--text); background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:12px; margin:12px 0}
+  .pet-bonus b{color:var(--teal)}
+  .feed-row{display:flex; gap:10px; flex-wrap:wrap}
+  .feed-btn{height:40px; padding:0 14px; border-radius:10px; border:1px solid var(--line); background:var(--panel2); color:var(--text); cursor:pointer; font-size:13px; font-family:inherit}
+  .feed-btn:hover{border-color:var(--green); color:var(--green)}
+  .feed-btn:disabled{opacity:.4; cursor:not-allowed}
   .title-row{display:flex; align-items:center; gap:12px; background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px}
   .title-row .t-name{font-size:14px; font-weight:700}
   .title-row .t-desc{font-size:12px; color:var(--muted); margin-top:2px}
@@ -193,6 +214,7 @@
       <div class="who">已登录：<b id="who"></b></div>
       <button class="btn-mini" id="checkinBtn">签到</button>
       <button class="btn-mini" id="titleBtn">称号</button>
+      <button class="btn-mini" id="petBtn">宠物</button>
       <button class="btn-mini" id="shopBtn">商城</button>
       <button class="btn-mini danger" id="logoutBtn">退出</button>
     </div>
@@ -212,6 +234,40 @@
   <div class="panel">
     <div class="panel-head"><h2>我的称号</h2><button class="x-btn" data-close="titleModal">×</button></div>
     <div id="titleList"></div>
+  </div>
+</div>
+
+<!-- 宠物弹窗 -->
+<div class="modal hidden" id="petModal">
+  <div class="panel">
+    <div class="panel-head"><h2>我的宠物</h2><button class="x-btn" data-close="petModal">×</button></div>
+    <div class="pet-box">
+      <div class="pet-avatar">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <circle cx="18" cy="18" r="7" fill="#3ddc84"/>
+          <circle cx="46" cy="18" r="7" fill="#3ddc84"/>
+          <circle cx="32" cy="36" r="20" fill="#3ddc84"/>
+          <circle cx="25" cy="34" r="2.6" fill="#06231a"/>
+          <circle cx="39" cy="34" r="2.6" fill="#06231a"/>
+          <path d="M28 41q4 3 8 0" stroke="#06231a" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <circle cx="21" cy="39" r="2.4" fill="#7ce8b0" opacity=".7"/>
+          <circle cx="43" cy="39" r="2.4" fill="#7ce8b0" opacity=".7"/>
+        </svg>
+      </div>
+      <div class="pet-meta">
+        <div class="pet-name" id="petName">徐杨洋</div>
+        <div class="pet-sub">全站共同的小宠物 · gay 的程度 <span class="pet-lv" id="petLv"></span></div>
+      </div>
+    </div>
+    <div class="exp-row">
+      <div class="exp-label"><span>成长值</span><span id="expText"></span></div>
+      <div class="exp-bar"><div class="exp-fill" id="expFill"></div></div>
+    </div>
+    <div class="pet-bonus" id="petBonus"></div>
+    <div class="feed-row">
+      <button class="feed-btn" id="feedCoin">投喂 10 gay币（+12 经验）</button>
+      <button class="feed-btn" id="feedPoint">投喂 1 gay值（+30 经验）</button>
+    </div>
   </div>
 </div>
 
@@ -264,7 +320,7 @@ var ACCOUNTS = {
 // ===== 默认游戏列表（页面内置兜底）=====
 var DEFAULT_GAMES = [
   { id:"roguelike", title:"割草肉鸽", desc:"类吸血鬼幸存者的割草肉鸽游戏：自动攻击、升级三选一卡牌强化技能，血量与经验值成长，进度可存档。", file:"games/roguelike.html", tag:"肉鸽" },
-  { id:"kart", title:"卡丁赛车", desc:"俯视 2D 卡丁车竞速：三辆 AI 对手同场竞技，四圈定名次；可选赛车与赛道，氮气板加速、赛道金币，键盘与触屏均可操作。", file:"games/kart.html", tag:"竞速" },
+  { id:"kart", title:"卡丁赛车", desc:"透视 3D 卡丁车竞速：算法生成弯道起伏赛道，三辆 AI 循迹走线，三圈定名次；可选赛车与赛道，氮气板加速、赛道金币，键盘与触屏均可操作。", file:"games/kart.html", tag:"竞速" },
   { id:"terraria", title:"方块世界", desc:"泰拉瑞亚式 2D 开放世界：程序化生成矿洞与矿脉，挖掘放置、工具合成与熔炉冶炼，昼夜刷怪战斗，自动存档。", file:"games/terraria.html", tag:"开放世界" },
   { id:"2048", title:"2048", desc:"经典数字合成游戏：合并相同数字冲向 2048，支持键盘与触屏，高分自动保存。", file:"games/2048.html", tag:"益智" },
   { id:"snake", title:"贪吃蛇", desc:"经典贪吃蛇：控制小蛇吃食物变长，别撞墙别咬自己，高分自动保存。", file:"games/snake.html", tag:"经典" }
@@ -305,7 +361,23 @@ var SHOP = [
 
 function defaultProfile(){
   return { coins:0, points:0, titles:["newbie"], activeTitle:"newbie",
-           lastCheckin:"", redeemed:[], perks:{}, playMin:0 };
+           lastCheckin:"", redeemed:[], perks:{}, playMin:0,
+           pet:{ level:1, exp:0 } };
+}
+var PET_NAME = "徐杨洋";
+var PET_MAX_LEVEL = 20;
+var PET_FEED_COINS = 10;   // 每次投喂消耗 gay币
+var PET_FEED_EXP_COIN = 12; // 币投喂经验
+var PET_FEED_POINTS = 1;   // 每次投喂消耗 gay值
+var PET_FEED_EXP_POINT = 30; // 值投喂经验
+function petNeed(level){ return 60 * level; }
+function petBonus(level){
+  var lv = Math.max(1, level);
+  return {
+    speed: Math.round((lv - 1) * 1.5),   // 极速 +%
+    accel: Math.round((lv - 1) * 1.2),   // 加速 +%
+    nitro: Math.min(100, 50 + 6 * (lv - 1)) // 开局氮气
+  };
 }
 function loadProfiles(){
   try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}"); }
@@ -318,6 +390,7 @@ function getProfile(u){
   if(!Array.isArray(all[u].titles)) all[u].titles=["newbie"];
   if(!all[u].perks) all[u].perks={};
   if(!all[u].redeemed) all[u].redeemed=[];
+  if(!all[u].pet || typeof all[u].pet.level!=="number") all[u].pet={level:1,exp:0};
   return all[u];
 }
 function saveProfile(u, prof){ var all=loadProfiles(); all[u]=prof; saveProfiles(all); }
@@ -560,6 +633,44 @@ function redeemProduct(p){
   toast("已兑换："+p.name);
 }
 $("shopBtn").addEventListener("click", function(){ renderShop(); $("shopModal").classList.remove("hidden"); });
+
+/* ============ 宠物系统 ============ */
+function renderPet(){
+  var prof=getProfile(user);
+  var pet=prof.pet;
+  var need=petNeed(pet.level);
+  var maxed=pet.level>=PET_MAX_LEVEL;
+  $("petLv").textContent="Lv."+pet.level;
+  $("petName").textContent=PET_NAME;
+  var pct=maxed?100:Math.min(100,Math.round(pet.exp/need*100));
+  $("expFill").style.width=pct+"%";
+  $("expText").textContent=maxed?"已满级":pet.exp+" / "+need;
+  var b=petBonus(pet.level);
+  $("petBonus").innerHTML="当前加成：极速 <b>+"+b.speed+"%</b> · 加速 <b>+"+b.accel+"%</b> · 开局氮气 <b>"+b.nitro+"%</b>（卡丁车等游戏开局生效）";
+  $("feedCoin").disabled=maxed||prof.coins<PET_FEED_COINS;
+  $("feedPoint").disabled=maxed||prof.points<PET_FEED_POINTS;
+}
+function feedPet(kind){
+  var prof=getProfile(user); var pet=prof.pet;
+  if(pet.level>=PET_MAX_LEVEL){ toast("已经满级啦"); return; }
+  if(kind==="coin"){
+    if(prof.coins<PET_FEED_COINS){ toast("gay币不足"); return; }
+    prof.coins-=PET_FEED_COINS; pet.exp+=PET_FEED_EXP_COIN;
+  } else {
+    if(prof.points<PET_FEED_POINTS){ toast("gay值不足"); return; }
+    prof.points-=PET_FEED_POINTS; pet.exp+=PET_FEED_EXP_POINT;
+  }
+  var up=0;
+  while(pet.level<PET_MAX_LEVEL && pet.exp>=petNeed(pet.level)){
+    pet.exp-=petNeed(pet.level); pet.level++; up++;
+  }
+  if(pet.level>=PET_MAX_LEVEL) pet.exp=0;
+  saveProfile(user, prof); refreshProfileUI(); renderPet();
+  toast(up>0?("投喂成功，升到 Lv."+pet.level):"投喂成功，成长值 +"+(kind==="coin"?PET_FEED_EXP_COIN:PET_FEED_EXP_POINT));
+}
+$("petBtn").addEventListener("click", function(){ renderPet(); $("petModal").classList.remove("hidden"); });
+$("feedCoin").addEventListener("click", function(){ feedPet("coin"); });
+$("feedPoint").addEventListener("click", function(){ feedPet("point"); });
 
 // 弹窗关闭
 document.querySelectorAll("[data-close]").forEach(function(el){

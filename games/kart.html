@@ -116,6 +116,10 @@ var allProf=loadAll();
 var myProf=sessionUser?allProf[sessionUser]:null;
 var hasNitro=!!(myProf&&myProf.perks&&myProf.perks.nitro);
 var rainbow=!!(myProf&&myProf.perks&&myProf.skinRainbow);
+var petLv=(myProf&&myProf.pet&&myProf.pet.level)?myProf.pet.level:1;
+var petSpeedMul=1+0.015*(petLv-1);
+var petAccelMul=1+0.012*(petLv-1);
+var petNitro=Math.min(100,50+6*(petLv-1));
 
 var KARTS=[
   {name:"疾风号", desc:"均衡稳健", accel:34, maxSp:46, turn:3.2, color:"#3ddc84"},
@@ -153,13 +157,31 @@ function buildTrack(seed){
   for(var c=0;c<18;c++){ var si=Math.floor(rnd()*ROWS); SEG[si].coins.push(rnd()>0.5?20:-20); }
   SEG[Math.floor(ROWS*0.25)].pads.push(0); SEG[Math.floor(ROWS*0.7)].pads.push(0);
   for(var tr=0;tr<70;tr++){ var ti=Math.floor(rnd()*ROWS); SEG[ti].trees.push(rnd()>0.5?HW+12+rnd()*34:-(HW+12+rnd()*34)); }
+  buildProfile();
 }
 function segY(idx){ return SEG[((idx%ROWS)+ROWS)%ROWS].y; }
+
+/* 曲率限速剖面：弯前就收油，反向传播保证来得及刹住 */
+var PROF=[];
+function buildProfile(){
+  PROF=[];
+  var base=42, gripK=16, minV=22;
+  for(var i=0;i<ROWS;i++){
+    var k=Math.abs(SEG[i].curve);
+    PROF.push(Math.max(minV, base-k*gripK));
+  }
+  for(var p=0;p<3;p++){
+    for(var j=ROWS-1;j>=0;j--){
+      var nx=PROF[(j+1)%ROWS];
+      if(PROF[j]>nx+5) PROF[j]=nx+5;
+    }
+  }
+}
 
 var karts=[];
 function makeKart(z,x,color,name,isPlayer,ai,veh){
   return {z:z,x:x,speed:0,color:color,name:name,isPlayer:!!isPlayer,veh:veh||null,
-    lap:1,finished:false,finishTime:0,nitro:hasNitro&&isPlayer?100:60,coins:0,ai:ai||null,steer:0};
+    lap:1,finished:false,finishTime:0,nitro:hasNitro&&isPlayer?100:(isPlayer?petNitro:60),coins:0,ai:ai||null,steer:0};
 }
 function resetRace(){
   buildTrack(TRACKS[selTrack].seed);
@@ -167,7 +189,7 @@ function resetRace(){
   var v=KARTS[selKart];
   karts.push(makeKart(0,0,v.color,"你",true,null,v));
   AI_DEF.forEach(function(d,k){
-    karts.push(makeKart(-2-k*2,-20-k*16,d.color,d.name,false,{base:d.speed,wp:0},null));
+    karts.push(makeKart(-2-k*2,-20-k*16,d.color,d.name,false,{base:d.speed,wp:0,corner:0.94+k*0.02,bias:(k-1)*2,stuck:0,rev:0},null));
   });
   state="countdown"; countT=3.0; raceTime=0; particles=[];
 }
@@ -200,22 +222,40 @@ function curveAhead(z){
 function updateKart(k,dt){
   var steer=0,throttle=0,brake=0,boost=false;
   var veh=k.veh||{accel:24,maxSp:32,turn:3,color:"#fff"};
+  var maxSp, accel;
   if(k.isPlayer){
     steer=(keys.left?-1:0)+(keys.right?1:0);
     throttle=keys.up?1:0; brake=keys.down?1:0; boost=keys.boost;
+    maxSp=veh.maxSp*petSpeedMul; accel=veh.accel*petAccelMul;
   } else {
-    var diff=0-k.x;
-    steer=Math.max(-1,Math.min(1,diff*0.06));
-    throttle=1;
     var player=karts[0];
     var gap=(player.lap*ROWS+player.z)-(k.lap*ROWS+k.z);
-    k.ai.base+=(gap>400?0.2:gap<-400?-0.2:0)*dt;
+    k.ai.base+=(gap>400?0.25:gap<-400?-0.18:0)*dt;
     k.ai.base=Math.max(34,Math.min(44,k.ai.base));
+    if(k.speed<2.5) k.ai.stuck+=dt; else k.ai.stuck=Math.max(0,k.ai.stuck-dt*0.5);
+    if(k.ai.stuck>1.0){ k.ai.rev=0.7; k.ai.stuck=0; }
+    if(k.ai.rev>0){
+      k.ai.rev-=dt; throttle=0; brake=1;
+      steer=Math.max(-1,Math.min(1,-k.x*0.12));
+      maxSp=14;
+    } else {
+      var ahead=6+k.speed*0.15;
+      var li=(((Math.floor(k.z+ahead))%ROWS)+ROWS)%ROWS;
+      var lineOff=-SEG[li].curve*5+k.ai.bias;
+      var offAi=Math.abs(k.x)>HW-4;
+      if(offAi) lineOff=0;
+      var diff=lineOff-k.x;
+      steer=Math.max(-1,Math.min(1,diff*0.075));
+      var si=(((Math.floor(k.z))%ROWS)+ROWS)%ROWS;
+      var target=Math.min(k.ai.base,PROF[si]*k.ai.corner);
+      if(offAi) target*=0.65;
+      if(k.speed>target+2.2){ brake=1; throttle=0; }
+      else if(k.speed>target+0.4){ throttle=0.3; }
+      else throttle=1;
+      maxSp=target;
+    }
+    accel=28;
   }
-  var maxSp=k.ai?k.ai.base:veh.maxSp;
-  var accel=k.ai?28:veh.accel;
-  var bend=curveAhead(k.z);
-  if(k.ai) maxSp=Math.max(20,maxSp-bend*7);
   if(boost&&k.nitro>0&&k.speed>1){ maxSp=58; k.nitro=Math.max(0,k.nitro-26*dt); }
   if(throttle) k.speed+=accel*dt;
   if(brake) k.speed-=accel*dt;
