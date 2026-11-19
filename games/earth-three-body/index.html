@@ -4050,7 +4050,7 @@ state.paused=true;render();requestAnimationFrame(frame);
   const $=s=>document.querySelector(s),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const boot=$('#commandBoot'),shell=$('.app-shell'),cache=new Map(),animations=new Map(),readouts=new Map(),flashes=new WeakMap();
   let numberFrame=0;
-  const loadingDuration=6500,progressStart=3350,progressEnd=5650,resourceCatchup=500,completeHold=450,loadingExit=400;
+  const loadingDuration=3000,progressStart=1400,progressEnd=2500,resourceCatchup=300,completeHold=180,loadingExit=220;
   const loadingUI={title:$('#bootTitle'),status:$('#bootStatus'),percent:$('#bootTerrain'),detail:$('#bootDetail'),progress:$('#bootProgress'),skip:$('#skipBoot')};
   const setText=(element,value)=>{if(element.textContent!==value)element.textContent=value;};
   const setHTML=(element,value)=>{if(element.innerHTML!==value)element.innerHTML=value;};
@@ -4260,14 +4260,14 @@ state.paused=true;render();requestAnimationFrame(frame);
         if(!bootRunning||phase!=='pledge')return;
         if(clock.visible&&!document.hidden)clock.elapsed+=Math.max(0,now-clock.last);
         clock.last=now;clock.visible=!document.hidden;const elapsed=clock.elapsed;
-        const second=elapsed>=(reduced?1700:3370),local=elapsed-(second?(reduced?1700:3370):0),phrase=second?'世界属于三体':'消灭人类暴政';
+        const second=elapsed>=(reduced?1100:1700),local=elapsed-(second?(reduced?1100:1700):0),phrase=second?'世界属于三体':'消灭人类暴政';
         const translation=second?'THE WORLD BELONGS TO TRISOLARIS.':'DESTROY HUMAN TYRANNY.';
         setClass(line,'is-red',second);setAttr(line,'aria-label',phrase+'。'+translation);
         const count=reduced?phrase.length:Math.max(0,Math.min(phrase.length,Math.floor((local-(second?0:250))/95)));
         setText(text,phrase.slice(0,count));setText(english,translation.slice(0,reduced?translation.length:Math.max(0,Math.floor((local-(second?400:650))/21))));
-        const opacity=reduced?1:second?Math.max(0,Math.min(1,(6600-elapsed)/400)):Math.max(0,Math.min(1,(3050-elapsed)/300));
+        const opacity=reduced?1:second?Math.max(0,Math.min(1,(3400-elapsed)/400)):Math.max(0,Math.min(1,(1600-elapsed)/300));
         line.style.opacity=String(opacity);cursor.style.opacity=local%880<540?'.85':'0';
-        if(elapsed>=(reduced?3700:6600)){proceed();return;}
+        if(elapsed>=(reduced?2400:3400)){proceed();return;}
         bootFrame=requestAnimationFrame(draw);
       };requestAnimationFrame(()=>{if(request===pledgeRequest&&phase==='pledge'){clock.last=performance.now();draw(clock.last);}});});return;
     }
