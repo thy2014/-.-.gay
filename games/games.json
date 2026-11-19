@@ -8,6 +8,13 @@
       "tag": "竞速"
     },
     {
+      "id": "earth-three-body",
+      "title": "ETO · 地球三体运动",
+      "desc": "三体主题策略游戏：三种信念、三条行动路线，在联合调查完成前推进你的派系目标。",
+      "file": "games/earth-three-body/index.html",
+      "tag": "策略"
+    },
+    {
       "id": "roguelike",
       "title": "割草肉鸽",
       "desc": "类吸血鬼幸存者的割草肉鸽游戏：自动攻击、升级三选一卡牌强化技能，血量与经验值成长，进度可存档。",
