@@ -1,0 +1,26 @@
+name: sync-eto2
+on:
+  push:
+    paths:
+      - '.github/workflows/sync-eto2.yml'
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and verify bundle
+        run: |
+          set -euo pipefail
+          curl -sL "https://aka.doubaocdn.com/s/8cbNkNvjEF" -o /tmp/eto2.zip
+          echo "691e6c94dd9ad53f395d671aca15e11a368544d8bb5c65330f8c88eae430c89e  /tmp/eto2.zip" | sha256sum -c -
+          unzip -oq /tmp/eto2.zip -d "${{ github.workspace }}"
+      - name: Commit files
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add games/earth-three-body/index.html
+          git diff --cached --quiet || git commit -m "perf: 压缩三体游戏内嵌贴图，缩短加载时间"
+          git push
