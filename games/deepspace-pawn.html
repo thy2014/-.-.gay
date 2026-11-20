@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>深空当铺 · 轨道站掌柜</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b1226'/%3E%3Cpath d='M16 4 L26 10 V22 L16 28 L6 22 V10 Z' fill='%231e7f8a'/%3E%3Cpath d='M16 8 L22 12 V20 L16 24 L10 20 V12 Z' fill='%2346d8e0'/%3E%3C/svg%3E">
+<style>
+:root{
+  --space1:#0b1226; --space2:#13223d; --space3:#1d3355; --panel:#16263f;
+  --metal:#2a3b55; --metal-l:#3c5577;
+  --ink:#dbe7f5; --dim:#8fa8c4;
+  --cyan:#46d8e0; --cyan-l:#8ff0f4; --cyan-d:#1e7f8a;
+  --amber:#f3c653; --red:#d9534a; --red-l:#f07a6f;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#070c1a;color:var(--ink);
+  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  -webkit-tap-highlight-color:transparent}
+body{overflow:hidden}
+#app{position:relative;width:100%;height:100vh;height:100dvh;display:flex;flex-direction:column;
+  background:radial-gradient(120% 80% at 50% -10%, #16263f 0%, #0d1729 55%, #070c1a 100%);
+  overflow:hidden}
+
+/* ---------- 通用金属框 ---------- */
+.metalbox{position:relative;background:linear-gradient(180deg,var(--space3),var(--space2));
+  border:2px solid #080d1a;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.08), inset 0 -3px 0 rgba(0,0,0,.42),
+    0 3px 0 #05080f, 0 6px 12px rgba(0,0,0,.55)}
+.metalbox:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.30;
+  background:repeating-linear-gradient(90deg, rgba(0,0,0,.28) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(0deg, rgba(140,200,220,.08) 0 1px, transparent 1px 10px)}
+
+/* ---------- 顶部 ---------- */
+#hud{position:relative;z-index:6;display:flex;align-items:center;gap:10px;
+  padding:8px 12px;background:linear-gradient(180deg,#22385a,#13223d);
+  border-bottom:2px solid #080d1a;box-shadow:0 2px 0 rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);flex:none}
+#hud .logo{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.5px}
+#hud .logo .em{width:22px;height:22px;flex:none}
+#hud .t1{font-size:17px;color:#e8f2fb}
+#hud .t2{font-size:11px;color:var(--dim);margin-top:1px}
+#hud .mid{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:#c3d6ea}
+#hud .mid .sep{opacity:.35}
+#hud .right{display:flex;align-items:center;gap:6px;margin-left:10px}
+.em-pill{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:4px;
+  background:linear-gradient(180deg,#0e1830,#080f20);border:2px solid #05080f;
+  box-shadow:inset 0 0 0 1px rgba(70,216,224,.28)}
+.em-pill svg{width:16px;height:16px}
+.em-pill b{font-size:16px;color:#8ff0f4;font-variant-numeric:tabular-nums;letter-spacing:.5px}
+.iconbtn{width:34px;height:34px;display:grid;place-items:center;border-radius:4px;cursor:pointer;
+  background:linear-gradient(180deg,#3c5577,#26395a);border:2px solid #080d1a;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 2px 0 #05080f;color:#dbe7f5}
+.iconbtn:active{transform:translateY(2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 0 #05080f}
+
+/* ---------- 主舞台 ---------- */
+#stage{position:relative;flex:1;min-height:0;display:flex}
+#sceneWrap{position:relative;flex:1;min-width:0;overflow:hidden}
+#scene{display:block;width:100%;height:100%}
+#ledger{position:absolute;left:12px;top:12px;width:186px;padding:9px 10px 10px;z-index:3;
+  border-radius:3px;font-size:12px}
+#ledger h4{margin:0 0 7px;font-size:12px;color:#e8f2fb;letter-spacing:1px;font-weight:600;
+  display:flex;align-items:center;justify-content:space-between}
+#ledger h4 span{font-size:10px;color:#7d93ad;letter-spacing:0}
+.lrow{display:flex;justify-content:space-between;padding:3px 0;color:#b3c6da;border-bottom:1px dashed rgba(150,190,220,.13)}
+.lrow:last-child{border-bottom:0}
+.lrow b{color:#e8f2fb;font-variant-numeric:tabular-nums}
+.lrow b.neg{color:#f07a6f}
+.lrow b.pos{color:#8ff0f4}
+#ledger .hint{margin-top:7px;font-size:11px;line-height:1.5;color:#7d93ad}
+
+/* 客人名牌 */
+#nametag{position:absolute;left:50%;transform:translateX(-50%);top:47%;
+  padding:3px 10px;border-radius:3px;background:rgba(8,13,26,.66);border:1px solid rgba(0,0,0,.6);
+  font-size:12px;color:#e8f2fb;text-shadow:0 1px 0 #000;z-index:2;white-space:nowrap;pointer-events:none}
+#nametag em{font-style:normal;color:#8fa8c4;margin-left:6px;font-size:11px}
+
+/* ---------- 右侧面板 ---------- */
+#panel{width:352px;flex:none;display:flex;flex-direction:column;background:linear-gradient(180deg,#1d3355,#0f1c31);
+  border-left:2px solid #080d1a;box-shadow:inset 2px 0 0 rgba(255,255,255,.06);overflow:hidden;
+  padding:12px 12px 10px;gap:10px}
+#custCard{flex:0 1 auto;min-height:0;overflow-y:auto}
+#offerBar{flex:none;padding:9px 10px}
+#custCard::-webkit-scrollbar{width:6px}
+#custCard::-webkit-scrollbar-thumb{background:#3c5577;border-radius:3px}
+#panel::-webkit-scrollbar{width:6px}
+#panel::-webkit-scrollbar-thumb{background:#3c5577;border-radius:3px}
+
+.card{background:linear-gradient(180deg,#e3edf5,#c6d8e6);color:#14263a;border-radius:4px;
+  border:2px solid #0a1220;box-shadow:0 3px 0 #05080f,0 6px 14px rgba(0,0,0,.5);
+  padding:10px 11px}
+.card .cap{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:#5f7892;letter-spacing:.5px}
+.card .who{font-size:19px;font-weight:800;color:#12243a;margin:3px 0 2px;display:flex;align-items:center;gap:7px}
+.card .who .pat{display:flex;gap:3px;margin-left:auto}
+.card .who .pat i{width:7px;height:7px;background:#d9534a;border-radius:1px;display:block}
+.card .who .pat i.off{background:#b0becb}
+.card .say{font-size:12.5px;line-height:1.55;color:#33506a;margin-top:2px;
+  border-left:3px solid #5f8fb4;padding-left:8px}
+
+.goods{display:flex;gap:9px;align-items:center;margin-top:9px;padding:8px;border-radius:3px;
+  background:linear-gradient(180deg,#b9cfdf,#a2bccd);
+  border:1px solid #7d98ad}
+.goods .ic{width:46px;height:46px;flex:none;display:grid;place-items:center;background:#101c30;border:2px solid #080d1a}
+.goods .meta{flex:1;min-width:0}
+.goods .meta .nm{font-size:14px;font-weight:700;color:#12243a}
+.goods .meta .ct{font-size:11px;color:#55708a;margin-top:1px}
+.goods .meta .ask{font-size:12px;color:#12243a;margin-top:4px;display:flex;align-items:center;gap:5px}
+.goods .meta .ask b{font-size:15px;color:#1e7f8a}
+
+.sect{margin-top:10px}
+.sect .hd{display:flex;justify-content:space-between;font-size:11px;color:#5f7892;letter-spacing:.5px;margin-bottom:5px}
+.checks{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.chk{padding:7px 2px;text-align:center;font-size:12.5px;border-radius:3px;cursor:pointer;color:#1c3348;
+  background:linear-gradient(180deg,#e8f1f8,#c2d6e4);border:2px solid #6f8ba0;
+  box-shadow:0 2px 0 #6f8ba0}
+.chk:active{transform:translateY(2px);box-shadow:none}
+.chk[disabled]{opacity:.45;cursor:default;transform:none;box-shadow:0 2px 0 #6f8ba0}
+.clue{margin-top:7px;font-size:12px;line-height:1.55;color:#33506a;background:rgba(255,255,255,.30);
+  border:1px dashed #8aa8bd;border-radius:3px;padding:6px 8px;min-height:34px}
+.clue ul{margin:0;padding-left:15px}
+.clue li{margin:1px 0}
+.clue .k{color:#1e7f8a;font-weight:700}
+.clue .b{color:#a3302a;font-weight:700}
+
+.est{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:12px;color:#41607a}
+.est b{font-size:17px;color:#12243a;font-variant-numeric:tabular-nums}
+.est.done b{color:#1e7f8a}
+
+.offer{display:flex;align-items:center;gap:7px;margin-top:6px}
+.offer button{width:34px;height:34px;font-size:18px;font-weight:700;border-radius:3px;cursor:pointer;
+  color:#1c3348;background:linear-gradient(180deg,#e8f1f8,#c2d6e4);border:2px solid #6f8ba0;box-shadow:0 2px 0 #6f8ba0}
+.offer button:active{transform:translateY(2px);box-shadow:none}
+.offer input{flex:1;min-width:0;height:34px;text-align:center;font-size:19px;font-weight:800;color:#14263a;
+  background:#eef4f9;border:2px solid #6f8ba0;border-radius:3px;font-variant-numeric:tabular-nums}
+.slider{width:100%;margin-top:7px;accent-color:#1e7f8a}
+.mini{font-size:11px;color:#55708a;margin-top:5px}
+
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
+.btn{padding:10px 4px;text-align:center;font-size:14px;font-weight:700;border-radius:3px;cursor:pointer;
+  border:2px solid #080d1a;box-shadow:0 3px 0 #080d1a;letter-spacing:.5px;color:#0c2428}
+.btn:active{transform:translateY(3px);box-shadow:0 0 0 #080d1a}
+.btn.ok{background:linear-gradient(180deg,#5ad9c6,#2f9f8f);color:#0c2420}
+.btn.no{background:linear-gradient(180deg,#8d99a5,#67737f);color:#141a20}
+.btn.warn{grid-column:1/-1;background:linear-gradient(180deg,#d9b46f,#b5893f);color:#2e1f06;margin-top:2px}
+.btn.ghost{background:linear-gradient(180deg,#3c5577,#26395a);color:#dbe7f5}
+
+/* ---------- 窄屏 ---------- */
+@media (max-width:860px){
+  #hud{padding:6px 8px;gap:6px}
+  #hud .t1{font-size:15px}
+  #hud .mid{display:none}
+  #stage{flex-direction:column}
+  #sceneWrap{flex:none;height:28vh;min-height:180px}
+  #ledger{width:132px;padding:6px 7px;font-size:10.5px;left:8px;top:8px}
+  #ledger h4{font-size:10.5px}
+  #ledger .hint{display:none}
+  #panel{width:100%;border-left:0;border-top:2px solid #080d1a;flex:1;min-height:0;
+    padding:8px 8px 0;gap:8px}
+  #ledger{display:none}
+  .acts{flex:none;margin-top:6px;padding-bottom:4px}
+  .clue{display:none}
+  #custCard .cap{display:none}
+  .card{padding:8px 9px}
+  #custCard{flex:1 1 auto}
+  .card .who{font-size:16px}
+  .card .say{font-size:12px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+  .goods{padding:6px 8px;gap:8px}
+  .goods .ic{width:40px;height:40px}
+  .goods .nm{font-size:13px}
+  .goods .ask{font-size:12px}
+  .mini{display:none}
+  .slider{height:18px}
+  .est{margin-top:6px}
+  .chk{padding:9px 2px;font-size:13px}
+  .btn{padding:10px 4px;font-size:14.5px}
+  #tools{padding:6px 8px;gap:6px}
+  #tools .me{width:36px;height:36px}
+  .tool{width:48px;font-size:10px;padding:4px 1px}
+  .tool svg{width:16px;height:16px}
+  #nametag{bottom:8px}
+}
+@media (max-width:420px){
+  #ledger{display:none}
+  #tools .tool{width:44px}
+}
+
+/* ---------- 底部工具栏 ---------- */
+#tools{flex:none;display:flex;align-items:center;gap:8px;padding:8px 12px;
+  background:linear-gradient(180deg,#1d3355,#0f1c31);border-top:2px solid #05080f;
+  box-shadow:0 -2px 0 rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.08)}
+#tools .me{width:44px;height:44px;flex:none;border-radius:3px;background:#101c30;border:2px solid #05080f;
+  display:grid;place-items:center;overflow:hidden}
+#tools .tools{display:flex;gap:6px;flex:1;justify-content:center;flex-wrap:wrap}
+.tool{width:62px;padding:5px 2px 4px;text-align:center;border-radius:3px;cursor:pointer;
+  background:linear-gradient(180deg,#3c5577,#26395a);border:2px solid #05080f;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 2px 0 #05080f;color:#dbe7f5;font-size:11px}
+.tool:active{transform:translateY(2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+.tool svg{display:block;margin:0 auto 2px}
+.tool .badge{position:relative}
+.tool.hot{outline:2px solid rgba(143,240,244,.55);outline-offset:-4px}
+
+/* ---------- 弹层 ---------- */
+#modal{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;
+  background:rgba(4,8,18,.74);padding:16px}
+#modal.on{display:flex}
+#sheet{width:min(560px,94vw);max-height:86vh;overflow-y:auto;border-radius:5px;padding:16px 18px}
+#sheet h3{margin:0 0 4px;font-size:19px;color:#e8f2fb;letter-spacing:1px}
+#sheet .sub{font-size:12px;color:#8fa8c4;margin-bottom:10px}
+#sheet .body{font-size:13px;line-height:1.7;color:#c9dbee}
+#sheet .body b{color:#8ff0f4}
+#sheet .body .item{padding:7px 0;border-bottom:1px dashed rgba(150,190,220,.16)}
+#sheet .body .item .h{color:#e8f2fb;font-weight:700}
+#sheet .close{margin-top:14px;display:flex;gap:8px;justify-content:flex-end}
+#sheet .close .btn{padding:9px 20px}
+
+/* ---------- 开场 / 结束 ---------- */
+#cover{position:absolute;inset:0;z-index:12;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;background:radial-gradient(90% 70% at 50% 40%, rgba(10,18,38,.55), rgba(4,8,18,.92))}
+#cover .sign{position:relative;padding:14px 30px 16px;border-radius:4px;
+  background:linear-gradient(180deg,#2f5577,#1d3355);border:3px solid #0a1220;
+  box-shadow:0 4px 0 #05080f,0 12px 26px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.16)}
+#cover .sign b{display:block;font-size:30px;letter-spacing:6px;color:#eaf6fb;text-shadow:0 2px 0 #12303c,0 -1px 0 #8ff0f4}
+#cover .slogan{font-size:13px;color:#a9c2d8;letter-spacing:1px}
+#cover .btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+#cover .btns .btn{padding:11px 22px;font-size:14px;min-width:120px}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== 顶部 HUD ===== -->
+  <div id="hud">
+    <div class="logo">
+      <svg class="em" viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M8 1 L13 4 V12 L8 15 L3 12 V4 Z" fill="#1e7f8a"/><path d="M8 3.4 L11 5.2 V10.8 L8 12.6 L5 10.8 V5.2 Z" fill="#46d8e0"/><rect x="7" y="6" width="2" height="4" fill="#eaf6fb"/></svg>
+      <div><div class="t1">深空当铺</div><div class="t2" id="hudSub">等客人靠近泊位</div></div>
+    </div>
+    <div class="mid">
+      <span id="dayTag">三日挑战 · 1/3 天</span><span class="sep">|</span><span id="phaseTag">白班</span>
+      <span class="sep">|</span><span id="leftTag">还剩 8 位</span>
+    </div>
+    <div class="right">
+      <div class="em-pill"><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M8 1 L13 4 V12 L8 15 L3 12 V4 Z" fill="#1e7f8a"/><path d="M8 3.4 L11 5.2 V10.8 L8 12.6 L5 10.8 V5.2 Z" fill="#46d8e0"/></svg><b id="gemTag">96</b></div>
+      <div class="iconbtn" id="soundBtn" title="音效">♪</div>
+      <div class="iconbtn" id="helpBtn" title="玩法">?</div>
+    </div>
+  </div>
+
+  <!-- ===== 舞台 ===== -->
+  <div id="stage">
+    <div id="sceneWrap">
+      <canvas id="scene"></canvas>
+      <div id="ledger" class="metalbox">
+        <h4>今日小账<span id="daySm">第 1 天</span></h4>
+        <div class="lrow"><span>净赚</span><b id="lgNet">0</b></div>
+        <div class="lrow"><span>泊位费</span><b id="lgRent">-24</b></div>
+        <div class="lrow"><span>已收</span><b id="lgIn">0 件</b></div>
+        <div class="lrow"><span>货架</span><b id="lgShelf">0/6</b></div>
+        <div class="hint" id="lgHint">下班后，回收商队会来收今天收到的货。</div>
+      </div>
+      <div id="nametag">—</div>
+    </div>
+
+    <!-- 右侧操作面板 -->
+    <div id="panel">
+      <div class="card" id="custCard">
+        <div class="cap"><span>正在收当</span><span id="qIdx">1 / 8</span></div>
+        <div class="who"><span id="cName">—</span><span class="pat" id="patience"></span></div>
+        <div class="say" id="cSay">柜台后面，一位客人正把货箱放上来。</div>
+      </div>
+      <div class="card" id="offerBar">
+        <div class="goods">
+          <div class="ic" id="gIcon"></div>
+          <div class="meta">
+            <div class="nm" id="gName">—</div>
+            <div class="ct" id="gCat">—</div>
+            <div class="ask">开价 <b id="gAsk">0</b><svg viewBox="0 0 16 16" width="12" height="12" shape-rendering="crispEdges"><path d="M8 1 L13 4 V12 L8 15 L3 12 V4 Z" fill="#1e7f8a"/><path d="M8 3.4 L11 5.2 V10.8 L8 12.6 L5 10.8 V5.2 Z" fill="#46d8e0"/></svg></div>
+          </div>
+        </div>
+        <div class="sect">
+          <div class="hd"><span>先验验货</span><span id="chkLeft">0 / 3</span></div>
+          <div class="checks">
+            <div class="chk" data-chk="look">外观扫描</div>
+            <div class="chk" data-chk="qual">成分检测</div>
+            <div class="chk" data-chk="orig">来路核验</div>
+          </div>
+          <div class="clue" id="clue">卖家说的，先信一半。</div>
+        </div>
+        <div class="est" id="estRow"><span>你的估价</span><b id="estVal">?</b></div>
+        <div class="offer">
+          <button id="minus">−</button>
+          <input id="price" type="number" min="0" value="0">
+          <button id="plus">+</button>
+        </div>
+        <input class="slider" id="slider" type="range" min="0" max="120" value="0">
+        <div class="mini" id="offerHint">出价太低，客人会不高兴。</div>
+      </div>
+      <div class="acts">
+        <div class="btn ok" id="dealBtn">按价收购</div>
+        <div class="btn no" id="skipBtn">拒收退货</div>
+        <div class="btn warn" id="golemBtn">来路不对？报星港海关</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 底部工具栏 ===== -->
+  <div id="tools">
+    <div class="me"><canvas id="meCv" width="80" height="80" style="width:100%;height:100%"></canvas></div>
+    <div class="tools">
+      <div class="tool" data-tool="manual">
+        <svg width="20" height="20" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="3" y="1" width="9" height="1" fill="#3c5577"/><rect x="2" y="2" width="11" height="11" fill="#c6d8e6"/><rect x="3" y="3" width="9" height="9" fill="#e3edf5"/><rect x="4" y="5" width="7" height="1" fill="#5f7892"/><rect x="4" y="8" width="7" height="1" fill="#5f7892"/><rect x="2" y="12" width="12" height="2" fill="#3c5577"/></svg>
+        手册
+      </div>
+      <div class="tool" data-tool="shelf">
+        <svg width="20" height="20" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="1" y="3" width="14" height="2" fill="#3c5577"/><rect x="1" y="9" width="14" height="2" fill="#3c5577"/><rect x="2" y="5" width="3" height="4" fill="#5f8fb4"/><rect x="6" y="5" width="3" height="4" fill="#3c5577"/><rect x="2" y="11" width="3" height="3" fill="#3c5577"/><rect x="10" y="11" width="3" height="3" fill="#5f8fb4"/></svg>
+        货架
+      </div>
+      <div class="tool" data-tool="book">
+        <svg width="20" height="20" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="2" y="1" width="12" height="13" fill="#2a4a6e"/><rect x="3" y="2" width="10" height="11" fill="#3c6a96"/><rect x="4" y="4" width="7" height="1" fill="#eaf6fb"/><rect x="4" y="7" width="5" height="1" fill="#eaf6fb"/></svg>
+        账本
+      </div>
+      <div class="tool" data-tool="bell">
+        <svg width="20" height="20" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="6" y="1" width="4" height="2" fill="#f3c653"/><rect x="4" y="3" width="8" height="7" fill="#f3c653"/><rect x="3" y="6" width="10" height="4" fill="#d9a83a"/><rect x="5" y="11" width="6" height="2" fill="#8a6a20"/></svg>
+        呼叫铃
+      </div>
+      <div class="tool" data-tool="lens">
+        <svg width="20" height="20" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="2" y="2" width="8" height="1" fill="#cfe9ff"/><rect x="1" y="4" width="10" height="5" fill="#a8d8f0"/><rect x="2" y="9" width="8" height="1" fill="#7fb8d8"/><rect x="10" y="10" width="3" height="4" fill="#3c5577"/></svg>
+        鉴定镜
+      </div>
+      <div class="tool" data-tool="reward">
+        <svg width="20" height="20" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="3" y="1" width="10" height="6" fill="#c6d8e6"/><rect x="4" y="6" width="8" height="1" fill="#5f7892"/><rect x="4" y="7" width="8" height="1" fill="#5f7892"/><rect x="3" y="12" width="10" height="3" fill="#3c5577"/></svg>
+        奖励
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 开场 ===== -->
+  <div id="cover">
+    <div class="sign"><b>深空当铺</b></div>
+    <div class="slogan">96 枚星币，轨道站里一间自己的当铺。</div>
+    <div class="btns">
+      <div class="btn ok" id="startOne">开门营业</div>
+      <div class="btn ghost" id="startThree">三日挑战</div>
+      <div class="btn ghost" id="openManual">掌柜手册</div>
+    </div>
+  </div>
+
+  <!-- ===== 弹层 ===== -->
+  <div id="modal"><div id="sheet" class="metalbox">
+    <h3 id="mdTitle">掌柜手册</h3>
+    <div class="sub" id="mdSub"></div>
+    <div class="body" id="mdBody"></div>
+    <div class="close"><div class="btn ok" id="mdClose">知道了</div></div>
+  </div></div>
+</div>
+<script>
+/* ================= 引擎前导 ================= */
+(function(){
+"use strict";
+
+var $=function(id){return document.getElementById(id);};
+function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+function rnd(a,b){return a+Math.random()*(b-a);}
+function ri(a,b){return Math.floor(rnd(a,b+1));}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function px(g,x,y,w,h,c){g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
+
+/* ============ 像素角色 ============ */
+var CHARS={
+  keeper:{skin:"#c99a70",hair:"#3a2c20",shirt:"#2e5f6e",pants:"#33445a",eye:"#222",
+    extra:function(g,u,ox,oy){
+      px(g,ox+4*u,oy+8*u,8*u,2*u,"#46d8e0");
+      px(g,ox+6*u,oy+12*u,4*u,1*u,"#8ff0f4"); }},
+  merc:{skin:"#c99a70",hair:"#3a2c20",shirt:"#2e5f6e",pants:"#33445a",eye:"#222",
+    extra:function(g,u,ox,oy){
+      px(g,ox+3*u,oy+9*u,10*u,2*u,"#1e7f8a");
+      px(g,ox+0*u,oy+12*u,4*u,2*u,"#1e7f8a");
+      px(g,ox+12*u,oy+12*u,4*u,2*u,"#1e7f8a"); }},
+  trader:{skin:"#c49a72",hair:"#2e2438",shirt:"#4a3f6e",pants:"#332a4a",eye:"#222",
+    hood:"#3a3158",
+    extra:function(g,u,ox,oy){ px(g,ox+4*u,oy+8*u,8*u,2*u,"#2a2340");
+      px(g,ox+7*u,oy+14*u,2*u,3*u,"#f3c653"); }},
+  fugitive:{skin:"#8a7a6a",hair:"#1a1a1a",shirt:"#2a2a30",pants:"#1f1f24",eye:"#555",
+    extra:function(g,u,ox,oy){
+      px(g,ox+4*u,oy+3*u,8*u,2*u,"#111");
+      px(g,ox+3*u,oy+8*u,10*u,3*u,"#202028"); }},
+  droid:{skin:"#9aa3ad",hair:"#7c858f",shirt:"#8a939e",pants:"#5a636e",eye:"#46d8e0",thin:true,
+    extra:function(g,u,ox,oy){
+      px(g,ox+7*u,oy-1.5*u,2*u,1.5*u,"#7c858f");
+      px(g,ox+7.2*u,oy-3*u,1.6*u,1.6*u,"#46d8e0");
+      px(g,ox+6*u,oy+10*u,4*u,2*u,"#46d8e0"); }},
+  hunter:{skin:"#d8b18a",hair:"#5a3a1a",shirt:"#b4632a",pants:"#4a3a2a",eye:"#222",hat:"#7a4a22",
+    extra:function(g,u,ox,oy){
+      px(g,ox+5*u,oy+2.6*u,6*u,1.6*u,"#222");
+      px(g,ox+5*u,oy+9*u,6*u,2*u,"#8a4a1a"); }},
+  miner:{skin:"#c99a70",hair:"#6b522a",shirt:"#8a7a2a",pants:"#4a4230",eye:"#222",hat:"#d9b43a",
+    extra:function(g,u,ox,oy){
+      px(g,ox+6.6*u,oy-2*u,2.8*u,2*u,"#fff");
+      px(g,ox+5*u,oy+9*u,6*u,2*u,"#6b5e1a"); }},
+  smuggler:{skin:"#b8896a",hair:"#2a3a20",shirt:"#3a5a34",pants:"#2a3326",eye:"#222",hat:"#2e4428",
+    extra:function(g,u,ox,oy){ px(g,ox+4*u,oy+8*u,8*u,2*u,"#263d22"); }},
+  attach:{skin:"#e8c4a0",hair:"#2a2a2a",shirt:"#d8dce2",pants:"#3a3f4a",eye:"#222",
+    extra:function(g,u,ox,oy){ px(g,ox+7*u,oy+9*u,2*u,4*u,"#2a4a6e"); }},
+  captain:{skin:"#c99a70",hair:"#3a3a3a",shirt:"#2e3f6e",pants:"#222a3e",eye:"#222",hat:"#22304e",
+    extra:function(g,u,ox,oy){
+      px(g,ox+3*u,oy+8*u,3*u,2*u,"#f3c653");
+      px(g,ox+10*u,oy+8*u,3*u,2*u,"#f3c653"); }},
+  peddler:{skin:"#b8896a",hair:"#4a3320",shirt:"#6b4a2a",pants:"#3a2c1c",eye:"#222",
+    extra:function(g,u,ox,oy){ px(g,ox+4*u,oy+8*u,8*u,2*u,"#54381e"); }},
+  doctor:{skin:"#e8bb92",hair:"#3a2f20",shirt:"#e8ecef",pants:"#3a4148",eye:"#222",
+    extra:function(g,u,ox,oy){
+      px(g,ox+7*u,oy+9*u,2*u,3*u,"#d9534a");
+      px(g,ox+6*u,oy+10*u,4*u,1*u,"#d9534a"); }},
+  spy:{skin:"#9a8a7a",hair:"#111",shirt:"#202026",pants:"#18181c",eye:"#c07dff",hood:"#18181e",
+    extra:function(g,u,ox,oy){ px(g,ox+5*u,oy+4*u,6*u,2*u,"#0a0a0e"); }}
+};
+
+/* 画一个角色：cx 为中心 x，footY 为脚底 y，u 为一个像素单位的屏幕尺寸 */
+function drawChar(g,ch,cx,footY,u,t){
+  if(!ch) return;
+  var bob=Math.sin(t*1.9)*0.35*u;
+  var ox=cx-8*u, oy=footY-32*u+bob;
+  var s=ch.skin, isThin=!!ch.thin;
+
+  var lw=isThin?3*u:4*u;
+  px(g,ox+4*u,oy+20*u,lw,12*u,ch.pants);
+  px(g,ox+(8+(4-lw/u))*u,oy+20*u,lw,12*u,ch.pants);
+  px(g,ox+4*u,oy+30*u,4*u,2*u,"#1a2230");
+  px(g,ox+8*u,oy+30*u,4*u,2*u,"#1a2230");
+
+  px(g,ox+4*u,oy+8*u,8*u,12*u,ch.shirt);
+  px(g,ox+4*u,oy+8*u,8*u*0.5,12*u,"rgba(255,255,255,.07)");
+  px(g,ox+4*u,oy+18*u,8*u,2*u,"rgba(0,0,0,.22)");
+
+  var armH=12;
+  px(g,ox+0.5*u,oy+8*u,3.5*u,armH*u,ch.shirt);
+  px(g,ox+12*u,oy+8*u,3.5*u,armH*u,ch.shirt);
+  px(g,ox+0.5*u,oy+(8+armH)*u,3.5*u,3*u,s);
+  px(g,ox+12*u,oy+(8+armH)*u,3.5*u,3*u,s);
+
+  px(g,ox+4*u,oy+0*u,8*u,8*u,s);
+  px(g,ox+4*u,oy+0*u,8*u,1.6*u,ch.hair);
+  px(g,ox+4*u,oy+0*u,1.4*u,4*u,ch.hair);
+  px(g,ox+10.6*u,oy+0*u,1.4*u,4*u,ch.hair);
+
+  var eyeW=1.3*u, eyeH=1.1*u;
+  px(g,ox+5.4*u,oy+3.1*u,eyeW,eyeH,ch.eye);
+  px(g,ox+9.1*u,oy+3.1*u,eyeW,eyeH,ch.eye);
+  if(ch.eye==="#c07dff"){
+    g.save(); g.shadowColor="#b06bff"; g.shadowBlur=10*u;
+    px(g,ox+5.4*u,oy+3.1*u,1.6*u,1.2*u,"#e0bdff");
+    px(g,ox+9.0*u,oy+3.1*u,1.6*u,1.2*u,"#e0bdff");
+    g.restore();
+  }
+  px(g,ox+6.5*u,oy+6.4*u,3*u,0.8*u,"rgba(0,0,0,.55)");
+  if(ch.hat){
+    px(g,ox+3*u,oy-1.2*u,10*u,1.4*u,ch.hat);
+    px(g,ox+4.4*u,oy-3.6*u,7.2*u,2.6*u,ch.hat);
+    px(g,ox+4.4*u,oy-2.2*u,7.2*u,0.7*u,"rgba(0,0,0,.22)");
+  }
+  if(ch.hood){
+    px(g,ox+3.2*u,oy-1.4*u,9.6*u,2*u,ch.hood);
+    px(g,ox+3.2*u,oy+0.4*u,1.4*u,5*u,ch.hood);
+    px(g,ox+11.4*u,oy+0.4*u,1.4*u,5*u,ch.hood);
+  }
+  if(ch.extra) ch.extra(g,u,ox,oy);
+}
+
+/* ============ 物品图标（16×16 网格） ============ */
+var ICONS={
+  battery:function(g,x,y,u){
+    px(g,x+5*u,y+2*u,6*u,12*u,"#2e5f6e"); px(g,x+5*u,y+2*u,6*u,2*u,"#1e7f8a");
+    px(g,x+6.5*u,y+4*u,3*u,8*u,"#46d8e0"); px(g,x+7*u,y+5*u,2*u,5*u,"#bff4f6");
+    px(g,x+6*u,y+0.5*u,4*u,1.5*u,"#9aa3ad");
+  },
+  chip:function(g,x,y,u){
+    px(g,x+3*u,y+3*u,10*u,10*u,"#1e4a5e"); px(g,x+4*u,y+4*u,8*u,8*u,"#2e6f86");
+    px(g,x+6*u,y+6*u,4*u,4*u,"#46d8e0");
+    for(var i=0;i<4;i++){ px(g,x+2*u,y+(3+i)*3*u,1*u,1*u,"#8ff0f4"); px(g,x+13*u,y+(3+i)*3*u,1*u,1*u,"#8ff0f4"); }
+  },
+  specimen:function(g,x,y,u){
+    px(g,x+5*u,y+2*u,6*u,12*u,"#cfe6ee"); px(g,x+5*u,y+2*u,6*u,1.4*u,"#7c858f");
+    px(g,x+6*u,y+7*u,4*u,5*u,"#5fae4a"); px(g,x+6.6*u,y+8*u,1.6*u,2.4*u,"#a8e08a");
+    px(g,x+5*u,y+13*u,6*u,1*u,"#9aa3ad");
+  },
+  wrench:function(g,x,y,u){
+    px(g,x+4*u,y+9*u,3*u,6*u,"#8a939e"); px(g,x+3*u,y+9*u,3*u,1*u,"#b8c0c9");
+    px(g,x+5*u,y+9*u,1*u,9*u,"#7c858f"); px(g,x+5*u,y+11*u,1*u,8*u,"#c2ccd4");
+    px(g,x+2*u,y+2*u,12*u,2*u,"#9aa3ad"); px(g,x+2*u,y+2*u,3*u,2*u,"#7c858f"); px(g,x+12*u,y+2*u,3*u,2*u,"#7c858f");
+  },
+  ration:function(g,x,y,u){
+    px(g,x+3*u,y+3*u,10*u,10*u,"#8a6a3a"); px(g,x+3*u,y+3*u,10*u,2*u,"#c29a5a");
+    px(g,x+4*u,y+6*u,8*u,4*u,"#e8d6a8"); px(g,x+5*u,y+7*u,6*u,1*u,"#8a6a3a");
+    px(g,x+3*u,y+13*u,10*u,1*u,"#5a4220");
+  },
+  compass:function(g,x,y,u){
+    px(g,x+3*u,y+3*u,10*u,10*u,"#3c5577"); px(g,x+4*u,y+4*u,8*u,8*u,"#c6d8e6");
+    px(g,x+7*u,y+4.5*u,2*u,7*u,"#d9534a"); px(g,x+7.6*u,y+4.5*u,0.8*u,7*u,"#f07a6f");
+    px(g,x+7.4*u,y+7*u,1.2*u,1.2*u,"#222");
+  },
+  drive:function(g,x,y,u){
+    px(g,x+4*u,y+4*u,8*u,8*u,"#4a3f6e"); px(g,x+5*u,y+5*u,6*u,6*u,"#6a5aa8");
+    px(g,x+6.5*u,y+6.5*u,3*u,3*u,"#c07dff"); px(g,x+7*u,y+7*u,2*u,2*u,"#e8d6ff");
+  },
+  relic:function(g,x,y,u){
+    px(g,x+5*u,y+2*u,6*u,2*u,"#9a6fdc"); px(g,x+3*u,y+4*u,10*u,4*u,"#b48fef");
+    px(g,x+5*u,y+8*u,6*u,5*u,"#8a5cd0"); px(g,x+6*u,y+3*u,2*u,3*u,"#d8bcff");
+  },
+  embryo:function(g,x,y,u){
+    px(g,x+5*u,y+2*u,6*u,12*u,"#cfe6ee"); px(g,x+5*u,y+8*u,6*u,4*u,"#7ad8c8");
+    px(g,x+6.6*u,y+9*u,2.8*u,2.4*u,"#3fae9e"); px(g,x+6*u,y+0.5*u,4*u,1.5*u,"#7c858f");
+  },
+  shield:function(g,x,y,u){
+    px(g,x+3*u,y+2*u,10*u,2*u,"#2e6f86"); px(g,x+2*u,y+4*u,12*u,6*u,"#1e7f8a");
+    px(g,x+4*u,y+10*u,8*u,3*u,"#176a74"); px(g,x+6*u,y+4.5*u,4*u,4*u,"#46d8e0");
+  },
+  ore:function(g,x,y,u){
+    px(g,x+3*u,y+6*u,6*u,6*u,"#5a636e"); px(g,x+8*u,y+4*u,5*u,6*u,"#6e7885");
+    px(g,x+4*u,y+4*u,4*u,4*u,"#7c858f"); px(g,x+5*u,y+7*u,2*u,2*u,"#46d8e0");
+    px(g,x+10*u,y+6*u,1.6*u,1.6*u,"#8ff0f4");
+  },
+  spice:function(g,x,y,u){
+    px(g,x+4*u,y+4*u,8*u,9*u,"#8a5c38"); px(g,x+4*u,y+4*u,8*u,2*u,"#a8764a");
+    px(g,x+5*u,y+6*u,6*u,4*u,"#c88a52"); px(g,x+6*u,y+2*u,4*u,2*u,"#6b4a2a");
+  }
+};
+function drawIcon(g,id,cx,cy,size){
+  var u=size/16, x=cx-size/2, y=cy-size/2;
+  g.save();
+  px(g,x,y,size,size,"#101c30");
+  g.fillStyle="rgba(140,220,230,.06)"; g.fillRect(x,y,size,size);
+  var f=ICONS[id]||ICONS.ore; f(g,x,y,u);
+  g.restore();
+}
+
+/* ============ 场景绘制 ============ */
+var CV=$("scene"), CX=CV.getContext("2d");
+var SC={w:1000,h:620,dpr:1,scale:1,t:0};
+
+var STARS=[];
+for(var si=0;si<90;si++){
+  STARS.push({x:Math.random(),y:Math.random()*0.62,r:Math.random()<0.25?2:1,p:Math.random()*Math.PI*2});
+}
+
+function resize(){
+  var wrap=$("sceneWrap");
+  var w=wrap.clientWidth||800, h=wrap.clientHeight||500;
+  var dpr=Math.min(window.devicePixelRatio||1,2);
+  CV.width=Math.round(w*dpr); CV.height=Math.round(h*dpr);
+  CV.style.width=w+"px"; CV.style.height=h+"px";
+  SC.dpr=dpr; SC.scale=Math.max(w/1000, h/620);
+  CX.setTransform(1,0,0,1,0,0);
+}
+window.addEventListener("resize",resize);
+
+function drawSpace(g,W,H){
+  var gr=g.createLinearGradient(0,0,0,H*0.62);
+  gr.addColorStop(0,"#070d1e"); gr.addColorStop(0.6,"#0f1c34"); gr.addColorStop(1,"#16283f");
+  g.fillStyle=gr; g.fillRect(-100,-100,W+200,H*0.62+100);
+
+  for(var i=0;i<STARS.length;i++){
+    var st=STARS[i], tw=0.55+0.45*Math.sin(SC.t*1.6+st.p);
+    g.globalAlpha=tw;
+    g.fillStyle=st.r>1?"#eaf6fb":"#9fc4dc";
+    g.fillRect(Math.round(st.x*W),Math.round(st.y*H),st.r,st.r);
+  }
+  g.globalAlpha=1;
+
+  /* 左上方行星 + 环 */
+  var px0=W*0.16, py0=H*0.16, pr=H*0.13;
+  var pg=g.createRadialGradient(px0-pr*0.3,py0-pr*0.3,2,px0,py0,pr);
+  pg.addColorStop(0,"#3c6a8c"); pg.addColorStop(0.7,"#1e3f5e"); pg.addColorStop(1,"#12283c");
+  g.fillStyle=pg; g.beginPath(); g.arc(px0,py0,pr,0,Math.PI*2); g.fill();
+  g.strokeStyle="rgba(143,240,244,.35)"; g.lineWidth=3;
+  g.beginPath(); g.ellipse(px0,py0,pr*1.5,pr*0.32,-0.35,0,Math.PI*2); g.stroke();
+
+  /* 远处空间站灯带 */
+  var hor=H*0.502;
+  g.fillStyle="#122236"; g.fillRect(-100,hor-10,W+200,12);
+  for(var k=0;k<14;k++){
+    var lx=(k*73)%(W+120)-60, lit=Math.sin(SC.t*1.2+k*1.7)>0.2;
+    g.fillStyle=lit?"#f3c653":"#3c5577";
+    g.fillRect(lx,hor-7,5,3);
+  }
+  g.fillStyle="#16283f"; g.fillRect(-100,hor,W+200,6);
+}
+
+/* 前景：当铺控制台 */
+function drawCounter(g,W,H){
+  var farY=H*0.600, faceY=H*0.842;
+  var tinL=-0.10, tinR=1.10;
+  var toutL=-0.56, toutR=1.56;
+
+  g.beginPath();
+  g.moveTo(W*tinL,farY); g.lineTo(W*tinR,farY);
+  g.lineTo(W*toutR,faceY); g.lineTo(W*toutL,faceY);
+  g.closePath();
+  var tf=g.createLinearGradient(0,farY,0,faceY);
+  tf.addColorStop(0,"#2a3b55"); tf.addColorStop(0.30,"#33485f"); tf.addColorStop(1,"#1f2d42");
+  g.fillStyle=tf; g.fill();
+
+  for(var m=1;m<9;m++){
+    var v=Math.pow(m/9,1.25);
+    var yy=farY+v*(faceY-farY);
+    var xa=W*tinL+v*(W*toutL-W*tinL);
+    var xb=W*tinR+v*(W*toutR-W*tinR);
+    g.strokeStyle="rgba(0,0,0,.24)"; g.lineWidth=2+v*1.4;
+    g.beginPath(); g.moveTo(xa,yy); g.lineTo(xb,yy); g.stroke();
+    g.strokeStyle="rgba(140,220,230,.12)"; g.lineWidth=1+v;
+    g.beginPath(); g.moveTo(xa,yy+2+v*2); g.lineTo(xb,yy+2+v*2); g.stroke();
+  }
+  g.strokeStyle="rgba(0,0,0,.06)"; g.lineWidth=1;
+  for(var k=1;k<16;k++){
+    var u=k/16;
+    var xt=W*tinL+u*(W*tinR-W*tinL);
+    var xb2=W*toutL+u*(W*toutR-W*toutL);
+    g.beginPath(); g.moveTo(xt,farY); g.lineTo(xb2,faceY); g.stroke();
+  }
+  var lg=g.createLinearGradient(W*0.1,farY,W*0.8,faceY);
+  lg.addColorStop(0,"rgba(190,230,240,.20)"); lg.addColorStop(0.4,"rgba(190,230,240,.05)");
+  lg.addColorStop(1,"rgba(0,0,0,.20)");
+  g.fillStyle=lg;
+  g.beginPath();
+  g.moveTo(W*tinL,farY); g.lineTo(W*tinR,farY);
+  g.lineTo(W*toutR,faceY); g.lineTo(W*toutL,faceY);
+  g.closePath(); g.fill();
+  var bs=g.createLinearGradient(0,farY,0,farY+26);
+  bs.addColorStop(0,"rgba(0,0,0,.34)"); bs.addColorStop(1,"rgba(0,0,0,0)");
+  g.fillStyle=bs; g.fillRect(W*tinL,farY,W*(tinR-tinL),26);
+
+  /* 全息交易垫 */
+  var bY1=farY+30, bY2=faceY-36;
+  g.beginPath();
+  g.moveTo(W*0.285,bY1); g.lineTo(W*0.715,bY1);
+  g.lineTo(W*0.765,bY2); g.lineTo(W*0.235,bY2);
+  g.closePath();
+  var bg=g.createLinearGradient(0,bY1,0,bY2);
+  bg.addColorStop(0,"rgba(30,127,138,.55)"); bg.addColorStop(1,"rgba(14,40,58,.7)");
+  g.fillStyle=bg; g.fill();
+  g.strokeStyle="rgba(70,216,224,.5)"; g.lineWidth=2; g.stroke();
+  g.beginPath();
+  g.moveTo(W*0.300,bY1+8); g.lineTo(W*0.700,bY1+8);
+  g.lineTo(W*0.748,bY2-8); g.lineTo(W*0.252,bY2-8);
+  g.closePath();
+  g.strokeStyle="rgba(143,240,244,.18)"; g.lineWidth=1; g.stroke();
+
+  /* 摆件：终端屏 / 星币堆 / 工具 */
+  var dY=(bY1+bY2)/2+16;
+  function shadow(x,y,w,h){ g.fillStyle="rgba(0,0,0,.30)"; g.fillRect(x,y,w,h); }
+  shadow(W*0.305,dY-16,84,24);
+  px(g,W*0.295,dY-34,84,34,"#16263f");
+  px(g,W*0.295,dY-34,84,6,"#3c5577");
+  g.save(); g.shadowColor="#46d8e0"; g.shadowBlur=12;
+  px(g,W*0.305,dY-27,64,20,"#0e1c30");
+  px(g,W*0.315,dY-23,40,3,"#46d8e0"); px(g,W*0.315,dY-17,28,3,"#1e7f8a");
+  g.restore();
+
+  g.save();
+  g.shadowColor="#f3c653"; g.shadowBlur=16;
+  px(g,W*0.505,dY-18,22,6,"#f3c653"); px(g,W*0.495,dY-24,22,6,"#e0b442");
+  px(g,W*0.485,dY-30,22,6,"#f3c653");
+  g.restore();
+
+  var sx=W*0.655, sy=dY-34;
+  shadow(sx-4,sy+34,30,7);
+  px(g,sx+2,sy+6,5,30,"#8a939e");
+  px(g,sx+2,sy+6,2,30,"#c2ccd4");
+  px(g,sx-16,sy+3,44,3,"#5f7892");
+  px(g,sx-15,sy+3,44,1,"#8aa8bd");
+
+  /* 前缘厚度 */
+  g.beginPath();
+  g.moveTo(W*toutL,faceY); g.lineTo(W*toutR,faceY);
+  g.lineTo(W*toutR,faceY+15); g.lineTo(W*toutL,faceY+15);
+  g.closePath();
+  var ef=g.createLinearGradient(0,faceY,0,faceY+15);
+  ef.addColorStop(0,"#33485f"); ef.addColorStop(1,"#16222f");
+  g.fillStyle=ef; g.fill();
+  g.fillStyle="rgba(143,240,244,.45)"; g.fillRect(W*toutL,faceY,W*(toutR-toutL),3);
+  g.fillStyle="rgba(234,246,251,.45)"; g.fillRect(W*toutL,faceY,W*(toutR-toutL),1);
+
+  /* 柜台正面 */
+  var fy2=faceY+15;
+  g.fillStyle="#101c30"; g.fillRect(-40,fy2,W+80,H-fy2+40);
+  g.fillStyle="rgba(140,220,230,.07)"; g.fillRect(-40,fy2,W+80,2);
+  var dx0=W*0.34, dx1=W*0.66, dy0=fy2+12, dy1=H+30;
+  g.fillStyle="#1d3355"; g.fillRect(dx0,dy0,dx1-dx0,dy1-dy0);
+  g.strokeStyle="rgba(143,240,244,.18)"; g.lineWidth=2;
+  g.strokeRect(dx0+5,dy0+5,dx1-dx0-10,dy1-dy0-14);
+  g.fillStyle="rgba(143,240,244,.45)"; g.fillRect((dx0+dx1)/2-18,dy0+26,36,7);
+  g.fillStyle="rgba(0,0,0,.35)"; g.fillRect((dx0+dx1)/2-18,dy0+33,36,2);
+}
+
+function drawScene(){
+  var W=1000,H=620;
+  var dpr=SC.dpr, k=SC.scale;
+  var sh=GAME.shake*8;
+  var ox=(CV.width/dpr - W*k)/2 + (sh>0?rnd(-sh,sh):0);
+  var oy=(CV.height/dpr - H*k)/2 + (sh>0?rnd(-sh,sh):0);
+  CX.setTransform(dpr*k,0,0,dpr*k, ox*dpr, oy*dpr);
+  CX.imageSmoothingEnabled=false;
+  CX.clearRect(-200,-200,W+400,H+400);
+
+  var phase=GAME.phase||"day";
+  drawSpace(CX,W,H);
+
+  if(GAME.guest){
+    var cxp=W*0.5, footY=H*0.610;
+    var pin=Math.min(1,GAME.inT/0.55); pin=1-Math.pow(1-pin,3);
+    var gdx=(1-pin)*W*0.17;
+    CX.save();
+    CX.globalAlpha=.26*pin; CX.fillStyle="#000";
+    CX.beginPath(); CX.ellipse(cxp+gdx,footY-2,46,9,0,0,Math.PI*2); CX.fill();
+    CX.globalAlpha=pin;
+    drawChar(CX,CHARS[GAME.guest.who.art]||CHARS.keeper,cxp+gdx,footY,6.2,SC.t);
+    CX.restore();
+  }
+
+  drawCounter(CX,W,H);
+
+  for(var i=0;i<GAME.pops.length;i++){
+    var q=GAME.pops[i], a=1-q.t/q.life;
+    CX.globalAlpha=a>.15?a:.15*(a/.15);
+    CX.font="bold 22px system-ui,'PingFang SC','Microsoft YaHei',sans-serif";
+    CX.textAlign="center";
+    CX.lineWidth=4; CX.strokeStyle="rgba(8,13,26,.72)";
+    CX.strokeText(q.txt,q.x,q.y);
+    CX.fillStyle=q.c; CX.fillText(q.txt,q.x,q.y);
+    CX.globalAlpha=1;
+  }
+  CX.textAlign="left";
+
+  var vg=CX.createRadialGradient(W*0.5,H*0.42,H*0.25,W*0.5,H*0.45,W*0.72);
+  vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,"rgba(4,8,18,.42)");
+  CX.fillStyle=vg; CX.fillRect(-200,-200,W+400,H+400);
+  if(GAME.light>0.01){ CX.fillStyle="rgba(8,12,30,"+(0.40*GAME.light)+")"; CX.fillRect(-200,-200,W+400,H+400); }
+}
+
+/* ============ 数据 ============ */
+var ITEMS=[
+  {id:"battery",name:"聚变电池",cat:"能源",base:42},
+  {id:"chip",name:"星图芯片",cat:"数据",base:56},
+  {id:"specimen",name:"外星标本",cat:"生物",base:62},
+  {id:"wrench",name:"工程扳手",cat:"工具",base:24},
+  {id:"ration",name:"压缩口粮",cat:"补给",base:20},
+  {id:"compass",name:"跃迁罗盘",cat:"导航",base:66},
+  {id:"drive",name:"量子存储器",cat:"数据",base:48},
+  {id:"relic",name:"外星古物",cat:"奇物",base:72},
+  {id:"embryo",name:"冷冻胚胎",cat:"生物",base:36},
+  {id:"shield",name:"护盾发生器",cat:"装备",base:52},
+  {id:"ore",name:"稀有矿石",cat:"矿物",base:34},
+  {id:"spice",name:"走私香料",cat:"补给",base:30}
+];
+
+var CUSTOMERS=[
+  {art:"merc",name:"流浪佣兵",line:"刚打完一场星际仗，先把装备典了换船票。"},
+  {art:"trader",name:"星际行商",line:"跑了三条旋臂，就你这家还亮着灯。"},
+  {art:"fugitive",name:"蒙面逃犯",line:"别问编号，东西我来路清楚。"},
+  {art:"droid",name:"旧型号机体",line:"我……这里有一件可以抵押的配件。"},
+  {art:"hunter",name:"赏金猎人",line:"单子没成，装备先押你这儿。"},
+  {art:"miner",name:"矿队矿工",line:"矿星风暴来得早，先典几件应急。"},
+  {art:"smuggler",name:"走私客",line:"货走暗格不方便，放你这儿几天。"},
+  {art:"attach",name:"外交官随从",line:"主人吩咐，这批东西低调处理。"},
+  {art:"captain",name:"退役舰长",line:"退役津贴拖了三个月，家当先当了。"},
+  {art:"peddler",name:"机器人贩子",line:"这批翻新件，成色你自己看。"},
+  {art:"doctor",name:"随船医师",line:"药房压了一批存货，想周转一下。"},
+  {art:"spy",name:"蒙面乘客",line:"问这么多干什么，钱给够就行。"}
+];
+
+/* ============ 状态 ============ */
+var GAME={
+  phase:"day", mode:"three", day:1, idx:0, total:8,
+  gems:96, rent:24, net:0, got:0,
+  shelf:[], shelfMax:6,
+  guest:null, patience:2,
+  checks:0, estLo:0, estHi:0, price:0,
+  flags:{look:false,qual:false,orig:false},
+  clues:[], lensUsed:false,
+  correct:0, wrong:0, penal:0, sold:0,
+  running:false, over:false,
+  inT:9, pops:[], shake:0, light:0
+};
+
+function popText(txt,c,x,y){
+  GAME.pops.push({txt:txt,c:c||"#ffd66a",x:(x==null?500:x),y:(y==null?330:y),t:0,life:1.15});
+}
+
+function makeGood(){
+  var it=pick(ITEMS);
+  var q = Math.random()<0.22?"fake":(Math.random()<0.30?"worn":"good");
+  var stolen = Math.random()<0.20;
+  var contra = Math.random()<0.16;
+  var mult = q==="good"?rnd(0.94,1.12):(q==="worn"?rnd(0.52,0.72):rnd(0.14,0.26));
+  var real = Math.max(3,Math.round(it.base*mult));
+  var ask = q==="fake"
+    ? Math.max(6,Math.round(it.base*rnd(0.80,0.95)))
+    : Math.max(5,Math.round(real*rnd(1.24,1.46)));
+  return {item:it,quality:q,stolen:stolen,contra:contra,real:real,ask:ask,name:it.name,cat:it.cat,icon:it.id};
+}
+
+function nextGuest(){
+  GAME.inT=0;
+  var c=pick(CUSTOMERS);
+  var g=makeGood();
+  GAME.guest={who:c,good:g};
+  GAME.patience=2;
+  GAME.checks=0;
+  GAME.flags={look:false,qual:false,orig:false};
+  GAME.clues=[];
+  GAME.estLo=Math.max(2,Math.round(g.real*0.40));
+  GAME.estHi=Math.round(g.real*1.85);
+  GAME.price=Math.round(g.ask*0.8);
+  renderGuest();
+  updateHUD();
+}
+
+/* ============ 面板渲染 ============ */
+function renderGuest(){
+  var g=GAME.guest;
+  if(!g){
+    $("cName").textContent="—";
+    $("cSay").textContent="泊位空着，等下一艘客船。";
+    return;
+  }
+  var G=g.good;
+  $("cName").textContent=g.who.name;
+  $("cSay").textContent=g.who.line;
+  $("gName").textContent=G.name;
+  $("gCat").textContent=G.cat;
+  $("gAsk").textContent=G.ask;
+  $("qIdx").textContent=(GAME.idx+1)+" / "+GAME.total;
+
+  var ic=$("gIcon");
+  ic.innerHTML="";
+  var cv=document.createElement("canvas");
+  cv.width=92; cv.height=92; cv.style.width="46px"; cv.style.height="46px";
+  var cg=cv.getContext("2d"); cg.imageSmoothingEnabled=false;
+  drawIcon(cg,G.icon,46,46,92);
+  ic.appendChild(cv);
+
+  var pat=$("patience"); pat.innerHTML="";
+  for(var i=0;i<2;i++){
+    var d=document.createElement("i");
+    if(i>=GAME.patience) d.className="off";
+    pat.appendChild(d);
+  }
+
+  renderChecks();
+  renderEst();
+  renderPrice();
+
+  $("nametag").innerHTML=g.who.name+"<em>"+guessTag()+"</em>";
+}
+
+function guessTag(){
+  var G=GAME.guest.good;
+  if(G.quality==="good") return "扫描看着还不错";
+  if(G.quality==="worn") return "用得有点狠";
+  return "说不太准";
+}
+
+function renderChecks(){
+  var cks=document.querySelectorAll(".chk");
+  for(var i=0;i<cks.length;i++){
+    var k=cks[i].getAttribute("data-chk");
+    cks[i].setAttribute("disabled", GAME.flags[k]?"disabled":"");
+  }
+  $("chkLeft").textContent=GAME.checks+" / 3";
+  var box=$("clue");
+  if(!GAME.clues.length){ box.textContent="卖家说的，先信一半。"; return; }
+  var html="<ul>";
+  for(var j=0;j<GAME.clues.length;j++) html+="<li>"+GAME.clues[j]+"</li>";
+  html+="</ul>";
+  box.innerHTML=html;
+}
+
+function renderEst(){
+  var row=$("estRow"), v=$("estVal");
+  if(GAME.checks===0){
+    v.textContent="?";
+    row.className="est";
+    return;
+  }
+  row.className="est done";
+  v.textContent=GAME.estLo+" – "+GAME.estHi;
+}
+
+function renderPrice(){
+  var p=$("price"), s=$("slider");
+  var max=Math.max(20,GAME.guest?GAME.guest.good.ask+40:120);
+  p.max=max; s.max=max;
+  p.value=GAME.price; s.value=GAME.price;
+  var g=GAME.guest?GAME.guest.good:null;
+  var hint=$("offerHint");
+  if(!g){ hint.textContent=""; return; }
+  if(GAME.price<Math.round(g.real*0.7)) hint.textContent="出这么低，客人会觉得你在压秤。";
+  else if(GAME.price>g.ask) hint.textContent="出得比开价还高，这单你肯定亏。";
+  else hint.textContent="开价 "+g.ask+" 枚，压一压有戏。";
+}
+
+function updateHUD(){
+  $("gemTag").textContent=GAME.gems;
+  $("dayTag").textContent="三日挑战 · "+GAME.day+"/3 天";
+  $("phaseTag").textContent=GAME.phase==="night"?"打烊":(GAME.phase==="dusk"?"晚班":"白班");
+  $("leftTag").textContent="还剩 "+Math.max(0,GAME.total-GAME.idx)+" 位";
+  $("hudSub").textContent=GAME.guest?"等下一位客人开口":"等客船靠近泊位";
+  $("daySm").textContent="第 "+GAME.day+" 天";
+  $("lgNet").textContent=(GAME.net>=0?"+":"")+GAME.net;
+  $("lgNet").className=GAME.net<0?"neg":"pos";
+  $("lgRent").textContent="-"+GAME.rent;
+  $("lgIn").textContent=GAME.got+" 件";
+  $("lgShelf").textContent=GAME.shelf.length+"/"+GAME.shelfMax;
+  $("lgHint").textContent=GAME.shelf.length>=GAME.shelfMax
+    ? "货架满了，先去货架上卖点东西。"
+    : "下班后，回收商队会来收今天收到的货。";
+
+  var lens=document.querySelector('[data-tool="lens"]');
+  if(lens) lens.className="tool"+(GAME.lensUsed?"":" hot");
+}
+
+/* ============ 音效 ============ */
+var AC=null, muted=false;
+function tone(freq,dur,type,vol){
+  if(muted) return;
+  try{
+    if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==="suspended") AC.resume();
+    var o=AC.createOscillator(), g=AC.createGain();
+    o.type=type||"triangle"; o.frequency.value=freq;
+    g.gain.value=vol==null?0.05:vol;
+    g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime+dur);
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime+dur);
+  }catch(e){}
+}
+
+/* ============ 检查 ============ */
+function doCheck(kind){
+  if(!GAME.guest || GAME.over || !GAME.running) return;
+  if(GAME.flags[kind]) return;
+  GAME.flags[kind]=true;
+  GAME.checks++;
+  var G=GAME.guest.good;
+  var ok = Math.random()<0.72;
+
+  if(kind==="look"){
+    if(G.quality==="worn"){
+      GAME.clues.push("<span class='k'>外观：</span>外壳磨得发亮，用了很久，但东西是真材实料。");
+    }else if(G.quality==="fake"){
+      GAME.clues.push(ok
+        ? "<span class='b'>外观：</span>做旧的手感不对，接缝太齐了，像是仿的。"
+        : "<span class='k'>外观：</span>看着还行，外壳有一点新。");
+    }else{
+      GAME.clues.push("<span class='k'>外观：</span>保存得很好，几乎没有磕碰划痕。");
+    }
+    GAME.estLo=Math.round((GAME.estLo*0.35+G.real*0.72)*1.0);
+    GAME.estHi=Math.round((GAME.estHi*0.35+G.real*1.30)*1.0);
+  }
+  if(kind==="qual"){
+    if(G.quality==="fake"){
+      GAME.clues.push(ok
+        ? "<span class='b'>品质：</span>成分比对出来了，是仿品，只能按材料价回收。"
+        : "<span class='k'>品质：</span>看着像真货，但说不上哪儿不对。");
+    }else if(G.quality==="worn"){
+      GAME.clues.push("<span class='k'>品质：</span>真货，磨损严重，值不了原价。");
+    }else{
+      GAME.clues.push(ok
+        ? "<span class='k'>品质：</span>真货，品质没问题。"
+        : "<span class='b'>品质：</span>有点看不准，得再想想。");
+    }
+    tighten(0.55,1.35);
+  }
+  if(kind==="orig"){
+    if(G.contra){
+      GAME.clues.push(ok
+        ? "<span class='b'>来路：</span>货单上盖着禁运章，这是违禁品。"
+        : "<span class='k'>来路：</span>通行码看着齐全，没查出什么。");
+    }else if(G.stolen){
+      GAME.clues.push(ok
+        ? "<span class='b'>来路：</span>序列号对得上失窃清单，这件的来路有问题。"
+        : "<span class='k'>来路：</span>收据看着齐全，没查出什么。");
+    }else{
+      GAME.clues.push(ok
+        ? "<span class='k'>来路：</span>来路正常，通关记录对得上。"
+        : "<span class='b'>来路：</span>货单有点糊，看不太清。");
+    }
+    tighten(0.72,1.14);
+  }
+  GAME.price=clamp(GAME.price,2,GAME.guest.good.ask+40);
+  tone(520,0.12,"square",0.04);
+  renderChecks(); renderEst(); renderGuest();
+}
+function tighten(lo,hi){
+  GAME.estLo=Math.max(2,Math.round(GAME.estLo*0.3+GAME.guest.good.real*lo*0.7));
+  GAME.estHi=Math.round(GAME.estHi*0.3+GAME.guest.good.real*hi*0.7);
+  if(GAME.estHi<GAME.estLo+3) GAME.estHi=GAME.estLo+3;
+}
+
+/* ============ 议价成交 ============ */
+function doDeal(){
+  if(!GAME.guest||GAME.over) return;
+  var G=GAME.guest.good;
+  var p=GAME.price;
+
+  if(GAME.shelf.length>=GAME.shelfMax){ toast("货架满了，先去货架上卖点东西。"); return; }
+  if(p<=0){ toast("出价不能是 0。"); return; }
+  if(p>GAME.gems){ toast("星币不够，你只有 "+GAME.gems+" 枚。"); return; }
+
+  if(p>G.ask){
+    settleDeal(p);
+    return;
+  }
+  if(p>=Math.round(G.real*0.93)){
+    settleDeal(p);
+    return;
+  }
+  GAME.patience--;
+  tone(240,0.18,"sawtooth",0.05);
+  if(GAME.patience<=0){
+    toast("客人摇着头收回了东西：「这价，我自己留着吧。」");
+    setTimeout(()=>{ advanceGuest(); },900);
+    renderGuest();
+    return;
+  }
+  var bump=pick([2,3,4]);
+  G.ask=Math.max(p+1,G.ask-bump);
+  $("gAsk").textContent=G.ask;
+  toast("客人皱了下眉：「"+G.ask+" 枚，不能再少了。」");
+  renderGuest(); renderPrice();
+}
+function settleDeal(p){
+  var G=GAME.guest.good;
+  GAME.gems-=p;
+  GAME.net-=p;
+  GAME.shelf.push({good:G,paid:p});
+  GAME.got++;
+  GAME.correct++;
+  tone(660,0.10,"triangle",0.06);
+  setTimeout(()=>tone(880,0.14,"triangle",0.05),90);
+  popText("\u2212"+p+" 枚","#ffb27a",500,214);
+  popText("已入货架","#8fe3a5",500,258);
+  toast("成交，"+G.name+" 归你了。");
+  advanceGuest();
+}
+function doSkip(){
+  if(!GAME.guest||GAME.over) return;
+  tone(300,0.12,"sine",0.03);
+  toast("你把货推了回去，客人收好走了。");
+  GAME.idx++;
+  advanceGuest();
+}
+function callCustoms(){
+  if(!GAME.guest||GAME.over) return;
+  var G=GAME.guest.good;
+  if(G.stolen||G.contra){
+    GAME.gems+=8; GAME.net+=8;
+    GAME.correct++;
+    tone(180,0.3,"square",0.05);
+    popText("+8 谢礼","#8fe3a5",500,222);
+    toast("海关巡逻艇把人带走了，星港给了你 8 枚谢礼。");
+  }else{
+    GAME.gems-=6; GAME.net-=6;
+    GAME.wrong++;
+    tone(140,0.3,"sawtooth",0.05);
+    GAME.shake=.7;
+    popText("\u22126 赔礼","#ff8f7a",500,222);
+    toast("核验过了来路正常。你赔了客人 6 枚星币。");
+  }
+  advanceGuest();
+}
+function advanceGuest(){
+  GAME.idx++;
+  updateHUD();
+  if(GAME.idx>=GAME.total){ endDay(); return; }
+  GAME.guest=null; renderGuest();
+  setTimeout(()=>{ if(!GAME.over) nextGuest(); },420);
+}
+
+/* ============ 日终 ============ */
+function endDay(){
+  GAME.running=false; GAME.guest=null; renderGuest();
+  var report=[]; var income=0, seized=0, fakeLoss=0;
+  for(var i=0;i<GAME.shelf.length;i++){
+    var it=GAME.shelf[i];
+    var g=it.good;
+    if(g.contra && Math.random()<0.80){
+      seized++;
+      GAME.gems-=14; GAME.net-=14; GAME.wrong++;
+      report.push("<div class='item'><span class='h'>"+g.name+"</span> 被海关查出是违禁品，没收，罚款 14 枚。</div>");
+      continue;
+    }
+    if(g.stolen && Math.random()<0.62){
+      seized++;
+      GAME.gems-=8; GAME.net-=8; GAME.wrong++;
+      report.push("<div class='item'><span class='h'>"+g.name+"</span> 被查出序列号失窃，没收，罚款 8 枚。</div>");
+      continue;
+    }
+    var sell=Math.round(g.real*(g.quality==="fake"?0.9:1.12));
+    GAME.gems+=sell; GAME.net+=sell; GAME.sold++;
+    if(g.quality==="fake") fakeLoss++;
+    report.push("<div class='item'><span class='h'>"+g.name+"</span> 回收商队按 <b>"+sell+"</b> 枚收走了"
+      +(g.quality==="fake"?"（后来商队发现是仿品，价钱压得很低）":"")+"。</div>");
+    income+=sell;
+  }
+  GAME.shelf=[];
+  GAME.gems-=GAME.rent; GAME.net-=GAME.rent;
+  report.push("<div class='item'><span class='h'>泊位费</span> 交掉 <b>"+GAME.rent+"</b> 枚。</div>");
+
+  var title = GAME.gems>=180?"星港金牌掌柜":(GAME.gems>=140?"旋臂有名的商人":
+             GAME.gems>=100?"本分的轨道掌柜":"空间站慈善家");
+
+  showModal("第 "+GAME.day+" 天 · 打烊",
+    "净赚 "+(GAME.net>=0?"+":"")+GAME.net+" 枚 · 余额 "+GAME.gems+" 枚",
+    report.join("")+
+      "<div class='item' style='border:0;margin-top:8px'><span class='h'>称号：</span>"+title+"</div>",
+    GAME.day<3?[["继续营业",continueDay]]:[["查看结算",finalScore]]);
+  GAME.phase="night"; updateHUD();
+}
+
+function continueDay(){
+  closeModal();
+  GAME.day++;
+  GAME.idx=0; GAME.total=8; GAME.net=0; GAME.got=0;
+  GAME.rent=24+GAME.day*4;
+  GAME.phase="day"; GAME.running=true;
+  nextGuest();
+  toast("第 "+GAME.day+" 天，开门营业。");
+}
+function finalScore(){
+  closeModal();
+  GAME.over=true; GAME.running=false;
+  var score=GAME.gems*10+GAME.correct*120-GAME.wrong*60;
+  score=Math.max(0,Math.min(10000,score));
+  var rows="<div class='item'><span class='h'>星币余额</span> "+GAME.gems+" 枚</div>"+
+    "<div class='item'><span class='h'>判对</span> "+GAME.correct+" 次 · 判错 "+GAME.wrong+" 次</div>"+
+    "<div class='item'><span class='h'>三日经营评分</span> <b>"+score+"</b> / 10000</div>";
+  var best=0;
+  try{ best=parseInt(localStorage.getItem("ds_pawn_best")||"0",10)||0; }catch(e){}
+  if(score>best){ best=score; try{ localStorage.setItem("ds_pawn_best",String(score)); }catch(e){} }
+  rows+="<div class='item'><span class='h'>本机最佳</span> "+best+"</div>";
+  showModal("三日挑战 · 结算","96 枚本金，轨道站里一间自己的当铺。",rows,[["再开一间",restart]]);
+}
+
+/* ============ 弹层 / toast ============ */
+function showModal(title,sub,body,btns){
+  $("mdTitle").textContent=title;
+  $("mdSub").textContent=sub;
+  $("mdBody").innerHTML=body;
+  var wrap=$("sheet").querySelector(".close");
+  wrap.innerHTML="";
+  for(var i=0;i<btns.length;i++){
+    (function(b){
+      var d=document.createElement("div");
+      d.className="btn ok"; d.textContent=b[0];
+      d.onclick=b[1];
+      wrap.appendChild(d);
+    })(btns[i]);
+  }
+  $("modal").classList.add("on");
+}
+function closeModal(){ $("modal").classList.remove("on"); }
+
+var toastEl=null;
+function toast(msg){
+  if(!toastEl){
+    toastEl=document.createElement("div");
+    toastEl.style.cssText="position:fixed;left:50%;bottom:96px;transform:translateX(-50%);"+
+      "background:rgba(8,13,26,.90);border:2px solid #05080f;color:#e8f2fb;padding:9px 16px;"+
+      "border-radius:3px;font-size:13px;z-index:30;max-width:70vw;line-height:1.5;text-align:center;"+
+      "box-shadow:0 4px 14px rgba(0,0,0,.6);transition:opacity .25s";
+    document.body.appendChild(toastEl);
+  }
+  toastEl.textContent=msg; toastEl.style.opacity="1";
+  clearTimeout(toastEl._t);
+  toastEl._t=setTimeout(()=>{ toastEl.style.opacity="0"; },1900);
+}
+
+/* ============ 工具栏弹层 ============ */
+function openTool(kind){
+  if(kind==="manual") return showManual();
+  if(kind==="shelf") return showShelf();
+  if(kind==="book") return showBook();
+  if(kind==="bell") return doBell();
+  if(kind==="lens") return doLens();
+  if(kind==="reward") return showReward();
+}
+function showManual(){
+  var rows="";
+  var list=[
+    ["收什么","客人把货放上台面，先看清开价，再决定要不要。"],
+    ["三样检查","外观扫描 / 成分检测 / 来路核验，每件货各有一次机会。查得越多，估价区间越窄。"],
+    ["估价","仿品只能按材料价收；磨损严重的真货值一半；保存完好的才是原价。"],
+    ["还价","开价是客人的心理价。压得太狠，客人的耐心会掉光，人就走。"],
+    ["报海关","怀疑赃物或违禁品就上报。坐实了巡逻艇带走，给你 8 枚谢礼；误报要赔 6 枚。"],
+    ["转售","收来的货进柜台货架，下班后回收商队来收。仿品卖不出价钱，赃物违禁品可能被追查。"]
+  ];
+  for(var i=0;i<list.length;i++){
+    rows+="<div class='item'><span class='h'>"+list[i][0]+"</span><br>"+list[i][1]+"</div>";
+  }
+  showModal("掌柜手册","轨道站柜台后的规矩，一共六条。",rows,[["知道了",closeModal]]);
+}
+function showShelf(){
+  if(!GAME.shelf.length){
+    showModal("货架","今天还没收到东西。", "<div class='item'>柜台下面空空的，先等客船靠近。</div>",[["知道了",closeModal]]);
+    return;
+  }
+  var rows="";
+  for(var i=0;i<GAME.shelf.length;i++){
+    var it=GAME.shelf[i], g=it.good;
+    var tag=g.quality==="fake"?"（仿品）":(g.quality==="worn"?"（磨损）":"");
+    var flag=g.contra?" · <span class='b'>违禁</span>":(g.stolen?" · <span class='b'>赃物</span>":"");
+    rows+="<div class='item'><span class='h'>"+g.name+tag+flag+"</span> 收价 "+it.paid+
+      " 枚 · 商队估价约 <b>"+Math.round(g.real*1.1)+"</b> 枚</div>";
+  }
+  rows+="<div class='item' style='border:0'>货架 "+GAME.shelf.length+"/"+GAME.shelfMax+"，下班后统一出手。</div>";
+  showModal("货架","收来的货暂时放在这里。",rows,[["知道了",closeModal]]);
+}
+function showBook(){
+  var rows="<div class='item'><span class='h'>今天</span> 第 "+GAME.day+" 天 · 收了 "+GAME.got+" 件 · 净账 "+
+    (GAME.net>=0?"+":"")+GAME.net+" 枚</div>"+
+    "<div class='item'><span class='h'>累计</span> 判对 "+GAME.correct+" 次 / 判错 "+GAME.wrong+" 次</div>"+
+    "<div class='item'><span class='h'>余额</span> <b>"+GAME.gems+"</b> 枚星币</div>"+
+    "<div class='item' style='border:0'>账本上的数字不会骗人，人会。</div>";
+  showModal("账本","一笔一笔都记着。",rows,[["知道了",closeModal]]);
+}
+function doBell(){
+  if(!GAME.guest){ toast("泊位前没人。"); return; }
+  GAME.guest.good.ask=Math.max(3,GAME.guest.good.ask-ri(2,5));
+  $("gAsk").textContent=GAME.guest.good.ask;
+  tone(720,0.5,"sine",0.05);
+  toast("你按了下呼叫铃，客人松了口："+GAME.guest.good.ask+" 枚。");
+  renderPrice();
+}
+function doLens(){
+  if(!GAME.guest){ toast("泊位前没人。"); return; }
+  if(GAME.lensUsed){ toast("鉴定镜一天只能用一次。"); return; }
+  GAME.lensUsed=true;
+  var G=GAME.guest.good;
+  var msg = G.quality==="fake" ? "镜片下浮出一层新镀层——是仿品。"
+    : G.quality==="worn" ? "真货，但磨损很重，最多值个半价。"
+    : "真货，成色干净。";
+  if(G.stolen) msg+=" 镜框边缘还映出一行失窃序列号。";
+  else if(G.contra) msg+=" 镜片角落浮出一枚红色禁运章。";
+  GAME.estLo=Math.max(2,Math.round(G.real*0.85));
+  GAME.estHi=Math.round(G.real*1.1);
+  renderEst(); updateHUD();
+  tone(900,0.35,"sine",0.04);
+  toast(msg);
+}
+function showReward(){
+  var rows="<div class='item'><span class='h'>熟客航道</span> 遇到熟客时开价会低一点。（已生效）</div>"+
+    "<div class='item'><span class='h'>鉴定镜</span> 每天一次，直接照出真伪与来路。</div>"+
+    "<div class='item'><span class='h'>呼叫铃</span> 无限次，每次能让客人松 2~5 枚。</div>"+
+    "<div class='item' style='border:0'>这些是开铺就带着的家什，不用额外解锁。</div>";
+  showModal("掌柜福利","老舰长留下的三件东西。",rows,[["知道了",closeModal]]);
+}
+
+/* ============ 开场 ============ */
+function beginGame(mode){
+  GAME.mode=mode;
+  GAME.day=1; GAME.idx=0; GAME.total=8; GAME.gems=96; GAME.rent=24;
+  GAME.net=0; GAME.got=0; GAME.shelf=[]; GAME.correct=0; GAME.wrong=0;
+  GAME.lensUsed=false; GAME.over=false; GAME.running=true; GAME.phase="day";
+  $("cover").style.display="none";
+  if(AC&&AC.state==="suspended") AC.resume();
+  updateHUD();
+  nextGuest();
+  tone(520,0.12,"triangle",0.05);
+}
+function restart(){
+  closeModal();
+  $("cover").style.display="flex";
+  GAME.over=false; GAME.running=false; GAME.guest=null; renderGuest();
+}
+
+/* ============ 事件 ============ */
+(function bind(){
+  var cks=document.querySelectorAll(".chk");
+  for(var i=0;i<cks.length;i++){
+    (function(el){
+      el.addEventListener("click",function(){ doCheck(el.getAttribute("data-chk")); });
+    })(cks[i]);
+  }
+  $("minus").onclick=function(){ GAME.price=Math.max(0,GAME.price-1); renderPrice(); };
+  $("plus").onclick=function(){ GAME.price=Math.min(200,GAME.price+1); renderPrice(); };
+  $("price").oninput=function(){ GAME.price=clamp(parseInt(this.value||"0",10)||0,0,200); $("slider").value=GAME.price; renderPrice(); };
+  $("slider").oninput=function(){ GAME.price=parseInt(this.value,10); $("price").value=GAME.price; renderPrice(); };
+  $("dealBtn").onclick=doDeal;
+  $("skipBtn").onclick=doSkip;
+  $("golemBtn").onclick=callCustoms;
+  $("mdClose").onclick=closeModal;
+  $("modal").onclick=function(e){ if(e.target===this) closeModal(); };
+  $("soundBtn").onclick=function(){ muted=!muted; this.textContent=muted?"×":"♪"; this.style.opacity=muted?".55":"1"; };
+  $("helpBtn").onclick=showManual;
+  $("openManual").onclick=showManual;
+  $("startOne").onclick=function(){ beginGame("one"); };
+  $("startThree").onclick=function(){ beginGame("three"); };
+  var tools=document.querySelectorAll(".tool");
+  for(var j=0;j<tools.length;j++){
+    (function(el){
+      el.addEventListener("click",function(){ openTool(el.getAttribute("data-tool")); });
+    })(tools[j]);
+  }
+  window.addEventListener("keydown",function(e){
+    if(e.key==="Escape") closeModal();
+    if(e.key==="Enter" && GAME.guest && !$("modal").classList.contains("on")) doDeal();
+  });
+})();
+
+/* ============ 掌柜头像 ============ */
+(function drawMe(){
+  var cv=$("meCv"), g=cv.getContext("2d");
+  g.imageSmoothingEnabled=false;
+  g.clearRect(0,0,80,80);
+  g.save(); g.translate(40,74); drawChar(g,CHARS.keeper,0,0,2.0,0.4); g.restore();
+  g.fillStyle="rgba(0,0,0,.25)"; g.fillRect(0,70,80,10);
+})();
+
+/* ============ 主循环 ============ */
+var _lastTs=0;
+function loop(ts){
+  var dt=_lastTs?Math.min(0.06,(ts-_lastTs)/1000):0.016;
+  _lastTs=ts;
+  SC.t=ts/1000;
+  GAME.inT+=dt;
+  GAME.shake=Math.max(0,GAME.shake-dt*3.0);
+  for(var i=GAME.pops.length-1;i>=0;i--){
+    var q=GAME.pops[i]; q.t+=dt; q.y-=dt*34;
+    if(q.t>=q.life) GAME.pops.splice(i,1);
+  }
+  var lt=GAME.phase==="night"?1:0;
+  GAME.light+=(lt-GAME.light)*Math.min(1,dt*4.5);
+  drawScene();
+  requestAnimationFrame(loop);
+}
+resize();
+updateHUD();
+renderGuest();
+requestAnimationFrame(loop);
+
+/* 初始化场景时先摆一位客人在柜台后，开场画面不至于空 */
+GAME.guest={who:CUSTOMERS[0],good:makeGood()};
+GAME.guest.good.name="—"; GAME.guest.good.ask=0;
+renderGuest();
+$("gAsk").textContent="—";
+$("gName").textContent="—";
+$("gCat").textContent="—";
+
+})();
+</script>
+</body>
+</html>
