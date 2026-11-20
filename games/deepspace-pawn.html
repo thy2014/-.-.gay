@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深空当铺 · 轨道站掌柜</title>
+<title>深空当铺：可能是偷的 · 下层区店铺</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b1226'/%3E%3Cpath d='M16 4 L26 10 V22 L16 28 L6 22 V10 Z' fill='%231e7f8a'/%3E%3Cpath d='M16 8 L22 12 V20 L16 24 L10 20 V12 Z' fill='%2346d8e0'/%3E%3C/svg%3E">
 <style>
 :root{
@@ -231,10 +231,10 @@ body{overflow:hidden}
   <div id="hud">
     <div class="logo">
       <svg class="em" viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M8 1 L13 4 V12 L8 15 L3 12 V4 Z" fill="#1e7f8a"/><path d="M8 3.4 L11 5.2 V10.8 L8 12.6 L5 10.8 V5.2 Z" fill="#46d8e0"/><rect x="7" y="6" width="2" height="4" fill="#eaf6fb"/></svg>
-      <div><div class="t1">深空当铺</div><div class="t2" id="hudSub">等客人靠近泊位</div></div>
+      <div><div class="t1">深空当铺</div><div class="t2" id="hudSub">下层区 · 店铺柜台后</div></div>
     </div>
     <div class="mid">
-      <span id="dayTag">三日挑战 · 1/3 天</span><span class="sep">|</span><span id="phaseTag">白班</span>
+      <span id="dayTag">试营业 · 1/3 天</span><span class="sep">|</span><span id="phaseTag">营业中</span>
       <span class="sep">|</span><span id="leftTag">还剩 8 位</span>
     </div>
     <div class="right">
@@ -250,11 +250,11 @@ body{overflow:hidden}
       <canvas id="scene"></canvas>
       <div id="ledger" class="metalbox">
         <h4>今日小账<span id="daySm">第 1 天</span></h4>
-        <div class="lrow"><span>净赚</span><b id="lgNet">0</b></div>
-        <div class="lrow"><span>泊位费</span><b id="lgRent">-24</b></div>
+        <div class="lrow"><span>净账</span><b id="lgNet">0</b></div>
+        <div class="lrow"><span>租金</span><b id="lgRent">-24</b></div>
         <div class="lrow"><span>已收</span><b id="lgIn">0 件</b></div>
         <div class="lrow"><span>货架</span><b id="lgShelf">0/6</b></div>
-        <div class="hint" id="lgHint">下班后，回收商队会来收今天收到的货。</div>
+        <div class="hint" id="lgHint">打烊后，商人会按市价收走货架上的货。</div>
       </div>
       <div id="nametag">—</div>
     </div>
@@ -262,9 +262,9 @@ body{overflow:hidden}
     <!-- 右侧操作面板 -->
     <div id="panel">
       <div class="card" id="custCard">
-        <div class="cap"><span>正在收当</span><span id="qIdx">1 / 8</span></div>
+        <div class="cap"><span>正在交易</span><span id="qIdx">1 / 8</span></div>
         <div class="who"><span id="cName">—</span><span class="pat" id="patience"></span></div>
-        <div class="say" id="cSay">柜台后面，一位客人正把货箱放上来。</div>
+        <div class="say" id="cSay">一位客人走上柜台，把东西放了上来。</div>
       </div>
       <div class="card" id="offerBar">
         <div class="goods">
@@ -276,15 +276,15 @@ body{overflow:hidden}
           </div>
         </div>
         <div class="sect">
-          <div class="hd"><span>先验验货</span><span id="chkLeft">0 / 3</span></div>
+          <div class="hd"><span>先查验货品</span><span id="chkLeft">0 / 3</span></div>
           <div class="checks">
-            <div class="chk" data-chk="look">外观扫描</div>
-            <div class="chk" data-chk="qual">成分检测</div>
+            <div class="chk" data-chk="look">外观查验</div>
+            <div class="chk" data-chk="qual">成色检测</div>
             <div class="chk" data-chk="orig">来路核验</div>
           </div>
-          <div class="clue" id="clue">卖家说的，先信一半。</div>
+          <div class="clue" id="clue">卖家的话，先信一半。</div>
         </div>
-        <div class="est" id="estRow"><span>你的估价</span><b id="estVal">?</b></div>
+        <div class="est" id="estRow"><span>估价区间</span><b id="estVal">?</b></div>
         <div class="offer">
           <button id="minus">−</button>
           <input id="price" type="number" min="0" value="0">
@@ -296,7 +296,7 @@ body{overflow:hidden}
       <div class="acts">
         <div class="btn ok" id="dealBtn">按价收购</div>
         <div class="btn no" id="skipBtn">拒收退货</div>
-        <div class="btn warn" id="golemBtn">来路不对？报星港海关</div>
+        <div class="btn warn" id="golemBtn">来路不对？上报治安部</div>
       </div>
     </div>
   </div>
@@ -319,15 +319,15 @@ body{overflow:hidden}
       </div>
       <div class="tool" data-tool="bell">
         <svg width="20" height="20" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="6" y="1" width="4" height="2" fill="#f3c653"/><rect x="4" y="3" width="8" height="7" fill="#f3c653"/><rect x="3" y="6" width="10" height="4" fill="#d9a83a"/><rect x="5" y="11" width="6" height="2" fill="#8a6a20"/></svg>
-        呼叫铃
+        叫客铃
       </div>
       <div class="tool" data-tool="lens">
         <svg width="20" height="20" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="2" y="2" width="8" height="1" fill="#cfe9ff"/><rect x="1" y="4" width="10" height="5" fill="#a8d8f0"/><rect x="2" y="9" width="8" height="1" fill="#7fb8d8"/><rect x="10" y="10" width="3" height="4" fill="#3c5577"/></svg>
-        鉴定镜
+        放大镜
       </div>
       <div class="tool" data-tool="reward">
         <svg width="20" height="20" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="3" y="1" width="10" height="6" fill="#c6d8e6"/><rect x="4" y="6" width="8" height="1" fill="#5f7892"/><rect x="4" y="7" width="8" height="1" fill="#5f7892"/><rect x="3" y="12" width="10" height="3" fill="#3c5577"/></svg>
-        奖励
+        声望
       </div>
     </div>
   </div>
@@ -335,10 +335,10 @@ body{overflow:hidden}
   <!-- ===== 开场 ===== -->
   <div id="cover">
     <div class="sign"><b>深空当铺</b></div>
-    <div class="slogan">96 枚星币，轨道站里一间自己的当铺。</div>
+    <div class="slogan">下层区一间小店 · 导师贷给你一笔启动信用点，撑过试营业。</div>
     <div class="btns">
       <div class="btn ok" id="startOne">开门营业</div>
-      <div class="btn ghost" id="startThree">三日挑战</div>
+      <div class="btn ghost" id="startThree">三日试营业</div>
       <div class="btn ghost" id="openManual">掌柜手册</div>
     </div>
   </div>
@@ -466,60 +466,57 @@ function drawChar(g,ch,cx,footY,u,t){
 
 /* ============ 物品图标（16×16 网格） ============ */
 var ICONS={
-  battery:function(g,x,y,u){
-    px(g,x+5*u,y+2*u,6*u,12*u,"#2e5f6e"); px(g,x+5*u,y+2*u,6*u,2*u,"#1e7f8a");
-    px(g,x+6.5*u,y+4*u,3*u,8*u,"#46d8e0"); px(g,x+7*u,y+5*u,2*u,5*u,"#bff4f6");
-    px(g,x+6*u,y+0.5*u,4*u,1.5*u,"#9aa3ad");
+  food:function(g,x,y,u){
+    px(g,x+3*u,y+5*u,10*u,7*u,"#8a6a3a"); px(g,x+3*u,y+5*u,10*u,2*u,"#c29a5a");
+    px(g,x+4.5*u,y+7*u,7*u,3*u,"#e8d6a8"); px(g,x+5.5*u,y+8*u,5*u,1*u,"#8a6a3a");
+    px(g,x+3*u,y+12*u,10*u,1*u,"#5a4220");
   },
-  chip:function(g,x,y,u){
-    px(g,x+3*u,y+3*u,10*u,10*u,"#1e4a5e"); px(g,x+4*u,y+4*u,8*u,8*u,"#2e6f86");
-    px(g,x+6*u,y+6*u,4*u,4*u,"#46d8e0");
-    for(var i=0;i<4;i++){ px(g,x+2*u,y+(3+i)*3*u,1*u,1*u,"#8ff0f4"); px(g,x+13*u,y+(3+i)*3*u,1*u,1*u,"#8ff0f4"); }
+  drink:function(g,x,y,u){
+    px(g,x+6*u,y+1*u,4*u,2*u,"#7c858f"); px(g,x+5*u,y+3*u,6*u,11*u,"#7a4a3a");
+    px(g,x+5.5*u,y+5*u,5*u,6*u,"#c86a4a"); px(g,x+6.5*u,y+6*u,2*u,3*u,"#f0a07a");
   },
-  specimen:function(g,x,y,u){
-    px(g,x+5*u,y+2*u,6*u,12*u,"#cfe6ee"); px(g,x+5*u,y+2*u,6*u,1.4*u,"#7c858f");
-    px(g,x+6*u,y+7*u,4*u,5*u,"#5fae4a"); px(g,x+6.6*u,y+8*u,1.6*u,2.4*u,"#a8e08a");
-    px(g,x+5*u,y+13*u,6*u,1*u,"#9aa3ad");
+  water:function(g,x,y,u){
+    px(g,x+6*u,y+1*u,4*u,2*u,"#7c858f"); px(g,x+5*u,y+3*u,6*u,11*u,"#2e5f6e");
+    px(g,x+5.5*u,y+5*u,5*u,6*u,"#46a8c8"); px(g,x+6.5*u,y+6*u,2*u,3*u,"#bff4f6");
   },
-  wrench:function(g,x,y,u){
-    px(g,x+4*u,y+9*u,3*u,6*u,"#8a939e"); px(g,x+3*u,y+9*u,3*u,1*u,"#b8c0c9");
-    px(g,x+5*u,y+9*u,1*u,9*u,"#7c858f"); px(g,x+5*u,y+11*u,1*u,8*u,"#c2ccd4");
-    px(g,x+2*u,y+2*u,12*u,2*u,"#9aa3ad"); px(g,x+2*u,y+2*u,3*u,2*u,"#7c858f"); px(g,x+12*u,y+2*u,3*u,2*u,"#7c858f");
+  med:function(g,x,y,u){
+    px(g,x+3*u,y+3*u,10*u,10*u,"#dfe8ee"); px(g,x+3*u,y+3*u,10*u,2*u,"#9aa3ad");
+    px(g,x+7*u,y+5.5*u,2*u,5*u,"#d9534a"); px(g,x+5.5*u,y+7*u,5*u,2*u,"#d9534a");
   },
-  ration:function(g,x,y,u){
-    px(g,x+3*u,y+3*u,10*u,10*u,"#8a6a3a"); px(g,x+3*u,y+3*u,10*u,2*u,"#c29a5a");
-    px(g,x+4*u,y+6*u,8*u,4*u,"#e8d6a8"); px(g,x+5*u,y+7*u,6*u,1*u,"#8a6a3a");
-    px(g,x+3*u,y+13*u,10*u,1*u,"#5a4220");
+  melee:function(g,x,y,u){
+    px(g,x+4*u,y+11*u,3*u,3*u,"#6b4a2a"); px(g,x+5*u,y+3*u,2*u,8*u,"#c2ccd4");
+    px(g,x+5.6*u,y+3*u,0.8*u,8*u,"#f0f4f8"); px(g,x+3*u,y+10*u,5*u,1*u,"#8a939e");
   },
-  compass:function(g,x,y,u){
-    px(g,x+3*u,y+3*u,10*u,10*u,"#3c5577"); px(g,x+4*u,y+4*u,8*u,8*u,"#c6d8e6");
-    px(g,x+7*u,y+4.5*u,2*u,7*u,"#d9534a"); px(g,x+7.6*u,y+4.5*u,0.8*u,7*u,"#f07a6f");
-    px(g,x+7.4*u,y+7*u,1.2*u,1.2*u,"#222");
+  gun:function(g,x,y,u){
+    px(g,x+3*u,y+5*u,9*u,3*u,"#3c444e"); px(g,x+10*u,y+5*u,3*u,2*u,"#22282f");
+    px(g,x+5*u,y+8*u,2*u,4*u,"#22282f"); px(g,x+3*u,y+6*u,2*u,1*u,"#5a636e");
   },
-  drive:function(g,x,y,u){
-    px(g,x+4*u,y+4*u,8*u,8*u,"#4a3f6e"); px(g,x+5*u,y+5*u,6*u,6*u,"#6a5aa8");
-    px(g,x+6.5*u,y+6.5*u,3*u,3*u,"#c07dff"); px(g,x+7*u,y+7*u,2*u,2*u,"#e8d6ff");
-  },
-  relic:function(g,x,y,u){
-    px(g,x+5*u,y+2*u,6*u,2*u,"#9a6fdc"); px(g,x+3*u,y+4*u,10*u,4*u,"#b48fef");
-    px(g,x+5*u,y+8*u,6*u,5*u,"#8a5cd0"); px(g,x+6*u,y+3*u,2*u,3*u,"#d8bcff");
-  },
-  embryo:function(g,x,y,u){
-    px(g,x+5*u,y+2*u,6*u,12*u,"#cfe6ee"); px(g,x+5*u,y+8*u,6*u,4*u,"#7ad8c8");
-    px(g,x+6.6*u,y+9*u,2.8*u,2.4*u,"#3fae9e"); px(g,x+6*u,y+0.5*u,4*u,1.5*u,"#7c858f");
-  },
-  shield:function(g,x,y,u){
-    px(g,x+3*u,y+2*u,10*u,2*u,"#2e6f86"); px(g,x+2*u,y+4*u,12*u,6*u,"#1e7f8a");
-    px(g,x+4*u,y+10*u,8*u,3*u,"#176a74"); px(g,x+6*u,y+4.5*u,4*u,4*u,"#46d8e0");
-  },
-  ore:function(g,x,y,u){
+  material:function(g,x,y,u){
     px(g,x+3*u,y+6*u,6*u,6*u,"#5a636e"); px(g,x+8*u,y+4*u,5*u,6*u,"#6e7885");
     px(g,x+4*u,y+4*u,4*u,4*u,"#7c858f"); px(g,x+5*u,y+7*u,2*u,2*u,"#46d8e0");
     px(g,x+10*u,y+6*u,1.6*u,1.6*u,"#8ff0f4");
   },
-  spice:function(g,x,y,u){
-    px(g,x+4*u,y+4*u,8*u,9*u,"#8a5c38"); px(g,x+4*u,y+4*u,8*u,2*u,"#a8764a");
-    px(g,x+5*u,y+6*u,6*u,4*u,"#c88a52"); px(g,x+6*u,y+2*u,4*u,2*u,"#6b4a2a");
+  household:function(g,x,y,u){
+    px(g,x+4*u,y+4*u,8*u,9*u,"#c8c2b8"); px(g,x+4*u,y+4*u,8*u,2*u,"#e8e2d6");
+    px(g,x+6*u,y+7*u,4*u,3*u,"#8a8578"); px(g,x+5*u,y+13*u,6*u,1*u,"#6b6558");
+  },
+  luxury:function(g,x,y,u){
+    px(g,x+4*u,y+7*u,8*u,5*u,"#c8a24a"); px(g,x+5*u,y+4*u,2*u,3*u,"#e8c86a");
+    px(g,x+9*u,y+4*u,2*u,3*u,"#e8c86a"); px(g,x+7*u,y+5*u,2*u,2*u,"#f0d88a");
+  },
+  doc:function(g,x,y,u){
+    px(g,x+4*u,y+2*u,8*u,11*u,"#e8e2d6"); px(g,x+5*u,y+4*u,6*u,1*u,"#8a8578");
+    px(g,x+5*u,y+6*u,6*u,1*u,"#8a8578"); px(g,x+5*u,y+8*u,4*u,1*u,"#8a8578");
+    px(g,x+9*u,y+9*u,2*u,2*u,"#d9534a");
+  },
+  contra:function(g,x,y,u){
+    px(g,x+5*u,y+2*u,6*u,12*u,"#4a2a3a"); px(g,x+5.5*u,y+5*u,5*u,6*u,"#c83a4a");
+    px(g,x+6.5*u,y+6*u,3*u,3*u,"#f0d8d8"); px(g,x+6*u,y+0.5*u,4*u,1.5*u,"#7c858f");
+  },
+  battery:function(g,x,y,u){
+    px(g,x+5*u,y+2*u,6*u,12*u,"#2e5f6e"); px(g,x+5*u,y+2*u,6*u,2*u,"#1e7f8a");
+    px(g,x+6.5*u,y+4*u,3*u,8*u,"#46d8e0"); px(g,x+7*u,y+5*u,2*u,5*u,"#bff4f6");
+    px(g,x+6*u,y+0.5*u,4*u,1.5*u,"#9aa3ad");
   }
 };
 function drawIcon(g,id,cx,cy,size){
@@ -736,33 +733,99 @@ function drawScene(){
 
 /* ============ 数据 ============ */
 var ITEMS=[
-  {id:"battery",name:"聚变电池",cat:"能源",base:42},
-  {id:"chip",name:"星图芯片",cat:"数据",base:56},
-  {id:"specimen",name:"外星标本",cat:"生物",base:62},
-  {id:"wrench",name:"工程扳手",cat:"工具",base:24},
-  {id:"ration",name:"压缩口粮",cat:"补给",base:20},
-  {id:"compass",name:"跃迁罗盘",cat:"导航",base:66},
-  {id:"drive",name:"量子存储器",cat:"数据",base:48},
-  {id:"relic",name:"外星古物",cat:"奇物",base:72},
-  {id:"embryo",name:"冷冻胚胎",cat:"生物",base:36},
-  {id:"shield",name:"护盾发生器",cat:"装备",base:52},
-  {id:"ore",name:"稀有矿石",cat:"矿物",base:34},
-  {id:"spice",name:"走私香料",cat:"补给",base:30}
+  /* 食物 */
+  {id:"ramen",name:"速食拉面",cat:"食物",base:18,icon:"food"},
+  {id:"nutrifruit",name:"营养果",cat:"食物",base:22,icon:"food"},
+  {id:"cheese",name:"合成奶酪",cat:"食物",base:26,icon:"food"},
+  {id:"choc",name:"猫咪巧克力棒",cat:"食物",base:15,icon:"food"},
+  {id:"snack",name:"轻食能量棒",cat:"食物",base:14,icon:"food"},
+  {id:"ribwich",name:"袋装肋排三明治",cat:"食物",base:40,icon:"food"},
+  {id:"meat",name:"生肉（标准）",cat:"食物",base:20,icon:"food"},
+  {id:"tilapia",name:"罗非鱼",cat:"食物",base:24,icon:"food"},
+  /* 饮料 */
+  {id:"beer",name:"红魔鬼啤酒",cat:"饮料",base:20,icon:"drink"},
+  {id:"soda",name:"汽水",cat:"饮料",base:12,icon:"drink"},
+  {id:"energy",name:"能量饮料",cat:"饮料",base:26,icon:"drink"},
+  {id:"nudka",name:"努特加",cat:"饮料",base:30,icon:"drink"},
+  {id:"wine",name:"荧光莓果酿",cat:"饮料",base:70,icon:"drink"},
+  /* 水 */
+  {id:"water",name:"瓶装水（标准）",cat:"水",base:14,icon:"water"},
+  {id:"waterbig",name:"瓶装水（大）",cat:"水",base:26,icon:"water"},
+  {id:"jug",name:"桶装水",cat:"水",base:48,icon:"water"},
+  {id:"rationwater",name:"密封水配给包",cat:"水",base:18,icon:"water"},
+  {id:"pure",name:"100%脱水纯水",cat:"水",base:90,icon:"water"},
+  /* 医疗 */
+  {id:"bandage",name:"基础绷带",cat:"医疗",base:18,icon:"med"},
+  {id:"hemo",name:"止血绷带",cat:"医疗",base:30,icon:"med"},
+  {id:"rubalc",name:"医用酒精",cat:"医疗",base:14,icon:"med"},
+  {id:"caffeine",name:"咖啡因药片",cat:"医疗",base:22,icon:"med"},
+  {id:"phag",name:"噬菌霉素片",cat:"医疗",base:36,icon:"med"},
+  {id:"immunivax",name:"免疫宁注射器",cat:"医疗",base:80,icon:"med"},
+  {id:"nalox",name:"纳洛通注射器",cat:"医疗",base:54,icon:"med"},
+  {id:"salve",name:"南丁格尔软膏",cat:"医疗",base:26,icon:"med"},
+  {id:"bloodbag",name:"血袋",cat:"医疗",base:44,icon:"med"},
+  /* 武器 */
+  {id:"knife",name:"战斗匕首",cat:"近战武器",base:46,icon:"melee"},
+  {id:"crowbar",name:"撬棍",cat:"近战武器",base:22,icon:"melee"},
+  {id:"cleaver",name:"厨刀",cat:"近战武器",base:18,icon:"melee"},
+  {id:"hatchet",name:"短柄斧",cat:"近战武器",base:30,icon:"melee"},
+  {id:"stunbaton",name:"眩晕警棍",cat:"武器",base:64,icon:"gun"},
+  {id:"ammo",name:"10毫米弹药",cat:"弹药",base:34,icon:"gun"},
+  {id:"nestfire",name:"“巢火”紧凑型手枪",cat:"枪械",base:150,icon:"gun"},
+  {id:"revolver",name:"兰斯维尔左轮手枪",cat:"枪械",base:170,icon:"gun"},
+  /* 材料 */
+  {id:"scrap",name:"废金属",cat:"材料",base:12,icon:"material"},
+  {id:"ore",name:"金属矿石",cat:"材料",base:26,icon:"material"},
+  {id:"ingot",name:"金属锭",cat:"材料",base:44,icon:"material"},
+  {id:"elec",name:"电子元件（普通）",cat:"材料",base:24,icon:"material"},
+  {id:"elecrare",name:"电子元件（稀有）",cat:"材料",base:62,icon:"material"},
+  {id:"wire",name:"线缆",cat:"材料",base:8,icon:"material"},
+  {id:"screws",name:"金属螺丝",cat:"材料",base:10,icon:"material"},
+  {id:"gunparts",name:"枪械零件",cat:"材料",base:38,icon:"material"},
+  {id:"cell",name:"能量电池",cat:"材料",base:30,icon:"battery"},
+  /* 日用品 */
+  {id:"toiletpaper",name:"一卷厕纸",cat:"日用品",base:8,icon:"household"},
+  {id:"toothpaste",name:"一支牙膏",cat:"日用品",base:12,icon:"household"},
+  {id:"towels",name:"一卷纸巾",cat:"日用品",base:9,icon:"household"},
+  {id:"wash4",name:"一瓶四合一洗涤剂",cat:"日用品",base:16,icon:"household"},
+  {id:"tampon",name:"一盒帕克斯卫生棉条",cat:"日用品",base:20,icon:"household"},
+  {id:"condom",name:"一盒瑞克斯避孕套",cat:"日用品",base:14,icon:"household"},
+  /* 奢侈品 / 文件 */
+  {id:"hemingway",name:"一包海明威香烟",cat:"奢侈品",base:70,icon:"luxury"},
+  {id:"cyberhand",name:"仿生机械手",cat:"奢侈品",base:160,icon:"luxury"},
+  {id:"coin",name:"赌徒硬币",cat:"奢侈品",base:34,icon:"luxury"},
+  {id:"cassette",name:"音乐磁带",cat:"奢侈品",base:28,icon:"luxury"},
+  {id:"lottery",name:"彩票",cat:"文件",base:6,icon:"doc"},
+  {id:"foodstamp",name:"食品券",cat:"文件",base:40,icon:"doc"},
+  {id:"keycard",name:"一次性钥匙卡（治安）",cat:"文件",base:90,icon:"doc"},
+  {id:"permit",name:"I级武器许可证",cat:"文件",base:50,icon:"doc"},
+  /* 管制品（生成时标记为违禁品） */
+  {id:"dreamdust",name:"一小瓶“梦尘”",cat:"麻醉品",base:46,icon:"contra",contra:true},
+  {id:"phanta",name:"芬太片",cat:"麻醉品",base:52,icon:"contra",contra:true},
+  {id:"oxymore",name:"奥克西莫注射器",cat:"管制医疗",base:60,icon:"contra",contra:true},
+  {id:"explosive",name:"塑性炸药",cat:"爆炸物",base:78,icon:"contra",contra:true},
+  {id:"nervegas",name:"MBS神经毒气",cat:"爆炸物",base:96,icon:"contra",contra:true},
+  {id:"pheromone",name:"“本源”费洛蒙香水",cat:"奢侈品",base:66,icon:"contra",contra:true},
+  {id:"unlicphag",name:"无证噬菌霉素片",cat:"管制医疗",base:30,icon:"contra",contra:true}
 ];
 
 var CUSTOMERS=[
-  {art:"merc",name:"流浪佣兵",line:"刚打完一场星际仗，先把装备典了换船票。"},
-  {art:"trader",name:"星际行商",line:"跑了三条旋臂，就你这家还亮着灯。"},
-  {art:"fugitive",name:"蒙面逃犯",line:"别问编号，东西我来路清楚。"},
-  {art:"droid",name:"旧型号机体",line:"我……这里有一件可以抵押的配件。"},
-  {art:"hunter",name:"赏金猎人",line:"单子没成，装备先押你这儿。"},
-  {art:"miner",name:"矿队矿工",line:"矿星风暴来得早，先典几件应急。"},
-  {art:"smuggler",name:"走私客",line:"货走暗格不方便，放你这儿几天。"},
-  {art:"attach",name:"外交官随从",line:"主人吩咐，这批东西低调处理。"},
-  {art:"captain",name:"退役舰长",line:"退役津贴拖了三个月，家当先当了。"},
-  {art:"peddler",name:"机器人贩子",line:"这批翻新件，成色你自己看。"},
-  {art:"doctor",name:"随船医师",line:"药房压了一批存货，想周转一下。"},
-  {art:"spy",name:"蒙面乘客",line:"问这么多干什么，钱给够就行。"}
+  {art:"trader",name:"拾荒客 · 乔治奥",faction:"下层区",line:"你好啊，我又来了！看看我给你带了什么好东西。",stolenBias:0.5},
+  {art:"miner",name:"下层区劳工",faction:"下层区",line:"嘿，我……嗯，捡了点东西。你买吗？"},
+  {art:"smuggler",name:"狡猾的销赃人",faction:"黑市",line:"你好，我得赶紧把这东西出手，风声太紧了。",stolenBias:0.7},
+  {art:"captain",name:"伦警官",faction:"治安部",line:"你好，公民，我是伦警官。今天巡逻，午饭盒忘带了，有吃的吗？",contraOk:false},
+  {art:"doctor",name:"负伤的星际客",faction:"下层区",line:"救命，我需要点药！有个穿灰制服的家伙把我劫了！",contraOk:true},
+  {art:"attach",name:"觅食游客",faction:"上层区",line:"你好，我从核心区段来。银河系里每种吃的我都想尝一遍。",premium:true},
+  {art:"peddler",name:"下层区主妇",faction:"下层区",line:"我钱不多，能买什么就给我什么吧。"},
+  {art:"droid",name:"口渴的星际客",faction:"下层区",line:"我要水！有基础水没有？！"},
+  {art:"hunter",name:"废品收购人",faction:"下层区",line:"你好，我手头有成吨的废金属！"},
+  {art:"merc",name:"下层区武器商人",faction:"黑市",line:"我这儿有几把家伙，看看成色？",contraBias:0.5},
+  {art:"spy",name:"上层区公民",faction:"上层区",line:"你好，我在为上层区一位客户备货。",premium:true},
+  {art:"fugitive",name:"革命军战士",faction:"革命军",line:"这批东西刚到手，痛快给个价。",stolenBias:0.4},
+  {art:"fugitive",name:"绝望的瘾君子",faction:"黑市",line:"别问那么多，有强效药就给我。",contraOk:true},
+  {art:"merc",name:"雇佣兵",faction:"下层区",line:"单子黄了，装备先押你这儿换点信用点。"},
+  {art:"droid",name:"改造人",faction:"黑市",line:"……检测到交易对象。报价。",robotic:true},
+  {art:"trader",name:"快递员",faction:"下层区",line:"送货顺路，有富余的材料出手。"}
 ];
 
 /* ============ 状态 ============ */
@@ -783,23 +846,25 @@ function popText(txt,c,x,y){
   GAME.pops.push({txt:txt,c:c||"#ffd66a",x:(x==null?500:x),y:(y==null?330:y),t:0,life:1.15});
 }
 
-function makeGood(){
+function makeGood(c){
   var it=pick(ITEMS);
-  var q = Math.random()<0.22?"fake":(Math.random()<0.30?"worn":"good");
-  var stolen = Math.random()<0.20;
-  var contra = Math.random()<0.16;
+  var q = Math.random()<0.18?"fake":(Math.random()<0.30?"worn":"good");
+  var stolen = Math.random()<(c&&c.stolenBias?c.stolenBias:0.20);
+  var contra = !!it.contra || Math.random()<(c&&c.contraBias?c.contraBias:0.12);
+  var tier = contra?pick(["低危","中危","高危","极危"]):"";
+  var heat = stolen?ri(20,90):0;
   var mult = q==="good"?rnd(0.94,1.12):(q==="worn"?rnd(0.52,0.72):rnd(0.14,0.26));
   var real = Math.max(3,Math.round(it.base*mult));
   var ask = q==="fake"
     ? Math.max(6,Math.round(it.base*rnd(0.80,0.95)))
     : Math.max(5,Math.round(real*rnd(1.24,1.46)));
-  return {item:it,quality:q,stolen:stolen,contra:contra,real:real,ask:ask,name:it.name,cat:it.cat,icon:it.id};
+  return {item:it,quality:q,stolen:stolen,contra:contra,tier:tier,heat:heat,real:real,ask:ask,name:it.name,cat:it.cat,icon:it.icon||it.id};
 }
 
 function nextGuest(){
   GAME.inT=0;
   var c=pick(CUSTOMERS);
-  var g=makeGood();
+  var g=makeGood(c);
   GAME.guest={who:c,good:g};
   GAME.patience=2;
   GAME.checks=0;
@@ -817,7 +882,7 @@ function renderGuest(){
   var g=GAME.guest;
   if(!g){
     $("cName").textContent="—";
-    $("cSay").textContent="泊位空着，等下一艘客船。";
+    $("cSay").textContent="柜台前空着，等下一位客人上门。";
     return;
   }
   var G=g.good;
@@ -852,7 +917,7 @@ function renderGuest(){
 
 function guessTag(){
   var G=GAME.guest.good;
-  if(G.quality==="good") return "扫描看着还不错";
+  if(G.quality==="good") return "外观看着还干净";
   if(G.quality==="worn") return "用得有点狠";
   return "说不太准";
 }
@@ -893,15 +958,15 @@ function renderPrice(){
   if(!g){ hint.textContent=""; return; }
   if(GAME.price<Math.round(g.real*0.7)) hint.textContent="出这么低，客人会觉得你在压秤。";
   else if(GAME.price>g.ask) hint.textContent="出得比开价还高，这单你肯定亏。";
-  else hint.textContent="开价 "+g.ask+" 枚，压一压有戏。";
+  else hint.textContent="开价 "+g.ask+" 信用点，压一压有戏。";
 }
 
 function updateHUD(){
   $("gemTag").textContent=GAME.gems;
-  $("dayTag").textContent="三日挑战 · "+GAME.day+"/3 天";
-  $("phaseTag").textContent=GAME.phase==="night"?"打烊":(GAME.phase==="dusk"?"晚班":"白班");
+  $("dayTag").textContent="试营业 · "+GAME.day+"/3 天";
+  $("phaseTag").textContent=GAME.phase==="night"?"打烊":(GAME.phase==="dusk"?"晚班":"营业中");
   $("leftTag").textContent="还剩 "+Math.max(0,GAME.total-GAME.idx)+" 位";
-  $("hudSub").textContent=GAME.guest?"等下一位客人开口":"等客船靠近泊位";
+  $("hudSub").textContent=GAME.guest?"等下一位客人开口":"柜台前空着，等客人上门";
   $("daySm").textContent="第 "+GAME.day+" 天";
   $("lgNet").textContent=(GAME.net>=0?"+":"")+GAME.net;
   $("lgNet").className=GAME.net<0?"neg":"pos";
@@ -910,7 +975,7 @@ function updateHUD(){
   $("lgShelf").textContent=GAME.shelf.length+"/"+GAME.shelfMax;
   $("lgHint").textContent=GAME.shelf.length>=GAME.shelfMax
     ? "货架满了，先去货架上卖点东西。"
-    : "下班后，回收商队会来收今天收到的货。";
+    : "打烊后，商人会按市价收走货架上的货。";
 
   var lens=document.querySelector('[data-tool="lens"]');
   if(lens) lens.className="tool"+(GAME.lensUsed?"":" hot");
@@ -943,13 +1008,13 @@ function doCheck(kind){
 
   if(kind==="look"){
     if(G.quality==="worn"){
-      GAME.clues.push("<span class='k'>外观：</span>外壳磨得发亮，用了很久，但东西是真材实料。");
+      GAME.clues.push("<span class='k'>外观：</span>外壳磨得发亮，封条旧了，但字体和 Logo 都对得上。");
     }else if(G.quality==="fake"){
       GAME.clues.push(ok
-        ? "<span class='b'>外观：</span>做旧的手感不对，接缝太齐了，像是仿的。"
-        : "<span class='k'>外观：</span>看着还行，外壳有一点新。");
+        ? "<span class='b'>外观：</span>字体发虚、Logo 走线不对，防伪封条也缺了一枚，像是仿品。"
+        : "<span class='k'>外观：</span>包装有一点新，暂时看不出问题。");
     }else{
-      GAME.clues.push("<span class='k'>外观：</span>保存得很好，几乎没有磕碰划痕。");
+      GAME.clues.push("<span class='k'>外观：</span>包装完好，字体、颜色、封条都齐全。");
     }
     GAME.estLo=Math.round((GAME.estLo*0.35+G.real*0.72)*1.0);
     GAME.estHi=Math.round((GAME.estHi*0.35+G.real*1.30)*1.0);
@@ -957,25 +1022,25 @@ function doCheck(kind){
   if(kind==="qual"){
     if(G.quality==="fake"){
       GAME.clues.push(ok
-        ? "<span class='b'>品质：</span>成分比对出来了，是仿品，只能按材料价回收。"
-        : "<span class='k'>品质：</span>看着像真货，但说不上哪儿不对。");
+        ? "<span class='b'>成色：</span>材质对不上批次，芯片也没有刻印，只能按材料价收。"
+        : "<span class='k'>成色：</span>看着像真货，但说不上哪儿不对。");
     }else if(G.quality==="worn"){
-      GAME.clues.push("<span class='k'>品质：</span>真货，磨损严重，值不了原价。");
+      GAME.clues.push("<span class='k'>成色：</span>真货，但磨损严重，成色不到中等。");
     }else{
       GAME.clues.push(ok
-        ? "<span class='k'>品质：</span>真货，品质没问题。"
-        : "<span class='b'>品质：</span>有点看不准，得再想想。");
+        ? "<span class='k'>成色：</span>真货，材质和成色都没问题。"
+        : "<span class='b'>成色：</span>有点看不准，得再想想。");
     }
     tighten(0.55,1.35);
   }
   if(kind==="orig"){
     if(G.contra){
       GAME.clues.push(ok
-        ? "<span class='b'>来路：</span>货单上盖着禁运章，这是违禁品。"
+        ? "<span class='b'>来路：</span>标签下印着禁运章，这是一件"+G.tier+"违禁品。"
         : "<span class='k'>来路：</span>通行码看着齐全，没查出什么。");
     }else if(G.stolen){
       GAME.clues.push(ok
-        ? "<span class='b'>来路：</span>序列号对得上失窃清单，这件的来路有问题。"
+        ? "<span class='b'>来路：</span>序列号对得上失窃清单，热度 "+G.heat+"%，来路有问题。"
         : "<span class='k'>来路：</span>收据看着齐全，没查出什么。");
     }else{
       GAME.clues.push(ok
@@ -1002,7 +1067,7 @@ function doDeal(){
 
   if(GAME.shelf.length>=GAME.shelfMax){ toast("货架满了，先去货架上卖点东西。"); return; }
   if(p<=0){ toast("出价不能是 0。"); return; }
-  if(p>GAME.gems){ toast("星币不够，你只有 "+GAME.gems+" 枚。"); return; }
+  if(p>GAME.gems){ toast("信用点不够，你只有 "+GAME.gems+" 点。"); return; }
 
   if(p>G.ask){
     settleDeal(p);
@@ -1023,7 +1088,7 @@ function doDeal(){
   var bump=pick([2,3,4]);
   G.ask=Math.max(p+1,G.ask-bump);
   $("gAsk").textContent=G.ask;
-  toast("客人皱了下眉：「"+G.ask+" 枚，不能再少了。」");
+  toast("客人皱了下眉：「"+G.ask+" 信用点，不能再少了。」");
   renderGuest(); renderPrice();
 }
 function settleDeal(p){
@@ -1035,15 +1100,15 @@ function settleDeal(p){
   GAME.correct++;
   tone(660,0.10,"triangle",0.06);
   setTimeout(()=>tone(880,0.14,"triangle",0.05),90);
-  popText("\u2212"+p+" 枚","#ffb27a",500,214);
+  popText("\u2212"+p+" 信用点","#ffb27a",500,214);
   popText("已入货架","#8fe3a5",500,258);
-  toast("成交，"+G.name+" 归你了。");
+  toast("成交，"+G.name+" 已收入货架。");
   advanceGuest();
 }
 function doSkip(){
   if(!GAME.guest||GAME.over) return;
   tone(300,0.12,"sine",0.03);
-  toast("你把货推了回去，客人收好走了。");
+  toast("你把货推了回去，客人收好东西走了。");
   GAME.idx++;
   advanceGuest();
 }
@@ -1051,18 +1116,18 @@ function callCustoms(){
   if(!GAME.guest||GAME.over) return;
   var G=GAME.guest.good;
   if(G.stolen||G.contra){
-    GAME.gems+=8; GAME.net+=8;
+    GAME.gems+=10; GAME.net+=10;
     GAME.correct++;
     tone(180,0.3,"square",0.05);
-    popText("+8 谢礼","#8fe3a5",500,222);
-    toast("海关巡逻艇把人带走了，星港给了你 8 枚谢礼。");
+    popText("+10 举报赏金","#8fe3a5",500,222);
+    toast("治安部把人带走了，付给你 10 点举报赏金。");
   }else{
-    GAME.gems-=6; GAME.net-=6;
+    GAME.gems-=8; GAME.net-=8;
     GAME.wrong++;
     tone(140,0.3,"sawtooth",0.05);
     GAME.shake=.7;
-    popText("\u22126 赔礼","#ff8f7a",500,222);
-    toast("核验过了来路正常。你赔了客人 6 枚星币。");
+    popText("\u22128 赔偿","#ff8f7a",500,222);
+    toast("核验过了来路正常。你赔了客人 8 点信用点。");
   }
   advanceGuest();
 }
@@ -1084,33 +1149,33 @@ function endDay(){
     if(g.contra && Math.random()<0.80){
       seized++;
       GAME.gems-=14; GAME.net-=14; GAME.wrong++;
-      report.push("<div class='item'><span class='h'>"+g.name+"</span> 被海关查出是违禁品，没收，罚款 14 枚。</div>");
+      report.push("<div class='item'><span class='h'>"+g.name+"</span> 被治安部查出是违禁品，没收，罚款 14 信用点。</div>");
       continue;
     }
     if(g.stolen && Math.random()<0.62){
       seized++;
       GAME.gems-=8; GAME.net-=8; GAME.wrong++;
-      report.push("<div class='item'><span class='h'>"+g.name+"</span> 被查出序列号失窃，没收，罚款 8 枚。</div>");
+      report.push("<div class='item'><span class='h'>"+g.name+"</span> 被查出序列号失窃，没收，罚款 8 信用点。</div>");
       continue;
     }
     var sell=Math.round(g.real*(g.quality==="fake"?0.9:1.12));
     GAME.gems+=sell; GAME.net+=sell; GAME.sold++;
     if(g.quality==="fake") fakeLoss++;
-    report.push("<div class='item'><span class='h'>"+g.name+"</span> 回收商队按 <b>"+sell+"</b> 枚收走了"
-      +(g.quality==="fake"?"（后来商队发现是仿品，价钱压得很低）":"")+"。</div>");
+    report.push("<div class='item'><span class='h'>"+g.name+"</span> 夜间接货的商人按 <b>"+sell+"</b> 信用点收走了"
+      +(g.quality==="fake"?"（后来发现是仿品，价钱压得很低）":"")+"。</div>");
     income+=sell;
   }
   GAME.shelf=[];
   GAME.gems-=GAME.rent; GAME.net-=GAME.rent;
-  report.push("<div class='item'><span class='h'>泊位费</span> 交掉 <b>"+GAME.rent+"</b> 枚。</div>");
+  report.push("<div class='item'><span class='h'>店面租金</span> 交给房东 <b>"+GAME.rent+"</b> 信用点。</div>");
 
-  var title = GAME.gems>=180?"星港金牌掌柜":(GAME.gems>=140?"旋臂有名的商人":
-             GAME.gems>=100?"本分的轨道掌柜":"空间站慈善家");
+  var title = GAME.gems>=180?"声名鹊起的掌柜":(GAME.gems>=140?"口碑稳定的店家":
+             GAME.gems>=100?"下层区熟脸":"无人问津的新手");
 
   showModal("第 "+GAME.day+" 天 · 打烊",
-    "净赚 "+(GAME.net>=0?"+":"")+GAME.net+" 枚 · 余额 "+GAME.gems+" 枚",
+    "净账 "+(GAME.net>=0?"+":"")+GAME.net+" 信用点 · 余额 "+GAME.gems+" 信用点",
     report.join("")+
-      "<div class='item' style='border:0;margin-top:8px'><span class='h'>称号：</span>"+title+"</div>",
+      "<div class='item' style='border:0;margin-top:8px'><span class='h'>声望：</span>"+title+"</div>",
     GAME.day<3?[["继续营业",continueDay]]:[["查看结算",finalScore]]);
   GAME.phase="night"; updateHUD();
 }
@@ -1129,14 +1194,14 @@ function finalScore(){
   GAME.over=true; GAME.running=false;
   var score=GAME.gems*10+GAME.correct*120-GAME.wrong*60;
   score=Math.max(0,Math.min(10000,score));
-  var rows="<div class='item'><span class='h'>星币余额</span> "+GAME.gems+" 枚</div>"+
-    "<div class='item'><span class='h'>判对</span> "+GAME.correct+" 次 · 判错 "+GAME.wrong+" 次</div>"+
-    "<div class='item'><span class='h'>三日经营评分</span> <b>"+score+"</b> / 10000</div>";
+  var rows="<div class='item'><span class='h'>信用点余额</span> "+GAME.gems+" 点</div>"+
+    "<div class='item'><span class='h'>判断正确</span> "+GAME.correct+" 次 · 判断失误 "+GAME.wrong+" 次</div>"+
+    "<div class='item'><span class='h'>试营业评分</span> <b>"+score+"</b> / 10000</div>";
   var best=0;
   try{ best=parseInt(localStorage.getItem("ds_pawn_best")||"0",10)||0; }catch(e){}
   if(score>best){ best=score; try{ localStorage.setItem("ds_pawn_best",String(score)); }catch(e){} }
   rows+="<div class='item'><span class='h'>本机最佳</span> "+best+"</div>";
-  showModal("三日挑战 · 结算","96 枚本金，轨道站里一间自己的当铺。",rows,[["再开一间",restart]]);
+  showModal("试营业 · 结算","导师贷给你一笔启动信用点，看看三天下来店铺归不归你。",rows,[["再开一间",restart]]);
 }
 
 /* ============ 弹层 / toast ============ */
@@ -1186,52 +1251,52 @@ function showManual(){
   var rows="";
   var list=[
     ["收什么","客人把货放上台面，先看清开价，再决定要不要。"],
-    ["三样检查","外观扫描 / 成分检测 / 来路核验，每件货各有一次机会。查得越多，估价区间越窄。"],
+    ["三样查验","外观查验 / 成色检测 / 来路核验，每件货各有一次机会。查得越多，估价区间越窄。"],
     ["估价","仿品只能按材料价收；磨损严重的真货值一半；保存完好的才是原价。"],
     ["还价","开价是客人的心理价。压得太狠，客人的耐心会掉光，人就走。"],
-    ["报海关","怀疑赃物或违禁品就上报。坐实了巡逻艇带走，给你 8 枚谢礼；误报要赔 6 枚。"],
-    ["转售","收来的货进柜台货架，下班后回收商队来收。仿品卖不出价钱，赃物违禁品可能被追查。"]
+    ["上报治安部","怀疑赃物或违禁品就上报。坐实了治安部带走，给你 10 点赏金；误报要赔 8 点。"],
+    ["转售","收来的货进柜台货架，打烊后商人按市价收走。仿品卖不出价钱，赃物、违禁品可能被追查。"]
   ];
   for(var i=0;i<list.length;i++){
     rows+="<div class='item'><span class='h'>"+list[i][0]+"</span><br>"+list[i][1]+"</div>";
   }
-  showModal("掌柜手册","轨道站柜台后的规矩，一共六条。",rows,[["知道了",closeModal]]);
+  showModal("掌柜手册","下层区柜台后的规矩，一共六条。",rows,[["知道了",closeModal]]);
 }
 function showShelf(){
   if(!GAME.shelf.length){
-    showModal("货架","今天还没收到东西。", "<div class='item'>柜台下面空空的，先等客船靠近。</div>",[["知道了",closeModal]]);
+    showModal("货架","今天还没收到东西。", "<div class='item'>柜台下面空空的，先等客人上门。</div>",[["知道了",closeModal]]);
     return;
   }
   var rows="";
   for(var i=0;i<GAME.shelf.length;i++){
     var it=GAME.shelf[i], g=it.good;
-    var tag=g.quality==="fake"?"（仿品）":(g.quality==="worn"?"（磨损）":"");
-    var flag=g.contra?" · <span class='b'>违禁</span>":(g.stolen?" · <span class='b'>赃物</span>":"");
+    var tag=g.quality==="fake"?"（仿品）":(g.quality==="worn"?"（成色一般）":"");
+    var flag=g.contra?" · <span class='b'>"+g.tier+"违禁</span>":(g.stolen?" · <span class='b'>赃物 "+g.heat+"%热度</span>":"");
     rows+="<div class='item'><span class='h'>"+g.name+tag+flag+"</span> 收价 "+it.paid+
-      " 枚 · 商队估价约 <b>"+Math.round(g.real*1.1)+"</b> 枚</div>";
+      " 信用点 · 夜商估价约 <b>"+Math.round(g.real*1.1)+"</b> 信用点</div>";
   }
-  rows+="<div class='item' style='border:0'>货架 "+GAME.shelf.length+"/"+GAME.shelfMax+"，下班后统一出手。</div>";
+  rows+="<div class='item' style='border:0'>货架 "+GAME.shelf.length+"/"+GAME.shelfMax+"，打烊后统一出手。</div>";
   showModal("货架","收来的货暂时放在这里。",rows,[["知道了",closeModal]]);
 }
 function showBook(){
   var rows="<div class='item'><span class='h'>今天</span> 第 "+GAME.day+" 天 · 收了 "+GAME.got+" 件 · 净账 "+
-    (GAME.net>=0?"+":"")+GAME.net+" 枚</div>"+
-    "<div class='item'><span class='h'>累计</span> 判对 "+GAME.correct+" 次 / 判错 "+GAME.wrong+" 次</div>"+
-    "<div class='item'><span class='h'>余额</span> <b>"+GAME.gems+"</b> 枚星币</div>"+
+    (GAME.net>=0?"+":"")+GAME.net+" 信用点</div>"+
+    "<div class='item'><span class='h'>累计</span> 判断正确 "+GAME.correct+" 次 / 判断失误 "+GAME.wrong+" 次</div>"+
+    "<div class='item'><span class='h'>余额</span> <b>"+GAME.gems+"</b> 信用点</div>"+
     "<div class='item' style='border:0'>账本上的数字不会骗人，人会。</div>";
   showModal("账本","一笔一笔都记着。",rows,[["知道了",closeModal]]);
 }
 function doBell(){
-  if(!GAME.guest){ toast("泊位前没人。"); return; }
+  if(!GAME.guest){ toast("柜台前没人。"); return; }
   GAME.guest.good.ask=Math.max(3,GAME.guest.good.ask-ri(2,5));
   $("gAsk").textContent=GAME.guest.good.ask;
   tone(720,0.5,"sine",0.05);
-  toast("你按了下呼叫铃，客人松了口："+GAME.guest.good.ask+" 枚。");
+  toast("你按了下叫客铃，客人松了口："+GAME.guest.good.ask+" 信用点。");
   renderPrice();
 }
 function doLens(){
-  if(!GAME.guest){ toast("泊位前没人。"); return; }
-  if(GAME.lensUsed){ toast("鉴定镜一天只能用一次。"); return; }
+  if(!GAME.guest){ toast("柜台前没人。"); return; }
+  if(GAME.lensUsed){ toast("放大镜一天只能用一次。"); return; }
   GAME.lensUsed=true;
   var G=GAME.guest.good;
   var msg = G.quality==="fake" ? "镜片下浮出一层新镀层——是仿品。"
@@ -1246,11 +1311,11 @@ function doLens(){
   toast(msg);
 }
 function showReward(){
-  var rows="<div class='item'><span class='h'>熟客航道</span> 遇到熟客时开价会低一点。（已生效）</div>"+
-    "<div class='item'><span class='h'>鉴定镜</span> 每天一次，直接照出真伪与来路。</div>"+
-    "<div class='item'><span class='h'>呼叫铃</span> 无限次，每次能让客人松 2~5 枚。</div>"+
+  var rows="<div class='item'><span class='h'>熟客关系</span> 遇到熟客时开价会低一点。（已生效）</div>"+
+    "<div class='item'><span class='h'>放大镜</span> 每天一次，直接照出真伪与来路。</div>"+
+    "<div class='item'><span class='h'>叫客铃</span> 无限次，每次能让客人松 2~5 点。</div>"+
     "<div class='item' style='border:0'>这些是开铺就带着的家什，不用额外解锁。</div>";
-  showModal("掌柜福利","老舰长留下的三件东西。",rows,[["知道了",closeModal]]);
+  showModal("掌柜福利","导师留下的三件东西。",rows,[["知道了",closeModal]]);
 }
 
 /* ============ 开场 ============ */
