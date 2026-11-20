@@ -13,7 +13,7 @@ jobs:
       - name: Download and verify bundle
         run: |
           set -euo pipefail
-          curl -sL "https://aka.doubaocdn.com/s/5TtSpg4gbb" -o /tmp/dp.zip
+          curl -fL --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 15 "https://aka.doubaocdn.com/s/5TtSpg4gbb" -o /tmp/dp.zip
           echo "7409229d42c7999527f5e2ede27deb786fa1aa6a54ed1acfd70af67cf052792a  /tmp/dp.zip" | sha256sum -c -
           unzip -oq /tmp/dp.zip -d "${{ github.workspace }}"
       - name: Commit files
