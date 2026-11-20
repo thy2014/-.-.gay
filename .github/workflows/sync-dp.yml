@@ -1,0 +1,34 @@
+name: sync-dp
+on:
+  push:
+    paths:
+      - .github/workflows/sync-dp.yml
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download artifacts
+        run: |
+          mkdir -p .stage
+          curl -sL "https://aka.doubaocdn.com/s/bKZuF6PVKR" -o .stage/deepspace-pawn.html
+          curl -sL "https://aka.doubaocdn.com/s/66YFmVm84a" -o .stage/index.html
+          curl -sL "https://aka.doubaocdn.com/s/QKdP9F0Osq" -o .stage/games.json
+      - name: Verify sha256
+        run: |
+          cd .stage
+          echo "ffb68cf2b7626fa611a5eed4ca5746ac5d5ae914811636e4bde913167332e4a6  deepspace-pawn.html" | sha256sum -c
+          echo "8b8cf6d5b96fb0d71ee96245605de2e34833145c24488c1baa669932fab248cc  index.html" | sha256sum -c
+          echo "0cda518e3b476b7f08595e24993ddca74e17100a5a4ee778a17920c02ebb7024  games.json" | sha256sum -c
+      - name: Deploy
+        run: |
+          cp .stage/deepspace-pawn.html games/deepspace-pawn.html
+          cp .stage/index.html index.html
+          cp .stage/games.json games/games.json
+          git config user.name "thy2014"
+          git config user.email "thy2014@users.noreply.github.com"
+          git add games/deepspace-pawn.html index.html games/games.json
+          git commit -m "add deepspace pawnshop game"
+          git push
