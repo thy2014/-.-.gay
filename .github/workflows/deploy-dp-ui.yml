@@ -12,8 +12,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Download bundle
         run: |
-          curl -fL --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o dp-bundle.zip "https://aka.doubaocdn.com/s/jqo9Tx7ibW"
-          echo "bf3dbc9bbe193127d1764f899ffa77306f6cde76b3901bfdcfd0027058479719  dp-bundle.zip" | sha256sum -c -
+          curl -fL --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o dp-bundle.zip "https://aka.doubaocdn.com/s/1EDJt6e3vB"
+          echo "f8cb1c18e9fabedbaa5d22bddd589c17a483947ef15d281d02ce9d886350fdc4  dp-bundle.zip" | sha256sum -c -
       - name: Unpack and verify
         run: |
           rm -rf /tmp/bundle && mkdir -p /tmp/bundle
