@@ -1,0 +1,29 @@
+name: deploy-dp-ui
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/deploy-dp-ui.yml"]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download bundle
+        run: |
+          curl -fL --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o dp-bundle.zip "https://aka.doubaocdn.com/s/jqo9Tx7ibW"
+          echo "bf3dbc9bbe193127d1764f899ffa77306f6cde76b3901bfdcfd0027058479719  dp-bundle.zip" | sha256sum -c -
+      - name: Unpack and verify
+        run: |
+          rm -rf /tmp/bundle && mkdir -p /tmp/bundle
+          unzip -o dp-bundle.zip -d /tmp/bundle
+          cp -r /tmp/bundle/games ./games
+          echo "ffb5d405852786243c4ca58ce136ac94d1bac51dc600cf565c44a16fd0438347  games/deepspace-pawn.html" | sha256sum -c -
+      - name: Commit and push
+        run: |
+          git config user.name "doubao-agent"
+          git config user.email "agent@local"
+          git add games/deepspace-pawn.html
+          git commit -m "deploy: refresh deepspace-pawn UI to original-style layout" || echo "no changes"
+          git push
