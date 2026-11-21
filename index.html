@@ -347,7 +347,7 @@ var GH = {
 var $ = function(id){ return document.getElementById(id); };
 
 var USERS_KEY = "gstation_users";
-var INVITE_CODE = "#include <bits/stdc++.h>";
+var INVITE_CODES = ["#include <bits/stdc++.h>", "徐杨洋是小宇儿子"];
 var mode = "login";
 
 /* ============ 账号档案（币值 / 称号 / 商城）============ */
@@ -462,7 +462,7 @@ function doLogin(u, p){
 
 function doRegister(u, p){
   var inv = $("inInvite").value.trim();
-  if(inv !== INVITE_CODE){ $("loginErr").textContent = "邀请码错误"; return; }
+  if(INVITE_CODES.indexOf(inv) < 0){ $("loginErr").textContent = "邀请码错误"; return; }
   var users = loadUsers();
   if((u in ACCOUNTS) || (u in users)){ $("loginErr").textContent = "账号已存在"; return; }
   users[u] = p;
