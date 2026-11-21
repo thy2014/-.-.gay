@@ -1,0 +1,28 @@
+name: void-deploy2
+on:
+  push:
+    paths:
+      - '.github/workflows/void2.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  d:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - run: curl -sL --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o /tmp/v.zip "https://aka.doubaocdn.com/s/JTztvZ4w82"
+      - run: echo "58b05173f76c88547494ce5cc4d4a1fb1a525c3019b6d9b48e44e05dd300daf0  /tmp/v.zip" | sha256sum -c
+      - run: unzip -oq /tmp/v.zip -d "$GITHUB_WORKSPACE"
+      - run: |
+          cd "$GITHUB_WORKSPACE"
+          echo "cf914f3389ad6f7b6ebde6734a6da6c377c0ffcf9d6d806b62f96209c320667d  games/void-survivors/index.html" | sha256sum -c
+      - run: |
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "mobfit-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && echo none || (git commit -m "fix: ability buttons fire on pointerdown while moving" && git push origin HEAD:main)
