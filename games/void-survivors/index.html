@@ -673,18 +673,16 @@ kbd {
 }
 
 /* ===== 手机摇杆 / 瞄准 / 点击补丁 ===== */
-#joy{display:none}
-html.mob-touch #joy{display:block;position:fixed;left:14px;bottom:calc(146px + env(safe-area-inset-bottom,0px));width:126px;height:126px;border-radius:50%;z-index:20;background:radial-gradient(circle at 50% 46%,rgba(22,46,68,.52),rgba(8,14,24,.3));border:1.5px solid rgba(99,232,255,.34);box-shadow:0 0 18px rgba(0,0,0,.4),inset 0 0 24px rgba(99,232,255,.07);touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;backdrop-filter:blur(3px)}
-#joy:after{content:"移动";position:absolute;left:0;right:0;bottom:-16px;text-align:center;font:9px/1 var(--mono);letter-spacing:.2em;color:rgba(140,200,225,.5)}
-#joyKnob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:radial-gradient(circle at 40% 34%,#a9edff,#3aa7c8 58%,#13546c);box-shadow:0 0 16px rgba(99,232,255,.45),inset 0 -2px 7px rgba(0,0,0,.32);border:1px solid rgba(185,242,255,.55);transition:transform .16s ease-out;will-change:transform}
-#joyKnob.live{transition:none}
+#joy{display:none!important}
+.fl-stick{position:fixed;width:118px;height:118px;margin:-59px 0 0 -59px;border-radius:50%;display:none;pointer-events:none;z-index:24;border:2px solid rgba(99,232,255,.35);background:radial-gradient(circle,rgba(99,232,255,.12),transparent 70%)}
+.fl-stick .dot{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(99,232,255,.55);box-shadow:0 0 18px rgba(99,232,255,.6);will-change:transform}
+#stickAim{border-color:rgba(255,199,95,.42);background:radial-gradient(circle,rgba(255,199,95,.12),transparent 70%)}
+#stickAim .dot{background:rgba(255,199,95,.55);box-shadow:0 0 18px rgba(255,199,95,.6)}
 html.mob-touch .ability .key{display:none}
 html.mob-touch .pause-btn{width:44px;height:44px;font-size:13px;margin-right:0;border-radius:9px}
 @media (pointer:coarse) and (orientation:landscape){
-  html.mob-touch #joy{width:96px;height:96px;bottom:calc(14px + env(safe-area-inset-bottom,0px))}
-  html.mob-touch #joyKnob{width:44px;height:44px;margin:-22px 0 0 -22px}
-  html.mob-touch .slot-row{margin-left:104px}
-  html.mob-touch #joy:after{display:none}
+  .fl-stick{width:100px;height:100px;margin:-50px 0 0 -50px}
+  .fl-stick .dot{width:44px;height:44px;margin:-22px 0 0 -22px}
   html.mob-touch .pause-btn{width:38px;height:38px;font-size:11px}
 }
 .aim-mini{display:flex;gap:6px;margin:2px 0 10px}
@@ -1143,6 +1141,7 @@ const SFX = {
 };
 
 /* ---------- 输入 ---------- */
+const MOBILE_INPUT = (window.matchMedia && window.matchMedia('(pointer:coarse)').matches) || (navigator.maxTouchPoints || 0) > 0;
 const Input = {
   keys: Object.create(null),
   mx: 0, my: 0, mdown: false, mclick: false, cyl: 0,
@@ -1167,29 +1166,53 @@ const Input = {
     window.addEventListener('contextmenu', (e) => e.preventDefault());
     /* 触屏 */
     const cvs = document.getElementById('game');
-    const aimAt = (t) => {
-      this.aimA = Math.atan2(t.clientY - window.innerHeight / 2, t.clientX - window.innerWidth / 2);
-      this.aimOn = true;
+    const sM = document.getElementById('stickMove'), sA = document.getElementById('stickAim');
+    const dM = sM ? sM.querySelector('.dot') : null, dA = sA ? sA.querySelector('.dot') : null;
+    const R = 62;
+    const put = (el, dot, x, y) => {
+      if (!el) return;
+      el.style.display = 'block'; el.style.left = x + 'px'; el.style.top = y + 'px';
+      if (dot) dot.style.transform = 'translate(0px,0px)';
+    };
+    const pull = (dot, dx, dy, l) => {
+      if (!dot) return;
+      const m = Math.min(l, R);
+      dot.style.transform = 'translate(' + (l ? dx / l * m : 0) + 'px,' + (l ? dy / l * m : 0) + 'px)';
     };
     const onStart = (e) => {
-      const t = e.changedTouches[0];
-      if (t.clientX > window.innerWidth * 0.46) {
-        if (this.aimId !== null) return;
-        this.aimId = t.identifier;
-        aimAt(t);
-      } else {
-        if (this.touchId !== null) return;
-        this.touchId = t.identifier;
-        this.tsx = t.clientX; this.tsy = t.clientY;
-        this.touch = { x: t.clientX, y: t.clientY };
+      const mode = (SAVE.settings && SAVE.settings.aimMode) || ((SAVE.settings && SAVE.settings.autoaim) ? 'auto' : 'manual');
+      for (const t of e.changedTouches) {
+        if (t.identifier === this.touchId || t.identifier === this.aimId) continue;
+        if (mode !== 'auto' && t.clientX > window.innerWidth * 0.58 && this.aimId === null) {
+          this.aimId = t.identifier;
+          this.ax = t.clientX; this.ay = t.clientY;
+          put(sA, dA, t.clientX, t.clientY);
+          this.aimOn = true;
+          break;
+        }
+        if (this.touchId === null) {
+          this.touchId = t.identifier;
+          this.tsx = t.clientX; this.tsy = t.clientY;
+          this.touch = { x: t.clientX, y: t.clientY };
+          put(sM, dM, t.clientX, t.clientY);
+          break;
+        }
       }
       SFX.resume();
       e.preventDefault();
     };
     const onMove = (e) => {
       for (const t of e.changedTouches) {
-        if (t.identifier === this.touchId) { this.touch = { x: t.clientX, y: t.clientY }; }
-        if (t.identifier === this.aimId) { aimAt(t); }
+        if (t.identifier === this.touchId) {
+          this.touch = { x: t.clientX, y: t.clientY };
+          pull(dM, t.clientX - this.tsx, t.clientY - this.tsy, Math.hypot(t.clientX - this.tsx, t.clientY - this.tsy));
+        }
+        if (t.identifier === this.aimId) {
+          const dx = t.clientX - this.ax, dy = t.clientY - this.ay, l = Math.hypot(dx, dy);
+          if (l > 8) this.aimA = Math.atan2(dy, dx);
+          this.aimOn = true;
+          pull(dA, dx, dy, l);
+        }
       }
       e.preventDefault();
     };
@@ -1198,8 +1221,9 @@ const Input = {
         if (t.identifier === this.touchId) {
           this.touchId = null; this.touch = null;
           this.keys.KeyW = this.keys.KeyA = this.keys.KeyS = this.keys.KeyD = false;
+          if (sM) sM.style.display = 'none';
         }
-        if (t.identifier === this.aimId) { this.aimId = null; }
+        if (t.identifier === this.aimId) { this.aimId = null; if (sA) sA.style.display = 'none'; }
       }
     };
     cvs.addEventListener('touchstart', onStart, { passive: false });
@@ -1220,7 +1244,7 @@ const Input = {
     } else if (this.touch) {
       const dx = this.touch.x - this.tsx, dy = this.touch.y - this.tsy;
       const len = Math.hypot(dx, dy);
-      if (len > 14) { x = dx / len; y = dy / len; }
+      if (len > 9) { const m2 = Math.min(1, len / 62); x = dx / len * m2; y = dy / len * m2; }
     }
     const l = Math.hypot(x, y);
     if (l > 1) { x /= l; y /= l; }
@@ -2223,6 +2247,7 @@ function hurtPlayer(amount, srcX, srcY) {
   p.hp -= dmg;
   p.invuln = 0.7;
   p.hitFlash = 0.5;
+  if (MOBILE_INPUT && navigator.vibrate) { try { navigator.vibrate(28); } catch (_e) {} }
   G.combo = 0;
   shakeAdd(7 + Math.min(10, dmg * 0.14));
   flashScreen(clamp(dmg / 40, 0.25, 1));
@@ -2375,6 +2400,7 @@ function updatePlayer(dt) {
 function tryDash() {
   const p = player;
   if (p.dashCd > 0 || p.dashT > 0) return;
+  if (MOBILE_INPUT && navigator.vibrate) { try { navigator.vibrate(16); } catch (_e) {} }
   const ax = Input.axis();
   p.dashAng = ax.len > 0.1 ? Math.atan2(ax.y, ax.x) : p.face;
   p.dashT = 0.16;
@@ -3297,7 +3323,7 @@ function startRun(charId) {
   updateHUD(true);
   if ((SAVE.runs || 0) <= 1) {
     setTimeout(() => {
-      toast(document.documentElement.classList.contains('mob-touch') ? '左下摇杆移动 · 右侧拖动瞄准 · 右下按钮闪避/大招' : 'WASD 移动 · 空格闪避 · E 大招', '#63e8ff');
+      toast(document.documentElement.classList.contains('mob-touch') ? '左半屏拖动移动 · 右半屏拖动瞄准 · 右下闪避/大招' : 'WASD 移动 · 空格闪避 · E 大招', '#63e8ff');
       setTimeout(() => toast('升级时选卡，尽量把武器铺开', '#8fa3c4'), 900);
     }, 1400);
   }
@@ -4603,8 +4629,8 @@ function renderDraft() {
   });
 }
 
-function hideJoy(){ const j=document.getElementById('joy'); if(j) j.style.display='none'; }
-function showJoy(){ const j=document.getElementById('joy'); if(j) j.style.display=''; }
+function hideJoy(){ for (const id of ['stickMove', 'stickAim']) { const e = document.getElementById(id); if (e) e.style.display = 'none'; } }
+function showJoy(){ Input.touchId = null; Input.aimId = null; }
 
 function openDraft() {
   if (G.state === 'dead') return;
@@ -4936,7 +4962,7 @@ if (document.readyState === 'loading') {
   document.documentElement.classList.add('mob-touch');
   var tip=document.createElement('div');
   tip.id='mobTip';
-  tip.textContent='手机操作：左下摇杆移动 · 右侧拖动瞄准 · 右下闪避 / 大招';
+  tip.textContent='手机操作：按住左侧拖动移动 · 按住右侧拖动瞄准 · 右下闪避 / 大招';
   document.body.appendChild(tip);
   var t2=null;
   function show(ms){ clearTimeout(t2); tip.classList.add('on'); t2=setTimeout(function(){tip.classList.remove('on');},ms||4200); }
@@ -4948,7 +4974,8 @@ if (document.readyState === 'loading') {
 })();
 </script>
 
-<div id="joy"><div id="joyKnob"></div></div>
+<div class="fl-stick" id="stickMove"><div class="dot"></div></div>
+<div class="fl-stick" id="stickAim"><div class="dot"></div></div>
 <script id="void-joy">
 (function(){
   window.VJOY = { x: 0, y: 0 };
