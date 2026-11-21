@@ -1,0 +1,29 @@
+name: pair-deploy
+on:
+  push:
+    paths:
+      - '.github/workflows/pair.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  d:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - run: curl -sL --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o /tmp/p.zip "https://aka.doubaocdn.com/s/LazxWSi87k"
+      - run: echo "72ebdca7ef7072a719c2ed16a221f15c689235c987726ac97c30142ffd9e9563  /tmp/p.zip" | sha256sum -c
+      - run: unzip -oq /tmp/p.zip -d "$GITHUB_WORKSPACE"
+      - run: |
+          cd "$GITHUB_WORKSPACE"
+          echo "883f57a7b1581121950f08d9f645c84a244863065275c6a61bb02b011032d724  games/deepspace-pawn.html" | sha256sum -c
+          echo "def9fefb29bfde31976c7365bbd057379c703d34c733bd1adeb4e509f9cdeabc  games/pawnshop.html" | sha256sum -c
+      - run: |
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "mobfit-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && echo none || (git commit -m "fix: hide rotate tip on vertical shop games" && git push origin HEAD:main)
