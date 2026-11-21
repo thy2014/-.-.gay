@@ -526,6 +526,26 @@ body.playing .arcade-back{opacity:0;pointer-events:none;transform:translateY(-8p
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001s !important;transition-duration:.001s !important}
 }
+/* ===== 手机适配补丁 ===== */
+.touch-only{display:none}
+html.mob-touch .kb-only{display:none!important}
+html.mob-touch .touch-only{display:block!important}
+html.mob-touch body{-webkit-user-select:none;user-select:none;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+@supports(padding:env(safe-area-inset-bottom)){
+  html.mob-touch .hud{padding-top:calc(14px + env(safe-area-inset-top,0px));padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  html.mob-touch .hud-bottom{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  html.mob-touch .arcade-back{top:calc(8px + env(safe-area-inset-top,0px))}
+}
+@media (max-width:430px){
+  .dps-box{padding:4px 8px}
+  .stat{padding:4px 8px}
+  .stat b{font-size:13px}
+}
+#mobTip{position:fixed;left:50%;top:36%;transform:translate(-50%,-50%) translateY(12px);
+  max-width:86vw;padding:11px 18px;border-radius:12px;background:rgba(9,13,24,.92);border:1px solid rgba(138,167,255,.36);
+  box-shadow:0 8px 26px rgba(0,0,0,.55);color:#e6ecff;font:500 13px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  text-align:center;z-index:2147483000;pointer-events:none;opacity:0;transition:opacity .28s,transform .28s}
+#mobTip.on{opacity:1;transform:translate(-50%,-50%)}
 
 </style>
 </head>
@@ -600,7 +620,7 @@ body.playing .arcade-back{opacity:0;pointer-events:none;transform:translateY(-8p
         <p class="tagline">在无尽的夜里活下去。武器自动开火，你只需要走位、拾取、把构筑堆成一场灾难。</p>
         <div class="menu-actions">
           <button class="btn primary big" id="btn-start">
-            <b>开始游戏</b><span class="hint">Enter</span>
+            <b>开始游戏</b><span class="hint kb-only">Enter</span>
           </button>
           <div class="menu-row">
             <button class="btn" id="btn-chars"><i class="bi">☾</i>幸存者</button>
@@ -610,6 +630,7 @@ body.playing .arcade-back{opacity:0;pointer-events:none;transform:translateY(-8p
           </div>
         </div>
         <div class="chosen-char" id="chosen-char"></div>
+        <div class="tip touch-only">手机：拖动屏幕移动 · 右下按钮冲刺 · 武器自动开火</div>
       </div>
       <aside class="menu-side">
         <div class="side-gold"><span>金币</span><b id="menu-gold">0</b></div>
@@ -6640,6 +6661,26 @@ class UI {
   ui.showStart();
 })();
 
+</script>
+<script id="mobfit">
+(function(){
+  var coarse=false;
+  try{ coarse = matchMedia('(pointer:coarse)').matches; }catch(e){}
+  if(!coarse) coarse = ('ontouchstart' in window) || (navigator.maxTouchPoints||0)>0;
+  if(!coarse) return;
+  document.documentElement.classList.add('mob-touch');
+  var tip=document.createElement('div');
+  tip.id='mobTip';
+  tip.textContent='手机操作：按住屏幕拖动移动，右下按钮冲刺，武器自动开火';
+  document.body.appendChild(tip);
+  var t2=null;
+  function show(ms){ clearTimeout(t2); tip.classList.add('on'); t2=setTimeout(function(){tip.classList.remove('on');},ms||4200); }
+  var armed=true;
+  document.addEventListener('pointerdown',function(e){
+    if(!armed||!e.target||e.target.tagName!=='CANVAS') return;
+    armed=false; setTimeout(function(){ show(4200); },260);
+  },true);
+})();
 </script>
 </body>
 </html>

@@ -178,6 +178,27 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}
 }
 #pauseBtn:active{background:rgba(30,48,36,.9)}
 @media (min-width: 900px){ #pauseBtn{display:none} }
+/* ===== 手机适配补丁 ===== */
+.touch-only{display:none}
+html.mob-touch .kb-only{display:none!important}
+html.mob-touch .touch-only{display:block!important}
+html.mob-touch body{-webkit-user-select:none;user-select:none;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+#skills{bottom:30px}
+@supports(padding:env(safe-area-inset-bottom)){
+  html.mob-touch #skills{bottom:calc(30px + env(safe-area-inset-bottom,0px))}
+  html.mob-touch #hud{top:calc(env(safe-area-inset-top,0px) + 6px)}
+  html.mob-touch #pauseBtn{top:calc(env(safe-area-inset-top,0px) + 60px)}
+}
+@media (max-width:640px){
+  #hud .tagline{max-width:36vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #skills{max-width:calc(100vw - 130px)}
+  #skills .slot{width:44px;height:44px}
+}
+#mobTip{position:fixed;left:50%;top:36%;transform:translate(-50%,-50%) translateY(12px);
+  max-width:86vw;padding:11px 18px;border-radius:12px;background:rgba(8,16,10,.92);border:1px solid rgba(126,240,160,.34);
+  box-shadow:0 8px 26px rgba(0,0,0,.55);color:#eaf7ee;font:500 13px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  text-align:center;z-index:2147483000;pointer-events:none;opacity:0;transition:opacity .28s,transform .28s}
+#mobTip.on{opacity:1;transform:translate(-50%,-50%)}
 </style>
 </head>
 <body>
@@ -218,12 +239,17 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}
       <h1>选一个<em>生物</em>，守住这五分钟</h1>
       <div class="sub">九分钟太长了。这里缩到五分钟：三波守卫、四个自动招式、一块会吃掉你的裂谷。</div>
       <div class="picks" id="picks"></div>
-      <div class="keys">
+      <div class="keys kb-only">
         <div><kbd>W A S D</kbd>移动</div>
         <div><kbd>空格</kbd>跳跃（高处落地砸击）</div>
         <div><kbd>Shift</kbd>滑步</div>
         <div><kbd>E</kbd>终极技</div>
         <div><kbd>Esc</kbd>暂停</div>
+      </div>
+      <div class="keys touch-only">
+        <div>左下摇杆拖动移动</div>
+        <div>右下按钮：终极 / 滑步 / 跳</div>
+        <div>升级时点一下卡牌选取</div>
       </div>
       <hr>
       <div class="row">
@@ -1942,6 +1968,26 @@ function roundRect(x, y, w, h, r, strokeOnly){
   if (strokeOnly) cx.stroke(); else cx.fill();
 }
 requestAnimationFrame(loop);
+</script>
+<script id="mobfit">
+(function(){
+  var coarse=false;
+  try{ coarse = matchMedia('(pointer:coarse)').matches; }catch(e){}
+  if(!coarse) coarse = ('ontouchstart' in window) || (navigator.maxTouchPoints||0)>0;
+  if(!coarse) return;
+  document.documentElement.classList.add('mob-touch');
+  var tip=document.createElement('div');
+  tip.id='mobTip';
+  tip.textContent='手机操作：左下摇杆拖动移动，右下按钮放终极/滑步/跳';
+  document.body.appendChild(tip);
+  var t2=null;
+  function show(ms){ clearTimeout(t2); tip.classList.add('on'); t2=setTimeout(function(){tip.classList.remove('on');},ms||4200); }
+  var armed=true;
+  document.addEventListener('pointerdown',function(e){
+    if(!armed||!e.target||e.target.tagName!=='CANVAS') return;
+    armed=false; setTimeout(function(){ show(4200); },260);
+  },true);
+})();
 </script>
 </body>
 </html>

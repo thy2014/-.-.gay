@@ -129,6 +129,21 @@
     .card{padding:10px 11px}
     .card .d{display:none}
   }
+/* ===== 手机适配补丁 ===== */
+.touch-only{display:none}
+html.mob-touch .kb-only{display:none!important}
+html.mob-touch .touch-only{display:block!important}
+html.mob-touch body{-webkit-user-select:none;user-select:none;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+@supports(padding:env(safe-area-inset-bottom)){
+  html.mob-touch #hud{top:calc(env(safe-area-inset-top,0px) + 6px);padding-top:4px}
+  html.mob-touch .xp,.mob-touch #hud .xp{bottom:calc(env(safe-area-inset-bottom,0px) + 4px)}
+}
+#mobTip{position:fixed;left:50%;top:36%;transform:translate(-50%,-50%) translateY(12px);
+  max-width:84vw;padding:11px 18px;border-radius:12px;background:rgba(6,12,10,.92);border:1px solid rgba(126,240,160,.32);
+  box-shadow:0 8px 26px rgba(0,0,0,.55);color:#eaf7ee;font:500 13px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  text-align:center;z-index:2147483000;pointer-events:none;opacity:0;transition:opacity .28s,transform .28s}
+#mobTip.on{opacity:1;transform:translate(-50%,-50%)}
+@media (max-width:520px){ html.mob-touch .pause{width:42px;height:42px} }
 </style>
 </head>
 <body>
@@ -145,7 +160,7 @@
     <div class="track"><div class="fill" id="xpFill"></div></div>
     <div class="txt" id="xpText"></div>
   </div>
-  <div class="tips">WASD / 方向键 移动 · 自动瞄准开火 · P 暂停 · 触屏任意位置拖动移动</div>
+  <div class="tips"><span class="kb-only">WASD / 方向键 移动 · 自动瞄准开火 · P 暂停 · 触屏任意位置拖动移动</span><span class="touch-only">左半屏拖动移动 · 右半屏拖动瞄准 · 自动开火</span></div>
 </div>
 
 <div class="stick" id="stick"><div class="ring"></div><div class="dot"></div></div>
@@ -1360,6 +1375,26 @@ xpNext=xpFor(1);
   }
 })();
 requestAnimationFrame(loop);
+})();
+</script>
+<script id="mobfit">
+(function(){
+  var coarse=false;
+  try{ coarse = matchMedia('(pointer:coarse)').matches; }catch(e){}
+  if(!coarse) coarse = ('ontouchstart' in window) || (navigator.maxTouchPoints||0)>0;
+  if(!coarse) return;
+  document.documentElement.classList.add('mob-touch');
+  var tip=document.createElement('div');
+  tip.id='mobTip';
+  tip.textContent='手机操作：左半屏拖动 = 移动，右半屏拖动 = 瞄准，开火自动';
+  document.body.appendChild(tip);
+  var t2=null;
+  function show(ms){ clearTimeout(t2); tip.classList.add('on'); t2=setTimeout(function(){tip.classList.remove('on');},ms||4200); }
+  var armed=true;
+  document.addEventListener('pointerdown',function(e){
+    if(!armed||!e.target||e.target.tagName!=='CANVAS') return;
+    armed=false; setTimeout(function(){ show(4200); },260);
+  },true);
 })();
 </script>
 </body>

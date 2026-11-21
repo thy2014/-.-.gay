@@ -671,6 +671,28 @@ kbd {
   .ability { width: 58px; height: 58px; }
   .ability .lbl { font-size: 10px; }
 }
+/* ===== 手机适配补丁 ===== */
+.touch-only{display:none}
+html.mob-touch .kb-only{display:none!important}
+html.mob-touch .touch-only{display:block!important}
+html.mob-touch body{-webkit-user-select:none;user-select:none;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+@supports(padding:env(safe-area-inset-bottom)){
+  html.mob-touch .hud-top{padding-top:calc(14px + env(safe-area-inset-top,0px))}
+  html.mob-touch .hud-bottom{padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+}
+@media (max-width:520px){
+  .hud-top{gap:6px;padding-left:10px;padding-right:10px}
+  .hud-left{width:42vw}
+  .hud-right{gap:8px}
+  .hud-right .stat{padding:3px 6px}
+  .hud-right .stat b{font-size:13px}
+  .hud-sub{font-size:9px}
+}
+#mobTip{position:fixed;left:50%;top:36%;transform:translate(-50%,-50%) translateY(12px);
+  max-width:86vw;padding:11px 18px;border-radius:12px;background:rgba(6,11,24,.92);border:1px solid rgba(99,232,255,.34);
+  box-shadow:0 8px 26px rgba(0,0,0,.55);color:#e4f6ff;font:500 13px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  text-align:center;z-index:2147483000;pointer-events:none;opacity:0;transition:opacity .28s,transform .28s}
+#mobTip.on{opacity:1;transform:translate(-50%,-50%)}
 </style>
 </head>
 <body>
@@ -682,6 +704,9 @@ kbd {
     text-decoration:none;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
     opacity:.45;transition:opacity .15s,color .15s;letter-spacing:.02em}
   .arcade-back:hover{opacity:1;color:#e8f1ff}
+  @media (pointer:coarse){
+    .arcade-back{bottom:calc(6px + env(safe-area-inset-bottom,0px));opacity:.28;font-size:10px;padding:3px 8px}
+  }
   @media (max-width:520px){.arcade-back{bottom:4px;font-size:10px;padding:3px 8px;opacity:.35}}
 </style>
 <a class="arcade-back" href="../../">← 游戏厅</a>
@@ -774,11 +799,16 @@ kbd {
             <button class="btn ghost sm" id="settingsBtn">设置</button>
           </div>
           <div class="menu-foot" style="margin-top:16px;">
-            <div class="keys">
+            <div class="keys kb-only">
               <span><kbd>WASD</kbd>移动</span>
               <span><kbd>空格</kbd>闪避</span>
               <span><kbd>E</kbd>大招</span>
               <span><kbd>ESC</kbd>暂停</span>
+            </div>
+            <div class="keys touch-only" style="gap:10px">
+              <span>拖动屏幕移动</span>
+              <span>点右下按钮闪避 / 大招</span>
+              <span>武器自动开火</span>
             </div>
           </div>
         </div>
@@ -3223,7 +3253,7 @@ function startRun(charId) {
   updateHUD(true);
   if ((SAVE.runs || 0) <= 1) {
     setTimeout(() => {
-      toast('WASD 移动 · 空格闪避 · E 大招', '#63e8ff');
+      toast(document.documentElement.classList.contains('mob-touch') ? '拖动屏幕移动 · 点右下按钮闪避/大招' : 'WASD 移动 · 空格闪避 · E 大招', '#63e8ff');
       setTimeout(() => toast('升级时选卡，尽量把武器铺开', '#8fa3c4'), 900);
     }, 1400);
   }
@@ -4814,6 +4844,26 @@ if (document.readyState === 'loading') {
 } else {
   boot();
 }
+</script>
+<script id="mobfit">
+(function(){
+  var coarse=false;
+  try{ coarse = matchMedia('(pointer:coarse)').matches; }catch(e){}
+  if(!coarse) coarse = ('ontouchstart' in window) || (navigator.maxTouchPoints||0)>0;
+  if(!coarse) return;
+  document.documentElement.classList.add('mob-touch');
+  var tip=document.createElement('div');
+  tip.id='mobTip';
+  tip.textContent='手机操作：按住屏幕拖动移动，点右下按钮闪避 / 大招';
+  document.body.appendChild(tip);
+  var t2=null;
+  function show(ms){ clearTimeout(t2); tip.classList.add('on'); t2=setTimeout(function(){tip.classList.remove('on');},ms||4200); }
+  var armed=true;
+  document.addEventListener('pointerdown',function(e){
+    if(!armed||!e.target||e.target.tagName!=='CANVAS') return;
+    armed=false; setTimeout(function(){ show(4200); },260);
+  },true);
+})();
 </script>
 </body>
 </html>
