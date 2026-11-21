@@ -671,6 +671,26 @@ kbd {
   .ability { width: 58px; height: 58px; }
   .ability .lbl { font-size: 10px; }
 }
+
+/* ===== 手机摇杆 / 瞄准 / 点击补丁 ===== */
+#joy{display:none}
+html.mob-touch #joy{display:block;position:fixed;left:14px;bottom:calc(146px + env(safe-area-inset-bottom,0px));width:126px;height:126px;border-radius:50%;z-index:20;background:radial-gradient(circle at 50% 46%,rgba(22,46,68,.52),rgba(8,14,24,.3));border:1.5px solid rgba(99,232,255,.34);box-shadow:0 0 18px rgba(0,0,0,.4),inset 0 0 24px rgba(99,232,255,.07);touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;backdrop-filter:blur(3px)}
+#joy:after{content:"移动";position:absolute;left:0;right:0;bottom:-16px;text-align:center;font:9px/1 var(--mono);letter-spacing:.2em;color:rgba(140,200,225,.5)}
+#joyKnob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:radial-gradient(circle at 40% 34%,#a9edff,#3aa7c8 58%,#13546c);box-shadow:0 0 16px rgba(99,232,255,.45),inset 0 -2px 7px rgba(0,0,0,.32);border:1px solid rgba(185,242,255,.55);transition:transform .16s ease-out;will-change:transform}
+#joyKnob.live{transition:none}
+html.mob-touch .ability .key{display:none}
+html.mob-touch .pause-btn{width:44px;height:44px;font-size:13px;margin-right:0;border-radius:9px}
+@media (pointer:coarse) and (orientation:landscape){
+  html.mob-touch #joy{width:96px;height:96px;bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  html.mob-touch #joyKnob{width:44px;height:44px;margin:-22px 0 0 -22px}
+  html.mob-touch .slot-row{margin-left:104px}
+  html.mob-touch #joy:after{display:none}
+  html.mob-touch .pause-btn{width:38px;height:38px;font-size:11px}
+}
+.aim-mini{display:flex;gap:6px;margin:2px 0 10px}
+.aim-mini .aimbtn{flex:1;padding:8px 4px;border-radius:6px;border:1px solid var(--line);background:rgba(12,22,36,.8);color:var(--dim);font-size:11.5px;cursor:pointer;touch-action:manipulation}
+.aim-mini .aimbtn.on{border-color:rgba(99,232,255,.65);color:var(--cyan);background:rgba(30,70,95,.4)}
+
 /* ===== 手机适配补丁 ===== */
 .touch-only{display:none}
 html.mob-touch .kb-only{display:none!important}
@@ -904,6 +924,7 @@ html.mob-touch body{-webkit-user-select:none;user-select:none;overscroll-behavio
         <div><b id="pTime">0:00</b><span>时间</span></div>
         <div><b id="pDust">0</b><span>星尘</span></div>
       </div>
+      <div class="aim-mini" id="aimPick"></div>
       <div style="display:flex;flex-direction:column;gap:9px;">
         <button class="btn primary" id="resumeBtn">继续</button>
         <button class="btn ghost" id="quitBtn">放弃本局</button>
@@ -1008,7 +1029,7 @@ const DEFAULT_SAVE = {
   upgrades: { hp: 0, dmg: 0, spd: 0, luck: 0, reroll: 0, xp: 0, revive: 0 },
   chars: { ranger: true, warden: false, wraith: false, warlock: false },
   lastChar: 'ranger',
-  settings: { sfx: true, shake: true, autoaim: true, dmgNum: true },
+  settings: { sfx: true, shake: true, autoaim: true, dmgNum: true, aimMode: 'auto' },
   seen: {},
 };
 
@@ -1126,6 +1147,7 @@ const Input = {
   keys: Object.create(null),
   mx: 0, my: 0, mdown: false, mclick: false, cyl: 0,
   touch: null, touchId: null, tsx: 0, tsy: 0,
+  aimA: 0, aimId: null, aimOn: false,
   init() {
     window.addEventListener('keydown', (e) => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
@@ -1145,18 +1167,29 @@ const Input = {
     window.addEventListener('contextmenu', (e) => e.preventDefault());
     /* 触屏 */
     const cvs = document.getElementById('game');
+    const aimAt = (t) => {
+      this.aimA = Math.atan2(t.clientY - window.innerHeight / 2, t.clientX - window.innerWidth / 2);
+      this.aimOn = true;
+    };
     const onStart = (e) => {
       const t = e.changedTouches[0];
-      if (this.touchId !== null) return;
-      this.touchId = t.identifier;
-      this.tsx = t.clientX; this.tsy = t.clientY;
-      this.touch = { x: t.clientX, y: t.clientY };
+      if (t.clientX > window.innerWidth * 0.46) {
+        if (this.aimId !== null) return;
+        this.aimId = t.identifier;
+        aimAt(t);
+      } else {
+        if (this.touchId !== null) return;
+        this.touchId = t.identifier;
+        this.tsx = t.clientX; this.tsy = t.clientY;
+        this.touch = { x: t.clientX, y: t.clientY };
+      }
       SFX.resume();
       e.preventDefault();
     };
     const onMove = (e) => {
       for (const t of e.changedTouches) {
         if (t.identifier === this.touchId) { this.touch = { x: t.clientX, y: t.clientY }; }
+        if (t.identifier === this.aimId) { aimAt(t); }
       }
       e.preventDefault();
     };
@@ -1166,6 +1199,7 @@ const Input = {
           this.touchId = null; this.touch = null;
           this.keys.KeyW = this.keys.KeyA = this.keys.KeyS = this.keys.KeyD = false;
         }
+        if (t.identifier === this.aimId) { this.aimId = null; }
       }
     };
     cvs.addEventListener('touchstart', onStart, { passive: false });
@@ -1180,7 +1214,10 @@ const Input = {
     if (k.KeyD || k.ArrowRight) x += 1;
     if (k.KeyW || k.ArrowUp) y -= 1;
     if (k.KeyS || k.ArrowDown) y += 1;
-    if (this.touch) {
+    const vj = window.VJOY;
+    if (vj && (Math.abs(vj.x) > 0.06 || Math.abs(vj.y) > 0.06)) {
+      x = vj.x; y = vj.y;
+    } else if (this.touch) {
       const dx = this.touch.x - this.tsx, dy = this.touch.y - this.tsy;
       const len = Math.hypot(dx, dy);
       if (len > 14) { x = dx / len; y = dy / len; }
@@ -2255,13 +2292,20 @@ function updatePlayer(dt) {
 
   /* --- 朝向 --- */
   let aimAng;
-  if (SAVE.settings.autoaim) {
-    const t = nearestEnemy(p.x, p.y, 900);
-    aimAng = t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.vy, p.vx);
+  const aimMode = SAVE.settings.aimMode || (SAVE.settings.autoaim ? 'auto' : 'manual');
+  const nearT = nearestEnemy(p.x, p.y, 900);
+  const moving = Math.abs(p.vx) + Math.abs(p.vy) > 6;
+  if (aimMode === 'manual') {
+    aimAng = Input.aimOn ? Input.aimA : (moving ? Math.atan2(p.vy, p.vx) : p.aim);
+  } else if (aimMode === 'far') {
+    const dn = nearT ? Math.hypot(nearT.x - p.x, nearT.y - p.y) : 1e9;
+    if (nearT && dn < 340) aimAng = Math.atan2(nearT.y - p.y, nearT.x - p.x);
+    else if (Input.aimOn) aimAng = Input.aimA;
+    else aimAng = moving ? Math.atan2(p.vy, p.vx) : p.aim;
   } else {
-    aimAng = Math.atan2(Input.my - H / 2, Input.mx - W / 2);
+    aimAng = nearT ? Math.atan2(nearT.y - p.y, nearT.x - p.x) : Math.atan2(p.vy, p.vx);
   }
-  if (p.vy * p.vy + p.vx * p.vx > 400) {
+  if (aimMode === 'auto' && p.vy * p.vy + p.vx * p.vx > 400) {
     const moveAng = Math.atan2(p.vy, p.vx);
     let da = Math.atan2(Math.sin(aimAng - moveAng), Math.cos(aimAng - moveAng));
     aimAng = moveAng + da * 0.15;
@@ -3253,7 +3297,7 @@ function startRun(charId) {
   updateHUD(true);
   if ((SAVE.runs || 0) <= 1) {
     setTimeout(() => {
-      toast(document.documentElement.classList.contains('mob-touch') ? '拖动屏幕移动 · 点右下按钮闪避/大招' : 'WASD 移动 · 空格闪避 · E 大招', '#63e8ff');
+      toast(document.documentElement.classList.contains('mob-touch') ? '左下摇杆移动 · 右侧拖动瞄准 · 右下按钮闪避/大招' : 'WASD 移动 · 空格闪避 · E 大招', '#63e8ff');
       setTimeout(() => toast('升级时选卡，尽量把武器铺开', '#8fa3c4'), 900);
     }, 1400);
   }
@@ -4197,7 +4241,7 @@ const el = {};
   'shopScreen', 'shopGrid', 'shopDust', 'shopClose',
   'codexScreen', 'codexWeapons', 'codexPassives', 'codexEnemies', 'codexBosses', 'codexClose',
   'settingsScreen', 'settingsList', 'settingsClose', 'resetBtn',
-  'pauseScreen', 'pWave', 'pKills', 'pTime', 'pDust', 'resumeBtn', 'quitBtn',
+  'pauseScreen', 'pWave', 'pKills', 'pTime', 'pDust', 'resumeBtn', 'quitBtn', 'aimPick',
   'draftScreen', 'draftCards', 'draftTitle', 'draftSub', 'rerollBtn', 'rerollCount', 'rerollInfo',
   'overScreen', 'oWave', 'oKills', 'oTime', 'oScore', 'oCombo', 'oDust', 'oDustTotal',
   'againBtn', 'toMenuBtn',
@@ -4392,7 +4436,6 @@ function renderSettings() {
   const rows = [
     { key: 'sfx', name: '音效', desc: '程序合成的射击与爆炸声' },
     { key: 'shake', name: '屏幕震动', desc: '命中与爆炸时的镜头抖动' },
-    { key: 'autoaim', name: '自动瞄准', desc: '关闭后用鼠标控制朝向' },
     { key: 'dmgNum', name: '伤害数字', desc: '关闭可提升低配设备帧率' },
   ];
   el.settingsList.innerHTML = rows.map(r => `
@@ -4408,6 +4451,38 @@ function renderSettings() {
       SFX.play('ui');
       renderSettings();
     };
+  });
+  const aimWrap = document.createElement('div');
+  aimWrap.style.cssText = 'margin-top:14px;padding-top:12px;border-top:1px solid var(--line)';
+  aimWrap.innerHTML = '<div style="font-size:12px;color:var(--txt);margin-bottom:8px">瞄准方式</div>'
+    + '<div style="display:flex;gap:8px">' + AIM_MODES.map(m =>
+      `<button class="btn ghost sm" data-aim="${m.k}" style="flex:1;flex-direction:column;gap:2px;padding:9px 6px;${AIM_CUR() === m.k ? 'border-color:var(--cyan);color:var(--cyan)' : ''}">
+        <b style="font-size:12.5px">${m.n}</b><span style="font-size:9.5px;color:var(--dim);line-height:1.35">${m.d}</span>
+      </button>`).join('') + '</div>';
+  el.settingsList.appendChild(aimWrap);
+  aimWrap.querySelectorAll('button').forEach(b => {
+    b.onclick = () => { setAimMode(b.dataset.aim); renderSettings(); };
+  });
+}
+
+const AIM_MODES = [
+  { k: 'auto', n: '全自动', d: '自动锁最近的敌人' },
+  { k: 'manual', n: '手动', d: '右侧拖动控制朝向' },
+  { k: 'far', n: '远距自动', d: '远处手动，近处自动锁' },
+];
+function AIM_CUR() { return SAVE.settings.aimMode || (SAVE.settings.autoaim ? 'auto' : 'manual'); }
+function setAimMode(k) {
+  SAVE.settings.aimMode = k;
+  SAVE.settings.autoaim = k !== 'manual';
+  saveSave();
+  SFX.play('ui');
+}
+function renderAimPick() {
+  if (!el.aimPick) return;
+  el.aimPick.innerHTML = AIM_MODES.map(m =>
+    `<div class="aimbtn ${AIM_CUR() === m.k ? 'on' : ''}" data-aim="${m.k}">${m.n}</div>`).join('');
+  el.aimPick.querySelectorAll('.aimbtn').forEach(b => {
+    b.onclick = () => { setAimMode(b.dataset.aim); renderAimPick(); };
   });
 }
 
@@ -4528,6 +4603,9 @@ function renderDraft() {
   });
 }
 
+function hideJoy(){ const j=document.getElementById('joy'); if(j) j.style.display='none'; }
+function showJoy(){ const j=document.getElementById('joy'); if(j) j.style.display=''; }
+
 function openDraft() {
   if (G.state === 'dead') return;
   G.state = 'draft';
@@ -4572,6 +4650,7 @@ function chooseIndex(i) {
 function closeDraft() {
   hideAllScreens();
   el.hud.classList.remove('dim');
+  showJoy();
   G.levelQueue = Math.max(0, G.levelQueue - 1);
   G.state = 'playing';
   if (G.levelQueue > 0) {
@@ -4648,6 +4727,8 @@ function updateHUD(force) {
 function pauseGame() {
   if (G.state !== 'playing') return;
   G.state = 'paused';
+  renderAimPick();
+  hideJoy();
   el.pWave.textContent = G.wave;
   el.pKills.textContent = fmt(G.kills);
   el.pTime.textContent = fmtTime(G.runTime);
@@ -4659,6 +4740,7 @@ function resumeGame() {
   if (G.state !== 'paused') return;
   hideAllScreens();
   G.state = 'playing';
+  showJoy();
   SFX.play('ui');
 }
 
@@ -4854,7 +4936,7 @@ if (document.readyState === 'loading') {
   document.documentElement.classList.add('mob-touch');
   var tip=document.createElement('div');
   tip.id='mobTip';
-  tip.textContent='手机操作：按住屏幕拖动移动，点右下按钮闪避 / 大招';
+  tip.textContent='手机操作：左下摇杆移动 · 右侧拖动瞄准 · 右下闪避 / 大招';
   document.body.appendChild(tip);
   var t2=null;
   function show(ms){ clearTimeout(t2); tip.classList.add('on'); t2=setTimeout(function(){tip.classList.remove('on');},ms||4200); }
@@ -4863,6 +4945,44 @@ if (document.readyState === 'loading') {
     if(!armed||!e.target||e.target.tagName!=='CANVAS') return;
     armed=false; setTimeout(function(){ show(4200); },260);
   },true);
+})();
+</script>
+
+<div id="joy"><div id="joyKnob"></div></div>
+<script id="void-joy">
+(function(){
+  window.VJOY = { x: 0, y: 0 };
+  var joy = document.getElementById('joy'), knob = document.getElementById('joyKnob');
+  if (!joy || !knob) return;
+  var pid = null, cx = 0, cy = 0, R = 42;
+  function apply(e){
+    var dx = e.clientX - cx, dy = e.clientY - cy, len = Math.hypot(dx, dy);
+    var m = Math.min(1, len / R), ang = Math.atan2(dy, dx);
+    var px = len ? Math.cos(ang) * Math.min(R, len) : 0;
+    var py = len ? Math.sin(ang) * Math.min(R, len) : 0;
+    knob.style.transform = 'translate(' + px + 'px,' + py + 'px)';
+    VJOY.x = len ? Math.cos(ang) * m : 0;
+    VJOY.y = len ? Math.sin(ang) * m : 0;
+  }
+  joy.addEventListener('pointerdown', function(e){
+    e.preventDefault();
+    pid = e.pointerId;
+    var b = joy.getBoundingClientRect();
+    cx = b.left + b.width / 2; cy = b.top + b.height / 2; R = b.width * 0.33;
+    knob.classList.add('live');
+    try { joy.setPointerCapture(e.pointerId); } catch (x) {}
+    apply(e);
+  });
+  joy.addEventListener('pointermove', function(e){ if (e.pointerId === pid) apply(e); });
+  function end(e){
+    if (e.pointerId !== pid) return;
+    pid = null; VJOY.x = 0; VJOY.y = 0;
+    knob.classList.remove('live');
+    knob.style.transform = 'translate(0,0)';
+  }
+  joy.addEventListener('pointerup', end);
+  joy.addEventListener('pointercancel', end);
+  joy.addEventListener('lostpointercapture', end);
 })();
 </script>
 </body>

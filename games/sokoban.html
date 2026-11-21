@@ -38,6 +38,15 @@ canvas{display:block;margin:0 auto;border-radius:10px;background:#0d1512;border:
 #pad .blank{visibility:hidden}
 #tools{display:flex;gap:8px;justify-content:center;margin-top:10px}
 #tools button{min-height:44px;padding:0 18px;background:#15211a;color:var(--green);border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:13px;cursor:pointer}
+
+/* mobfit: 手机手感与横屏提醒 */
+@media (pointer:coarse){#wrap canvas{width:100%;height:auto;max-width:100%}}
+
+html.mob-touch{-webkit-tap-highlight-color:transparent}
+html.mob-touch body{overscroll-behavior:none;overscroll-behavior-y:contain;touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+#mobfit-rot{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:9998;background:rgba(12,16,20,.88);color:#eaf5ee;border:1px solid rgba(130,205,170,.45);border-radius:10px;padding:7px 13px;font:12px/1.45 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;display:none;pointer-events:none;max-width:88vw;text-align:center;backdrop-filter:blur(6px);box-shadow:0 4px 18px rgba(0,0,0,.35)}
+#mobfit-rot.on{display:block;animation:mobfitFade 6.2s ease forwards}
+@keyframes mobfitFade{0%{opacity:0;transform:translate(-50%,-6px)}8%{opacity:1;transform:translate(-50%,0)}78%{opacity:1}100%{opacity:0}}
 </style>
 </head>
 <body>
@@ -216,6 +225,33 @@ canvas{display:block;margin:0 auto;border-radius:10px;background:#0d1512;border:
 
   levelIdx=0; loadLevel(0);
   loop();
+})();
+</script>
+<script id="mobfit-js">
+(function(){
+  var coarse = (window.matchMedia && matchMedia('(pointer:coarse)').matches) || navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+  if(!coarse) return;
+  document.documentElement.classList.add('mob-touch');
+  function tip(){
+    if(window.innerWidth > window.innerHeight) return;
+    var best = null;
+    document.querySelectorAll('canvas').forEach(function(c){
+      if(c.offsetWidth < 120) return;
+      var r = c.width / (c.height || 1);
+      if(r > 1.45 && c.offsetWidth >= window.innerWidth * 0.55 && (!best || c.offsetWidth > best.offsetWidth)) best = c;
+    });
+    if(!best) return;
+    var el = document.getElementById('mobfit-rot');
+    if(!el){ el = document.createElement('div'); el.id = 'mobfit-rot'; document.body.appendChild(el); }
+    if(el.classList.contains('on')) return;
+    el.textContent = '横屏玩，画面更大 ⟳';
+    el.classList.add('on');
+    setTimeout(function(){ el.classList.remove('on'); }, 6400);
+  }
+  function run(){ setTimeout(tip, 700); }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+  window.addEventListener('orientationchange', function(){ setTimeout(tip, 900); });
 })();
 </script>
 </body>
