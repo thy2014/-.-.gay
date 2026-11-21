@@ -1199,7 +1199,6 @@ const Input = {
         }
       }
       SFX.resume();
-      e.preventDefault();
     };
     const onMove = (e) => {
       for (const t of e.changedTouches) {
@@ -1214,7 +1213,6 @@ const Input = {
           pull(dA, dx, dy, l);
         }
       }
-      e.preventDefault();
     };
     const onEnd = (e) => {
       for (const t of e.changedTouches) {
@@ -4925,9 +4923,22 @@ function boot() {
       toast('存档已清空');
     }
   };
-  el.dashAb.onclick = () => { if (G.state === 'playing' && player) tryDash(); };
-  el.ultAb.onclick = () => { if (G.state === 'playing' && player && player.ultCharge >= 100) castUlt(); };
-  el.pauseBtn.onclick = () => { if (G.state === 'playing') pauseGame(); };
+  const tapHook = (node, fn) => {
+    if (!node) return;
+    let last = 0;
+    const fire = (e) => {
+      const now = Date.now();
+      if (now - last < 150) return;
+      last = now;
+      try { e.preventDefault(); } catch (_e) {}
+      fn();
+    };
+    node.addEventListener('pointerdown', (e) => { if (e.button && e.button !== 0) return; fire(e); }, { passive: false });
+    node.addEventListener('touchstart', fire, { passive: false });
+  };
+  tapHook(el.dashAb, () => { if (G.state === 'playing' && player) tryDash(); });
+  tapHook(el.ultAb, () => { if (G.state === 'playing' && player && player.ultCharge >= 100) castUlt(); });
+  tapHook(el.pauseBtn, () => { if (G.state === 'playing') pauseGame(); });
   el.resumeBtn.onclick = resumeGame;
   el.quitBtn.onclick = () => {
     const reward = bankRun();
