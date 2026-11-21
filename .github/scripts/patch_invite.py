@@ -1,26 +1,20 @@
-name: patch-invite
-on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/patch-invite.yml"
-permissions:
-  contents: write
-jobs:
-  patch:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Apply invite patch
-        run: |
-          set -euo pipefail
-          python3 .github/scripts/patch_invite.py
-          grep -c "徐杨洋是小宇儿子" index.html
-      - name: Commit
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git diff --cached --quiet || git commit -m "feat: 注册邀请码支持多个并新增一条"
-          git push
+import pathlib
+
+p = pathlib.Path("index.html")
+s = p.read_text(encoding="utf-8")
+
+old1 = 'var INVITE_CODE = "#include <bits/stdc++.h>";'
+new1 = 'var INVITE_CODES = ["#include <bits/stdc++.h>", "徐杨洋是小宇儿子"];'
+old2 = "if(inv !== INVITE_CODE){"
+new2 = "if(INVITE_CODES.indexOf(inv) < 0){"
+
+if old1 in s:
+    s = s.replace(old1, new1)
+if old2 in s:
+    s = s.replace(old2, new2)
+
+assert "INVITE_CODES.indexOf" in s, "patch failed"
+assert s.count("INVITE_CODES") == 2, s.count("INVITE_CODES")
+
+p.write_text(s, encoding="utf-8")
+print("patched")
