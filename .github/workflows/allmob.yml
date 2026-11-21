@@ -1,0 +1,44 @@
+name: allmob-deploy
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/allmob.yml'
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Download
+        run: |
+          curl -sL --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o /tmp/a.zip "https://aka.doubaocdn.com/s/26jEdUt51I"
+      - name: Verify zip
+        run: |
+          echo "802a02b12fbf080ad3281d1a124755db9ec6a65dfee1ee0a437533e24db30dfc  /tmp/a.zip" | sha256sum -c
+      - name: Unzip
+        run: |
+          unzip -oq /tmp/a.zip -d "$GITHUB_WORKSPACE"
+      - name: Verify files
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          echo "3be03082a05390b9edfecb3674b8fd8f74be2c8cb361070f0719b1115f96624f  games/void-survivors/index.html" | sha256sum -c
+          echo "2d46d9350e7328a77b5618dfbb532af40c0afedaa53e54f58f61a246d42202d5  games/sokoban.html" | sha256sum -c
+          echo "1dc4c2eebbcaa3d6405058a8d371a2fc3a2689d34ccc70f0444da2e35527edef  games/super-kart-8/index.html" | sha256sum -c
+          echo "5f13cb4d38d98f592d3b9ddee6f239347ea844a0092b3277dce67dc053ecc1c4  games/earth-three-body/index.html" | sha256sum -c
+      - name: Commit
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "mobfit-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "feat: mobile fit for all arcade games"
+            git push origin HEAD:main
+          fi
