@@ -680,23 +680,20 @@ kbd {
 #stickAim .dot{background:rgba(255,199,95,.55);box-shadow:0 0 18px rgba(255,199,95,.6)}
 html.mob-touch .ability .key{display:none}
 html.mob-touch .pause-btn{width:44px;height:44px;font-size:13px;margin-right:0;border-radius:9px}
-@media (pointer:coarse) and (orientation:landscape){
-  .fl-stick{width:100px;height:100px;margin:-50px 0 0 -50px}
-  .fl-stick .dot{width:44px;height:44px;margin:-22px 0 0 -22px}
+@media (orientation:landscape){
+  html.mob-touch .fl-stick{width:100px;height:100px;margin:-50px 0 0 -50px}
+  html.mob-touch .fl-stick .dot{width:44px;height:44px;margin:-22px 0 0 -22px}
   html.mob-touch .pause-btn{width:38px;height:38px;font-size:11px}
 }
 body.in-run .arcade-back{display:none}
-@media (pointer:coarse){
-  .screen{padding-bottom:64px}
-  #menuScreen,#shopScreen,#codexScreen,#settingsScreen{justify-content:flex-start}
-  #menuScreen .inner,#shopScreen .inner,#codexScreen .inner,#settingsScreen .inner{margin:6px 0}
-  .screen{padding-top:calc(10px + env(safe-area-inset-top,0px))}
-  .btn.sm{min-height:38px;padding:10px 14px;font-size:11.5px;letter-spacing:.06em}
-  .close-x{width:40px;height:40px;font-size:17px}
-  .dust-badge{min-height:32px}
-  .stat-box .v{font-size:22px}
-  .reward > div{white-space:nowrap}
-}
+html.mob-touch .screen{padding-bottom:64px;padding-top:calc(10px + env(safe-area-inset-top,0px))}
+html.mob-touch #menuScreen,html.mob-touch #shopScreen,html.mob-touch #codexScreen,html.mob-touch #settingsScreen{justify-content:flex-start}
+html.mob-touch #menuScreen .inner,html.mob-touch #shopScreen .inner,html.mob-touch #codexScreen .inner,html.mob-touch #settingsScreen .inner{margin:6px 0}
+html.mob-touch .btn.sm{min-height:40px;padding:10px 14px;font-size:11.5px;letter-spacing:.06em}
+html.mob-touch .close-x{width:40px;height:40px;font-size:17px}
+html.mob-touch .dust-badge{min-height:32px}
+html.mob-touch .stat-box .v{font-size:22px}
+html.mob-touch .reward > div{white-space:nowrap}
 .aim-mini{display:flex;gap:6px;margin:2px 0 10px}
 .aim-mini .aimbtn{flex:1;padding:8px 4px;border-radius:6px;border:1px solid var(--line);background:rgba(12,22,36,.8);color:var(--dim);font-size:11.5px;cursor:pointer;touch-action:manipulation}
 .aim-mini .aimbtn.on{border-color:rgba(99,232,255,.65);color:var(--cyan);background:rgba(30,70,95,.4)}
@@ -737,6 +734,7 @@ html.mob-touch body{-webkit-user-select:none;user-select:none;overscroll-behavio
   @media (pointer:coarse){
     .arcade-back{left:8px;transform:none;bottom:calc(6px + env(safe-area-inset-bottom,0px));opacity:.34;font-size:10px;padding:4px 9px}
   }
+  html.mob-touch .arcade-back{left:8px;top:calc(4px + env(safe-area-inset-top,0px));bottom:auto;transform:none;opacity:.32;font-size:10px;padding:4px 9px}
   @media (max-width:520px){.arcade-back{bottom:4px;font-size:10px;padding:3px 8px;opacity:.35}}
 </style>
 <a class="arcade-back" href="../../">← 游戏厅</a>
