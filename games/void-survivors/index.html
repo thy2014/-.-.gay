@@ -1358,6 +1358,32 @@ const CHARS = {
 };
 
 /* ---------- 武器 ---------- */
+function aimModeNow() {
+  return SAVE.settings.aimMode || (SAVE.settings.autoaim ? 'auto' : 'manual');
+}
+/* 开火方向：手动=跟随手指；远距自动=近身锁定/远处跟随手指；全自动=锁最近敌（无目标不发） */
+function aimBase(p, t) {
+  const mode = aimModeNow();
+  if (mode === 'manual') return p.aim;
+  if (mode === 'far') {
+    if (t && Math.hypot(t.x - p.x, t.y - p.y) < 340) return Math.atan2(t.y - p.y, t.x - p.x);
+    return p.aim;
+  }
+  return t ? Math.atan2(t.y - p.y, t.x - p.x) : null;
+}
+/* 手动瞄准时挑同方向（±46°）内最近的敌人，给链雷这类必须锁敌的武器用 */
+function aimPick(p, range) {
+  let best = null, bestA = 0.82;
+  for (const e of enemies) {
+    if (e.dead) continue;
+    const dx = e.x - p.x, dy = e.y - p.y;
+    if (dx * dx + dy * dy > range * range) continue;
+    const ang = Math.atan2(dy, dx);
+    const da = Math.abs(Math.atan2(Math.sin(ang - p.aim), Math.cos(ang - p.aim)));
+    if (da < bestA) { bestA = da; best = e; }
+  }
+  return best;
+}
 const WEAPONS = {
   pulse: {
     id: 'pulse', name: '脉冲弩', icon: '✦', color: '#6ee7ff', rgb: '110,231,255',
@@ -1366,8 +1392,8 @@ const WEAPONS = {
     stats: (l) => ({ dmg: 8 + l * 3.4, cd: Math.max(0.09, 0.36 - l * 0.032), count: l >= 5 ? 3 : l >= 4 ? 2 : 1, spd: 900, pierce: l >= 3 ? 1 : 0 }),
     fire(p, w) {
       const s = w.stats, t = nearestEnemy(p.x, p.y, 760);
-      if (!t) return;
-      const base = Math.atan2(t.y - p.y, t.x - p.x);
+      const base = aimBase(p, t);
+      if (base === null) return;
       const n = s.count + (w.extra || 0);
       for (let i = 0; i < n; i++) {
         const off = n === 1 ? 0 : (i - (n - 1) / 2) * 0.1;
@@ -1386,7 +1412,8 @@ const WEAPONS = {
     fire(p, w) {
       const s = w.stats;
       const t = nearestEnemy(p.x, p.y, 420);
-      const base = t ? Math.atan2(t.y - p.y, t.x - p.x) : p.aim;
+      const base = aimBase(p, t);
+      if (base === null) return;
       const n = s.count + (w.extra || 0);
       for (let i = 0; i < n; i++) {
         const off = (i / Math.max(1, n - 1) - 0.5) * s.spread + rnd(-0.03, 0.03);
@@ -1452,6 +1479,7 @@ const WEAPONS = {
     fire(p, w) {
       const s = w.stats;
       let t = nearestEnemy(p.x, p.y, s.seek);
+      if (aimModeNow() === 'manual') t = aimPick(p, s.seek) || t;
       if (!t) return;
       const pts = [[p.x, p.y]];
       const hit = new Set();
@@ -1482,16 +1510,18 @@ const WEAPONS = {
     stats: (l) => ({ dmg: 18 + l * 6.5, cd: Math.max(0.55, 1.75 - l * 0.11), count: 1 + Math.floor(l / 3), splash: 58 + l * 7, spd: 430 }),
     fire(p, w) {
       const s = w.stats;
+      const mode = aimModeNow();
       const t = nearestEnemy(p.x, p.y, 780);
-      if (!t) return;
+      const base = aimBase(p, t);
+      if (base === null) return;
       const n = s.count + (w.extra || 0);
       for (let i = 0; i < n; i++) {
-        const a = Math.atan2(t.y - p.y, t.x - p.x) + rnd(-0.5, 0.5);
+        const a = base + rnd(-0.5, 0.5);
         pBullets.push({
           x: p.x, y: p.y, vx: Math.cos(a) * 190, vy: Math.sin(a) * 190,
           r: 8, dmg: s.dmg * p.stats.dmg, life: 3.4, pierce: 0, hit: [],
           kind: 'missile', rgb: '255,138,92', color: '#ff8a5c',
-          homing: t, turn: 5.2, accel: 620, splash: s.splash * p.stats.area, ang: a, trail: 0,
+          homing: mode === 'manual' ? null : t, noHome: mode === 'manual', turn: 5.2, accel: 620, splash: s.splash * p.stats.area, ang: a, trail: 0,
         });
       }
       SFX.play('shoot2');
@@ -1505,10 +1535,12 @@ const WEAPONS = {
     beam: true,
     update(p, w, dt) {
       const s = w.stats;
+      const mode = aimModeNow();
       const t = nearestEnemy(p.x, p.y, s.len);
-      w.on = !!t;
-      if (!t) return;
-      const a = Math.atan2(t.y - p.y, t.x - p.x);
+      const a0 = mode === 'manual' ? p.aim : aimBase(p, t);
+      w.on = a0 !== null;
+      if (a0 === null) return;
+      const a = a0;
       w.ang = w.ang === undefined ? a : w.ang + Math.atan2(Math.sin(a - w.ang), Math.cos(a - w.ang)) * Math.min(1, dt * 12);
       const len = s.len, hw = (s.width / 2) * p.stats.area;
       const ex = p.x + Math.cos(w.ang) * len, ey = p.y + Math.sin(w.ang) * len;
@@ -1552,7 +1584,8 @@ const WEAPONS = {
     fire(p, w) {
       const s = w.stats;
       const t = nearestEnemy(p.x, p.y, 700);
-      const base = t ? Math.atan2(t.y - p.y, t.x - p.x) : p.aim;
+      const base = aimBase(p, t);
+      if (base === null) return;
       const n = s.count + (w.extra || 0);
       for (let i = 0; i < n; i++) {
         const a = base + (n === 1 ? 0 : (i - (n - 1) / 2) * 0.5);
@@ -3140,7 +3173,7 @@ function updateBullets(dt) {
     b.life -= dt;
 
     if (b.kind === 'missile') {
-      if (!b.homing || b.homing.dead) {
+      if (!b.noHome && (!b.homing || b.homing.dead)) {
         b.homing = nearestEnemy(b.x, b.y, 520);
       }
       if (b.homing) {
@@ -3731,13 +3764,14 @@ function drawPlayer() {
 
   /* 尾焰 */
   const sp = Math.hypot(p.vx, p.vy);
-  if (G.state === 'playing' && sp > 30) {
-    const back = Math.atan2(-p.vy, -p.vx);
+  if (G.state === 'playing' && (sp > 30 || Math.abs(p.vx) + Math.abs(p.vy) > 12)) {
+    const back = p.face + Math.PI;
     for (let i = 0; i < 2; i++) {
-      const d = rnd(12, 26);
-      addParticleRealTime(p.x + Math.cos(back) * d, p.y + Math.sin(back) * d,
-        Math.cos(back) * rnd(40, 120) + rnd(-20, 20), Math.sin(back) * rnd(40, 120) + rnd(-20, 20),
-        0.26, rnd(2, 4.5), p.char.rgb);
+      const d = rnd(10, 20);
+      const b = back + rnd(-0.12, 0.12);
+      addParticleRealTime(p.x + Math.cos(b) * d, p.y + Math.sin(b) * d,
+        Math.cos(back) * rnd(70, 150) + p.vx * 0.25, Math.sin(back) * rnd(70, 150) + p.vy * 0.25,
+        0.2, rnd(2, 4.5), p.char.rgb);
     }
   }
 
