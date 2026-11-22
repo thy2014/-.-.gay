@@ -685,6 +685,18 @@ html.mob-touch .pause-btn{width:44px;height:44px;font-size:13px;margin-right:0;b
   .fl-stick .dot{width:44px;height:44px;margin:-22px 0 0 -22px}
   html.mob-touch .pause-btn{width:38px;height:38px;font-size:11px}
 }
+body.in-run .arcade-back{display:none}
+@media (pointer:coarse){
+  .screen{padding-bottom:64px}
+  #menuScreen,#shopScreen,#codexScreen,#settingsScreen{justify-content:flex-start}
+  #menuScreen .inner,#shopScreen .inner,#codexScreen .inner,#settingsScreen .inner{margin:6px 0}
+  .screen{padding-top:calc(10px + env(safe-area-inset-top,0px))}
+  .btn.sm{min-height:38px;padding:10px 14px;font-size:11.5px;letter-spacing:.06em}
+  .close-x{width:40px;height:40px;font-size:17px}
+  .dust-badge{min-height:32px}
+  .stat-box .v{font-size:22px}
+  .reward > div{white-space:nowrap}
+}
 .aim-mini{display:flex;gap:6px;margin:2px 0 10px}
 .aim-mini .aimbtn{flex:1;padding:8px 4px;border-radius:6px;border:1px solid var(--line);background:rgba(12,22,36,.8);color:var(--dim);font-size:11.5px;cursor:pointer;touch-action:manipulation}
 .aim-mini .aimbtn.on{border-color:rgba(99,232,255,.65);color:var(--cyan);background:rgba(30,70,95,.4)}
@@ -723,7 +735,7 @@ html.mob-touch body{-webkit-user-select:none;user-select:none;overscroll-behavio
     opacity:.45;transition:opacity .15s,color .15s;letter-spacing:.02em}
   .arcade-back:hover{opacity:1;color:#e8f1ff}
   @media (pointer:coarse){
-    .arcade-back{bottom:calc(6px + env(safe-area-inset-bottom,0px));opacity:.28;font-size:10px;padding:3px 8px}
+    .arcade-back{left:8px;transform:none;bottom:calc(6px + env(safe-area-inset-bottom,0px));opacity:.34;font-size:10px;padding:4px 9px}
   }
   @media (max-width:520px){.arcade-back{bottom:4px;font-size:10px;padding:3px 8px;opacity:.35}}
 </style>
@@ -824,9 +836,9 @@ html.mob-touch body{-webkit-user-select:none;user-select:none;overscroll-behavio
               <span><kbd>ESC</kbd>暂停</span>
             </div>
             <div class="keys touch-only" style="gap:10px">
-              <span>拖动屏幕移动</span>
-              <span>点右下按钮闪避 / 大招</span>
-              <span>武器自动开火</span>
+              <span>按住左侧拖动移动</span>
+              <span>右半屏拖动瞄准</span>
+              <span>右下按钮闪避 / 大招</span>
             </div>
           </div>
         </div>
@@ -941,7 +953,7 @@ html.mob-touch body{-webkit-user-select:none;user-select:none;overscroll-behavio
       <div class="cards" id="draftCards"></div>
       <div class="draft-foot">
         <button class="btn ghost sm" id="rerollBtn">重抽 <span id="rerollCount">1</span></button>
-        <div class="reroll-info" id="rerollInfo">点击卡片选择 · 按 1 / 2 / 3 快捷选择</div>
+        <div class="reroll-info" id="rerollInfo"><span class="kb-only">点击卡片选择 · 按 1 / 2 / 3 快捷选择</span><span class="touch-only">点击卡片选择</span></div>
       </div>
     </div>
   </div>
@@ -2303,6 +2315,7 @@ function hurtPlayer(amount, srcX, srcY) {
 
 function die() {
   if (G.state === 'dead') return;
+  hideJoy();
   G.state = 'dead';
   G.hitStop = 0;
   shakeAdd(24);
@@ -3321,6 +3334,7 @@ function update(dt) {
 
 /* ---------- 开局 ---------- */
 function startRun(charId) {
+  document.body.classList.add('in-run');
   clearWorld();
   uidSeq = 1;
   G.state = 'playing';
@@ -4656,16 +4670,18 @@ function renderDraft() {
   });
   el.draftCards.innerHTML = html;
   el.draftCards.querySelectorAll('.card').forEach(node => {
-    node.onclick = () => chooseIndex(+node.dataset.i);
+    node.onclick = () => { if (performance.now() - (G.draftAt || 0) < 260) return; chooseIndex(+node.dataset.i); };
     node.onmouseenter = () => { SFX.play('ui'); };
   });
 }
 
 function hideJoy(){ for (const id of ['stickMove', 'stickAim']) { const e = document.getElementById(id); if (e) e.style.display = 'none'; } }
-function showJoy(){ Input.touchId = null; Input.aimId = null; }
+function showJoy(){ /* 保留正在按着的手指状态，松手时由 touchend 清理 */ }
 
 function openDraft() {
   if (G.state === 'dead') return;
+  hideJoy();
+  G.draftAt = performance.now();
   G.state = 'draft';
   draftChoices = buildChoices(3);
   renderDraft();
@@ -4835,6 +4851,7 @@ function showGameOver() {
   SFX.play('wave');
 }
 function toMenu() {
+  document.body.classList.remove('in-run');
   G.state = 'menu';
   player = null;
   clearWorld();
