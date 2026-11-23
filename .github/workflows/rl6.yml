@@ -1,0 +1,29 @@
+name: rl-deploy
+on:
+  push:
+    paths:
+      - '.github/workflows/rl6.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  d:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - run: curl -sL --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o /tmp/r.zip "https://aka.doubaocdn.com/s/lnPG2THNNv"
+      - run: echo "53bc5c6809800319e6c4a803f616ead3bb68fc112212b55877d4bcba9f48803b  /tmp/r.zip" | sha256sum -c
+      - run: unzip -oq /tmp/r.zip -d "$GITHUB_WORKSPACE"
+      - run: |
+          cd "$GITHUB_WORKSPACE"
+          echo "a1fb57f33ad591116705ce2d1da61f9fa527037662ee81f504126f299637a3a2  games/roguelike.html" | sha256sum -c
+          echo "1dd03080d05e29eb4fce38fa14e001c0b667c40f51f4ee10eff63d89f2a22e8d  games/games.json" | sha256sum -c
+      - run: |
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "mobfit-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && echo none || (git commit -m "feat: 萤原潮生 · 五章 BOSS 解锁武器与涂装" && git push origin HEAD:main)
