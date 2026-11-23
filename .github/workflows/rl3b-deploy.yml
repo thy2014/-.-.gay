@@ -15,7 +15,7 @@ jobs:
           fetch-depth: 0
       - name: Download zip
         run: |
-          curl -sL --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o /tmp/x.zip "https://aka.doubaocdn.com/s/AUlOdvZXst"
+          curl -sL --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o /tmp/x.zip "https://aka.doubaocdn.com/s/yqKwGlcHwz"
       - name: Verify zip hash
         run: |
           echo "7c5451382df62c2d2de7a0188cc6bccce6c765ae209dee571b1f818ab9121fce  /tmp/x.zip" | sha256sum -c
