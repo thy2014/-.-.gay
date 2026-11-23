@@ -1212,6 +1212,7 @@ function update(dt){
     if(e.spawnT>0)e.spawnT-=dt;
     if(e.fireCd>0)e.fireCd-=dt;
     if(e.aiCd>0)e.aiCd-=dt;
+    if(e.isBoss) continue;
     e.rot+=e.spin*dt; e.pulse+=dt*4;
     var dx=P.x-e.x,dy=P.y-e.y,d=Math.hypot(dx,dy)||1;
     var ang=Math.atan2(dy,dx);
@@ -1498,7 +1499,25 @@ function render(){
   if(hitFlash>0){ctx.fillStyle="rgba(255,93,108,"+(hitFlash*0.20).toFixed(3)+")";ctx.fillRect(0,0,W,H);}
 
   drawMinimap();
+  drawBossPointer();
   syncHud();
+}
+
+function drawBossPointer(){
+  if(state!=="play"||!bossOn||!bossObj||!isFinite(bossObj.x)||!isFinite(bossObj.y)) return;
+  var bx=sx(bossObj.x),by=sy(bossObj.y),pad=42,topPad=86;
+  if(bx>pad&&bx<W-pad&&by>topPad&&by<H-pad) return;
+  var px=clamp(bx,pad,W-pad),py=clamp(by,topPad,H-pad);
+  var ang=Math.atan2(by-py,bx-px);
+  ctx.save();ctx.translate(px,py);ctx.rotate(ang);
+  ctx.fillStyle="rgba(255,93,108,0.16)";ctx.strokeStyle="rgba(255,93,108,0.9)";ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(0,0,17,0,6.283);ctx.fill();ctx.stroke();
+  ctx.fillStyle="#ff5d6c";ctx.shadowColor="#ff5d6c";ctx.shadowBlur=12;
+  ctx.beginPath();ctx.moveTo(21,0);ctx.lineTo(7,-7);ctx.lineTo(7,7);ctx.closePath();ctx.fill();
+  ctx.shadowBlur=0;ctx.rotate(-ang);
+  ctx.fillStyle="#ffb0b8";ctx.font="700 9px system-ui,sans-serif";ctx.textAlign="center";
+  ctx.fillText("BOSS",0,30);
+  ctx.restore();
 }
 
 function poly(ctx,n,r,phase){
@@ -1526,6 +1545,15 @@ function drawEnemy(en,gx,gy){
     ctx.globalAlpha=1; ctx.restore();
     ctx.strokeStyle=hexA(col,0.34); ctx.lineWidth=2; ctx.setLineDash([12,10]);
     ctx.beginPath(); ctx.arc(gx,gy,r+16+Math.sin(time*2)*4,0,6.283); ctx.stroke(); ctx.setLineDash([]);
+    if(en.introT>0){
+      var ik=Math.max(0,en.introT)/1.25,ir=r+26+(1-ik)*96;
+      ctx.strokeStyle=hexA(col,0.86*ik);ctx.lineWidth=4;
+      ctx.beginPath();ctx.arc(gx,gy,ir,0,6.283);ctx.stroke();
+      ctx.strokeStyle=hexA("#ffffff",0.34*ik);ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(gx,gy,r+14,0,6.283);ctx.stroke();
+      ctx.fillStyle=hexA(col,0.95);ctx.font="700 12px system-ui,sans-serif";ctx.textAlign="center";
+      ctx.fillText("章末巨兽 · "+en.name,gx,gy-r-32-(1-ik)*10);
+    }
     if(en.hp<en.maxHp){
       var bw=r*2.4,br2=Math.max(0,en.hp/en.maxHp);
       ctx.fillStyle="rgba(255,255,255,0.10)";ctx.fillRect(gx-bw/2,gy-r-16,bw,4);
@@ -2534,14 +2562,14 @@ function startBoss(reason){
 function spawnBoss(chIdx,mul,wave,reason){
   var ch=CHAPTERS[chIdx];
   var ang=P.aim+Math.PI*0.5;
-  var bossDist=Math.min(430,Math.min(W,H)*0.30);
+  var bossDist=Math.min(430,Math.max(210,Math.min(W,H)*0.42));
   var hp=Math.round(ch.bossHp*(mul||1));
   var b={type:"boss",isBoss:true,ch:chIdx,name:ch.boss,r:56,shape:"p8",
     x:clamp(P.x+Math.cos(ang)*bossDist,120,WORLD-120),
     y:clamp(P.y+Math.sin(ang)*bossDist,120,WORLD-120),
     hp:hp,maxHp:hp,sp:62,dmg:26,col:ch.col,xp:0,
     rot:0,spin:0.16,flash:0,orbCd:0,weCd:0,pulse:0,ttl:99999,fade:0,slowT:0,domCd:0,
-    ct:2.4,wind:0,charge:0,chargeAng:0,auraCd:0,wave:wave||0};
+    phase:0,introT:1.25,ct:2.8,wind:0,charge:0,chargeAng:0,auraCd:0,wave:wave||0};
   enemies.push(b); bossObj=b; bossOn=true;
   document.getElementById("bossBar").classList.add("on");
   document.getElementById("bossName").textContent=ch.boss+(wave?" · 第 "+wave+" 波":"");
@@ -2606,7 +2634,13 @@ function updateBoss(dt){
   if(!bossOn||!bossObj) return;
   var chIdx=(bossObj.ch!==undefined?bossObj.ch:curChapter);
   var b=bossObj,ch=CHAPTERS[chIdx];
+  if(!isFinite(b.x)||!isFinite(b.y)){
+    var fixDist=Math.min(430,Math.max(210,Math.min(W,H)*0.42));
+    b.x=clamp(P.x+Math.cos((isFinite(P.aim)?P.aim:-Math.PI/2)+Math.PI*0.5)*fixDist,120,WORLD-120);
+    b.y=clamp(P.y+Math.sin((isFinite(P.aim)?P.aim:-Math.PI/2)+Math.PI*0.5)*fixDist,120,WORLD-120);
+  }
   b.flash=Math.max(0,b.flash-dt); b.pulse+=dt*3; b.rot+=b.spin*dt;
+  if(b.introT>0){ b.introT=Math.max(0,b.introT-dt); return; }
   if(b.wind>0){
     b.wind-=dt;
     if(b.wind<=0) { b.charge=1.0; b.chargeAng=Math.atan2(P.y-b.y,P.x-b.x); }
