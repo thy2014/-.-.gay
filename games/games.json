@@ -174,6 +174,13 @@
       "desc": "太空割草 Roguelite：无尽波次、11 种武器、3 个 Boss，四个角色各带闪避与大招，星尘和永久强化跨局保留。",
       "file": "games/void-survivors/index.html",
       "tag": "幸存者"
+    },
+    {
+      "id": "farm-story",
+      "title": "小农场物语",
+      "desc": "像素风农场生活模拟：种田、浇水、收获、钓鱼、做饭、商店与村民关系，四季与节日循环，支持键盘和触屏。",
+      "file": "games/farm-story.html",
+      "tag": "模拟经营"
     }
   ]
 }

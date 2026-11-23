@@ -1,0 +1,4733 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小农场物语</title>
+<style>
+  :root{
+    --paper:#f6e9c8; --paper2:#efdfb6; --ink:#3a2a1a; --brown:#6b432a;
+    --deep:#2a1a12; --green:#4f7f3e; --gold:#d9a94a; --red:#c05a4a;
+    --shadow:rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;background:#14100c;color:var(--ink);
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    overflow:hidden;user-select:none;
+  }
+  #app{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  #stage-wrap{position:relative;width:480px;height:270px;filter:drop-shadow(0 0 40px rgba(0,0,0,.6))}
+  #stage{position:absolute;left:0;top:0;width:480px;height:270px;transform-origin:0 0}
+  #game{display:block;width:480px;height:270px;image-rendering:pixelated;image-rendering:crisp-edges;background:#000}
+  #fade{position:absolute;left:0;top:0;width:480px;height:270px;background:#0d0a07;opacity:0;pointer-events:none}
+
+  /* ---------- HUD ---------- */
+  #hud{position:absolute;inset:0;pointer-events:none;font-size:13px;line-height:1.35}
+  #hud.hidden{display:none}
+  .panel{
+    background:linear-gradient(#f9efd4,#efdfb6);
+    border:2px solid #5a3a24;
+    box-shadow:0 3px 0 rgba(0,0,0,.32), inset 0 0 0 2px #fff6dd, inset 0 0 0 3px #d9c28f;
+    border-radius:3px;color:var(--ink);
+  }
+  #hud-clock{position:absolute;left:10px;top:10px;padding:6px 10px 7px;min-width:112px}
+  #hud-clock .row1{font-size:12px;letter-spacing:.5px;color:#6b4f36}
+  #hud-clock .row2{display:flex;align-items:baseline;gap:6px}
+  #hud-time{font-size:19px;font-weight:700;letter-spacing:1px}
+  #hud-weather{font-size:12px;color:#4f7f3e}
+  #hud-money{position:absolute;right:10px;top:10px;padding:6px 12px;font-size:16px;font-weight:700;letter-spacing:.5px}
+  #hud-money span{color:#a37b2a;font-size:13px;margin-right:2px}
+  #hud-area{
+    position:absolute;left:50%;top:10px;transform:translateX(-50%);
+    padding:4px 14px;font-size:13px;letter-spacing:2px;opacity:.92;
+    background:rgba(42,26,18,.72);color:#f6e9c8;border:1px solid #8a6a4c;border-radius:2px;
+    transition:opacity .4s;
+  }
+  #hud-fest{
+    position:absolute;left:50%;top:44px;transform:translateX(-50%);
+    padding:5px 12px;font-size:12px;background:rgba(42,26,18,.82);color:#ffe9b0;
+    border:1px solid #b08a4e;border-radius:2px;display:none;max-width:80%;text-align:center;
+  }
+  #energy-wrap{position:absolute;left:50%;bottom:58px;transform:translateX(-50%);width:236px;display:flex;align-items:center;gap:7px}
+  #energy-label{font-size:12px;color:#f6e9c8;text-shadow:0 1px 0 #000;letter-spacing:2px}
+  #energy-bar{flex:1;height:13px;background:#2a1a12;border:2px solid #5a3a24;border-radius:2px;overflow:hidden;box-shadow:0 0 0 1px #00000055}
+  #energy-fill{display:block;height:100%;width:100%;background:linear-gradient(#a8d46a,#5f9a3a);transition:width .18s}
+  #energy-fill.low{background:linear-gradient(#e8a04a,#c05a4a)}
+  #hotbar{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:4px;pointer-events:auto}
+  .slot{
+    width:38px;height:38px;background:linear-gradient(#f9efd4,#e8d5a8);
+    border:2px solid #6b432a;border-radius:3px;position:relative;cursor:pointer;
+    box-shadow:inset 0 0 0 1px #fff6dd, 0 2px 0 rgba(0,0,0,.3);
+  }
+  .slot canvas.ico{position:absolute;left:4px;top:4px;width:26px;height:26px;image-rendering:pixelated}
+  .slot .cnt{position:absolute;right:2px;bottom:1px;font-size:10px;font-weight:700;color:#f6e9c8;text-shadow:0 1px 0 #000,0 0 3px #000}
+  .slot .num{position:absolute;left:2px;top:1px;font-size:9px;color:#8a6a4c}
+  .slot.sel{border-color:#f0d060;box-shadow:0 0 0 2px #f0d060, inset 0 0 0 1px #fff6dd;transform:translateY(-2px)}
+  .slot.empty{opacity:1;background:linear-gradient(#dcc9a1,#cbb185);border-color:#8f6a48;box-shadow:inset 0 2px 3px rgba(0,0,0,.18)}
+  #hud-hint{position:absolute;left:10px;bottom:56px;font-size:10px;color:#f6e9c8;text-shadow:0 1px 2px #000;opacity:.85;max-width:108px;line-height:1.4}
+  #tooltip{position:absolute;pointer-events:none;background:#2a1a12ee;color:#f6e9c8;font-size:11px;padding:4px 7px;border:1px solid #8a6a4c;border-radius:2px;display:none;max-width:190px;z-index:5}
+
+  /* ---------- Toast ---------- */
+  #toast{
+    position:fixed;left:50%;top:24%;transform:translate(-50%,0);
+    background:rgba(30,20,14,.9);color:#ffe9b0;padding:8px 18px;font-size:14px;
+    border:2px solid #8a6a4c;border-radius:3px;opacity:0;pointer-events:none;
+    transition:opacity .25s, top .25s;z-index:50;text-align:center;max-width:80vw;
+  }
+  #toast.show{opacity:1;top:27%}
+
+  /* ---------- 弹窗 ---------- */
+  #modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(16,10,6,.62);z-index:60;padding:16px}
+  #modal.hidden{display:none}
+  .box{
+    width:min(600px,94vw);max-height:86vh;background:linear-gradient(#f9efd4,#f2e5c2);
+    border:4px solid #6b432a;border-radius:4px;box-shadow:0 0 0 2px #22140c,0 12px 0 rgba(0,0,0,.35);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .box-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#6b432a;color:#ffe9b0}
+  .box-head h2{margin:0;font-size:17px;letter-spacing:2px;font-weight:700}
+  .box-close{background:none;border:none;color:#ffe9b0;font-size:20px;cursor:pointer;line-height:1;padding:0 4px}
+  .box-body{padding:14px;overflow:auto;flex:1;font-size:14px;line-height:1.6}
+  .box-foot{padding:10px 14px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;background:#efe0bb;border-top:2px solid #d9c28f}
+  .btn{
+    font-family:inherit;font-size:14px;padding:7px 16px;cursor:pointer;color:#3a2a1a;
+    background:linear-gradient(#fdf5de,#e8d5a8);border:2px solid #6b432a;border-radius:3px;
+    box-shadow:0 2px 0 rgba(0,0,0,.3), inset 0 0 0 1px #fff8e3;transition:transform .08s;
+  }
+  .btn:hover{background:linear-gradient(#fffdf2,#f2e3bd)}
+  .btn:active{transform:translateY(2px);box-shadow:none}
+  .btn.primary{background:linear-gradient(#a8d46a,#6f9f46);color:#1e2c14;border-color:#3f6b32}
+  .btn.danger{background:linear-gradient(#e8a08a,#c05a4a);color:#2a1210;border-color:#7d3a2c}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+
+  /* ---------- 对话 ---------- */
+  #dialogue{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;z-index:55;padding:0 14px 18px}
+  #dialogue.hidden{display:none}
+  #dialogue .dlg{
+    width:min(720px,96vw);background:linear-gradient(#f9efd4,#efe0bb);
+    border:4px solid #6b432a;border-radius:4px;box-shadow:0 0 0 2px #22140c,0 -6px 0 rgba(0,0,0,.25);
+    display:flex;gap:14px;padding:14px;align-items:flex-start;
+  }
+  #dlg-portrait{width:84px;height:84px;image-rendering:pixelated;border:3px solid #6b432a;background:#e8d5a8;border-radius:2px;flex:none;display:block}
+  #dlg-main{flex:1;min-width:0}
+  #dlg-name{font-size:13px;color:#8a5c38;letter-spacing:1px;margin-bottom:4px}
+  #dlg-name b{color:#3a2a1a;font-size:16px;letter-spacing:2px}
+  #dlg-hearts{color:#c05a4a;font-size:13px;margin-left:6px;letter-spacing:1px}
+  #dlg-text{font-size:15px;line-height:1.7;min-height:44px}
+  #dlg-opts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;justify-content:flex-end}
+
+  /* ---------- 列表 ---------- */
+  .grid-inv{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+  .inv-cell{
+    position:relative;height:60px;background:#fff8e3;border:2px solid #b89a6a;border-radius:3px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;padding:4px;
+  }
+  .inv-cell canvas.ico{width:36px;height:36px;image-rendering:pixelated}
+  .inv-cell .n{position:absolute;right:4px;bottom:2px;font-size:11px;font-weight:700;color:#5a3a24}
+  .inv-cell .nm{position:absolute;left:3px;top:2px;font-size:9px;color:#8a6a4c;max-width:90%;overflow:hidden;white-space:nowrap}
+  .inv-cell:hover{border-color:#6b432a;background:#fffdf2}
+  .inv-cell.empty{opacity:.35;cursor:default}
+  .shop-row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px dashed #d0b98a}
+  .shop-row canvas.ico{width:32px;height:32px;image-rendering:pixelated}
+  .shop-row .info{flex:1;min-width:0}
+  .shop-row .nm{font-weight:700}
+  .shop-row .ds{font-size:12px;color:#7a6246}
+  .shop-row .price{font-weight:700;color:#a3763f;white-space:nowrap}
+  .shop-row .btns{display:flex;gap:5px}
+  .shop-row .btn{padding:4px 9px;font-size:12px}
+  .stat-line{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed #d9c28f;font-size:13px}
+  .rel-row{display:flex;align-items:center;gap:12px;padding:9px 4px;border-bottom:1px dashed #d9c28f}
+  .rel-row canvas.pico{width:54px;height:54px;image-rendering:pixelated;border:2px solid #6b432a;border-radius:2px}
+  .rel-row .who{width:92px}
+  .rel-row .who b{display:block;font-size:15px}
+  .rel-row .who span{font-size:11px;color:#8a6a4c}
+  .hearts{font-size:15px;letter-spacing:1px;color:#c05a4a}
+  .hearts .off{color:#cbb28a}
+  .hearts .half{opacity:.5}
+  .hint-box{background:#fff8e3;border:2px solid #d9c28f;border-radius:3px;padding:10px 12px;margin:8px 0;font-size:13px}
+  .kbd{display:inline-block;background:#fffdf2;border:1px solid #b89a6a;border-bottom-width:2px;border-radius:2px;padding:0 5px;font-size:12px;font-weight:700;margin:0 2px}
+
+  /* ---------- 标题 ---------- */
+  #title{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:40;background:linear-gradient(rgba(20,14,10,.55),rgba(20,14,10,.82))}
+  #title.hidden{display:none}
+  .title-logo{
+    font-size:clamp(38px,7vw,72px);letter-spacing:.18em;color:#ffe9b0;font-weight:800;
+    text-shadow:4px 4px 0 #6b432a, 8px 8px 0 rgba(0,0,0,.45), 0 0 30px rgba(255,220,140,.35);
+    margin-left:.18em;
+  }
+  .title-sub{color:#c8b48a;font-size:clamp(11px,1.4vw,15px);letter-spacing:.5em;margin-top:10px;text-transform:uppercase}
+  .title-menu{display:flex;flex-direction:column;gap:10px;margin-top:34px;width:220px}
+  .title-menu .btn{font-size:16px;padding:10px 0;letter-spacing:4px}
+  .title-tip{margin-top:18px;font-size:12px;color:#e8d9b8;opacity:.75;letter-spacing:1px}
+  .title-foot{position:absolute;bottom:22px;font-size:12px;color:#9c8766;letter-spacing:2px}
+  .title-hint{position:absolute;bottom:52px;font-size:11px;color:#7d6a4d;letter-spacing:1px}
+
+  @media (max-width:760px){
+    #hud{font-size:11px}
+    .slot{width:32px;height:32px}
+    .slot img{width:22px;height:22px;left:3px;top:3px}
+    #hud-hint{display:none}
+    #energy-wrap{width:190px;bottom:48px}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage-wrap">
+    <div id="stage">
+      <canvas id="game" width="480" height="270"></canvas>
+      <div id="fade"></div>
+    </div>
+    <div id="hud" class="hidden">
+      <div id="hud-clock" class="panel">
+        <div class="row1" id="hud-date">春 1日 · 周一</div>
+        <div class="row2"><span id="hud-time">06:00</span><span id="hud-weather">☀ 晴</span></div>
+      </div>
+      <div id="hud-money" class="panel"><span>G</span><b id="hud-money-val">500</b></div>
+      <div id="hud-area">农场</div>
+      <div id="hud-fest"></div>
+      <div id="energy-wrap">
+        <span id="energy-label">体力</span>
+        <div id="energy-bar"><i id="energy-fill"></i></div>
+      </div>
+      <div id="hotbar"></div>
+      <div id="hud-hint"><b>H</b> 帮助 · <b>Tab</b> 背包</div>
+      <div id="tooltip"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="title" class="hidden">
+  <div class="title-logo">小农场物语</div>
+  <div class="title-sub">A Little Farm Story</div>
+  <div class="title-menu">
+    <button class="btn primary" id="btn-new">新游戏</button>
+    <button class="btn" id="btn-continue">继续游戏</button>
+    <button class="btn" id="btn-help-title">操作说明</button>
+  </div>
+  <div class="title-tip">按 <b>Enter</b> 开始 · 按 <b>H</b> 查看操作</div>
+  <div class="title-foot">2D 像素农场 · 种田 · 小镇 · 节日</div>
+</div>
+
+<div id="modal" class="hidden">
+  <div class="box">
+    <div class="box-head"><h2 id="modal-title">标题</h2><button class="box-close" id="modal-close">×</button></div>
+    <div class="box-body" id="modal-body"></div>
+    <div class="box-foot" id="modal-foot"></div>
+  </div>
+</div>
+
+<div id="dialogue" class="hidden">
+  <div class="dlg">
+    <canvas id="dlg-portrait" width="40" height="40"></canvas>
+    <div id="dlg-main">
+      <div id="dlg-name"></div>
+      <div id="dlg-text"></div>
+      <div id="dlg-opts"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== 00_util.js ===== */
+'use strict';
+
+/* ============================================================
+   小农场物语 — 基础工具
+   ============================================================ */
+const W = 480, H = 270, TS = 16;
+
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a) * t;
+const rnd = (a = 0, b = 1) => a + Math.random() * (b - a);
+const ri = (a, b) => Math.floor(rnd(a, b + 1));
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+function hash2(x, y) {
+  let h = x * 374761393 + y * 668265263;
+  h = (h ^ (h >> 13)) * 1274126177;
+  return ((h ^ (h >> 16)) >>> 0) / 4294967295;
+}
+
+function makeCanvas(w, h) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  return { c, g, w, h };
+}
+
+function pic(w, h) {
+  const o = makeCanvas(w, h);
+  return {
+    c: o.c, g: o.g, w, h,
+    r(x, y, ww, hh, col) { o.g.fillStyle = col; o.g.fillRect(Math.round(x), Math.round(y), ww, hh); return this; },
+    dot(x, y, col) { o.g.fillStyle = col; o.g.fillRect(Math.round(x), Math.round(y), 1, 1); return this; }
+  };
+}
+
+function hexToRgb(hex) {
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  const n = parseInt(hex, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+function rgbToHex(r, g, b) {
+  const f = (v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0');
+  return '#' + f(r) + f(g) + f(b);
+}
+function shade(hex, amt) {
+  const { r, g, b } = hexToRgb(hex);
+  return rgbToHex(r + amt, g + amt, b + amt);
+}
+function mix(hexA, hexB, t) {
+  const a = hexToRgb(hexA), b = hexToRgb(hexB);
+  return rgbToHex(lerp(a.r, b.r, t), lerp(a.g, b.g, t), lerp(a.b, b.b, t));
+}
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+function timeStr(h, m) {
+  const hh = ((h % 24) + 24) % 24;
+  return pad2(hh) + ':' + pad2(Math.floor(m / 10) * 10);
+}
+function amountStr(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  return String(Math.floor(n));
+}
+
+/* 圆角像素块 */
+function pxRound(p, x, y, w, h, col) {
+  p.r(x + 1, y, w - 2, h, col);
+  p.r(x, y + 1, w, h - 2, col);
+}
+
+/* 阴影椭圆 */
+function shadowEllipse(g, cx, cy, rx, ry) {
+  g.fillStyle = 'rgba(0,0,0,0.22)';
+  for (let y = -ry; y <= ry; y++) {
+    const t = 1 - Math.abs(y) / (ry + 0.001);
+    const w = Math.round(rx * Math.sqrt(Math.max(0, t)));
+    g.fillRect(Math.round(cx - w), Math.round(cy + y), w * 2, 1);
+  }
+}
+
+/* 像素文字（用于 canvas 内少量文字，如告示牌） */
+const FONT5 = {
+  '0': ['01110','10001','10001','10001','01110'],
+  '1': ['00100','01100','00100','00100','00100'],
+  '2': ['01110','10001','00100','01000','11111'],
+  '3': ['01110','10001','00110','10001','01110'],
+  '4': ['00010','00110','01110','11111','00100'],
+  '5': ['11110','00001','01110','10001','01110'],
+  '6': ['01110','10001','11111','10001','01110'],
+  '7': ['11111','00010','00100','01000','10000'],
+  '8': ['01110','10001','01110','10001','01110'],
+  '9': ['01110','10001','00110','10001','01110'],
+  'A': ['01110','10001','11111','10001','01110'],
+  'B': ['11110','10001','11110','10001','11110'],
+  'C': ['01110','10001','10001','10001','01110'],
+  'D': ['11110','10001','10001','10001','11110'],
+  'E': ['11111','10001','11110','10001','11111'],
+  'F': ['11111','10001','11110','10001','10001'],
+  'G': ['01110','10001','10111','10001','01110'],
+  'H': ['10001','10001','11111','10001','10001'],
+  'I': ['01110','00100','00100','00100','01110'],
+  'J': ['00111','00100','00100','00100','01110'],
+  'K': ['10001','10010','10100','11000','10001'],
+  'L': ['10000','10000','10000','10000','11110'],
+  'M': ['10001','10101','10101','10101','10001'],
+  'N': ['10001','10001','10101','10101','10001'],
+  'O': ['01110','10001','10001','10001','01110'],
+  'P': ['11110','10001','11110','10001','10001'],
+  'Q': ['01110','10001','10001','10101','01110'],
+  'R': ['11110','10001','11110','10001','10010'],
+  'S': ['01110','10001','00110','00001','01110'],
+  'T': ['11111','00100','00100','00100','00100'],
+  'U': ['10001','10001','10001','10001','01110'],
+  'V': ['10001','10001','10001','01010','00100'],
+  'W': ['10001','10101','10101','10101','10001'],
+  'X': ['10001','01010','00100','01010','10001'],
+  'Y': ['10001','01010','00100','00100','00100'],
+  'Z': ['11111','00010','00100','01000','11111'],
+  '-': ['00000','00000','11111','00000','00000'],
+  '.': ['00000','00000','00000','00000','00100'],
+  ' ': ['00000','00000','00000','00000','00000']
+};
+function pixelText(p, text, x, y, col, scale = 1) {
+  let cx = x;
+  for (const ch of text.toUpperCase()) {
+    const rows = FONT5[ch] || FONT5[' '];
+    for (let ry = 0; ry < 5; ry++) {
+      for (let rx = 0; rx < 5; rx++) {
+        if (rows[ry][rx] === '1') p.r(cx + rx * scale, y + ry * scale, scale, scale, col);
+      }
+    }
+    cx += 6 * scale;
+  }
+}
+
+
+/* ===== 01_art.js ===== */
+'use strict';
+
+/* ============================================================
+   程序化像素美术：所有图形在启动时绘制到离屏画布
+   ============================================================ */
+const ART = {
+  ground: [],          // [season] -> {grass:[], grassFlower:[], path:[], sand:[], water:[], snow:[]}
+  soil: {},            // dry / wet
+  interiors: {},
+  trees: {},           // oak, pine, maple, stump, bush
+  objects: {},         // rock, weed, flower, fence, bin, fountain, stall, pot, egg, gift, lamp
+  buildings: {},       // house, shop, cabin, barn? 
+  chars: {},           // player, npc
+  portraits: {},
+  icons: {},
+  crops: {},
+  ui: {}
+};
+
+const SEASON_NAMES = ['春', '夏', '秋', '冬'];
+const SEASON_PAL = [
+  { grass: '#5f8f45', speck: '#4e7c39', light: '#79a95c', blade: '#3f6b32', soilEdge: '#6b8f4a' },
+  { grass: '#4e823c', speck: '#416f30', light: '#6d9c50', blade: '#355e28', soilEdge: '#5d7f3c' },
+  { grass: '#8a7f3f', speck: '#75682f', light: '#a89552', blade: '#6a5c2a', soilEdge: '#8a7f3f' },
+  { grass: '#e2ebf2', speck: '#c9d7e3', light: '#f7fbff', blade: '#b7c8d8', soilEdge: '#d7e2ec' }
+];
+
+/* ---------- 基础形状 ---------- */
+function blob(p, cx, cy, rx, ry, col) {
+  for (let y = -ry; y <= ry; y++) {
+    const t = 1 - Math.abs(y) / (ry + 0.0001);
+    const w = Math.round(rx * Math.sqrt(Math.max(0, t)));
+    p.r(cx - w, cy + y, w * 2, 1, col);
+  }
+}
+
+function grassTile(pal, variant) {
+  const p = pic(16, 16);
+  p.r(0, 0, 16, 16, pal.grass);
+  const seed = variant * 37;
+  for (let i = 0; i < 16; i++) {
+    const x = Math.floor(hash2(seed + i, 11) * 16);
+    const y = Math.floor(hash2(seed + i, 23) * 16);
+    p.dot(x, y, i % 3 === 0 ? pal.light : pal.speck);
+  }
+  // 草叶
+  for (let i = 0; i < 3; i++) {
+    const x = 2 + ((variant * 5 + i * 4) % 12);
+    const y = 4 + ((variant * 3 + i * 5) % 10);
+    p.r(x, y, 1, 2, pal.blade);
+    p.dot(x + 1, y, pal.light);
+    p.dot(x - 1, y + 1, pal.blade);
+  }
+  return p.c;
+}
+
+function flowerTile(pal, variant) {
+  const p = pic(16, 16);
+  p.r(0, 0, 16, 16, pal.grass);
+  for (let i = 0; i < 8; i++) {
+    p.dot(Math.floor(hash2(variant + i, 5) * 16), Math.floor(hash2(variant + i, 9) * 16), pal.speck);
+  }
+  const col = ['#f2e05a', '#e86f8a', '#d9d2f0', '#f6f0e4'][variant % 4];
+  const xs = [3, 8, 12], ys = [4, 10, 7];
+  for (let i = 0; i < 3; i++) {
+    const x = xs[(i + variant) % 3], y = ys[(i + variant * 2) % 3];
+    p.dot(x, y - 1, col); p.dot(x - 1, y, col); p.dot(x + 1, y, col); p.dot(x, y + 1, col);
+    p.dot(x, y, '#f7d24a');
+    p.r(x, y + 2, 1, 2, pal.blade);
+  }
+  return p.c;
+}
+
+function pathTile(variant) {
+  const p = pic(16, 16);
+  p.r(0, 0, 16, 16, '#b28d5e');
+  const d = ['#a07c4e', '#c29f6f', '#957044'];
+  for (let i = 0; i < 22; i++) {
+    const x = Math.floor(hash2(i + variant * 13, 3) * 16);
+    const y = Math.floor(hash2(i + variant * 13, 17) * 16);
+    p.dot(x, y, d[i % 3]);
+  }
+  for (let i = 0; i < 4; i++) {
+    p.r(((variant * 3 + i * 5) % 14), ((i * 7 + variant) % 14), 2, 2, '#8a6c44');
+  }
+  return p.c;
+}
+
+function dirtTile(variant) {
+  const p = pic(16, 16);
+  p.r(0, 0, 16, 16, '#7d5a3a');
+  for (let i = 0; i < 18; i++) {
+    const x = Math.floor(hash2(i, variant + 2) * 16);
+    const y = Math.floor(hash2(i, variant + 5) * 16);
+    p.dot(x, y, ['#8b6745', '#6c4c2f', '#96754f'][i % 3]);
+  }
+  return p.c;
+}
+
+function sandTile(variant) {
+  const p = pic(16, 16);
+  p.r(0, 0, 16, 16, '#e2cf9c');
+  for (let i = 0; i < 14; i++) {
+    const x = Math.floor(hash2(i, variant + 7) * 16);
+    const y = Math.floor(hash2(i, variant + 9) * 16);
+    p.dot(x, y, ['#d4bd88', '#efe0b5', '#c9b07c'][i % 3]);
+  }
+  return p.c;
+}
+
+function snowTile(variant) {
+  const p = pic(16, 16);
+  p.r(0, 0, 16, 16, '#e9f1f8');
+  for (let i = 0; i < 12; i++) {
+    const x = Math.floor(hash2(i, variant + 21) * 16);
+    const y = Math.floor(hash2(i, variant + 33) * 16);
+    p.dot(x, y, i % 2 ? '#dbe7f2' : '#ffffff');
+  }
+  return p.c;
+}
+
+function waterTile(frame) {
+  const p = pic(16, 16);
+  p.r(0, 0, 16, 16, '#3a7ea3');
+  p.r(0, 0, 16, 2, '#4d93b8');
+  p.r(0, 14, 16, 2, '#326f92');
+  const off = frame % 2;
+  for (let i = 0; i < 3; i++) {
+    const x = (i * 6 + off * 3) % 16;
+    const y = 4 + i * 4;
+    p.r(x, y, 4, 1, '#8cc6d9');
+    p.dot(x + 4, y + 1, '#5aa4c0');
+  }
+  p.dot(3 + off * 5, 9, '#bfe6f0');
+  return p.c;
+}
+
+function soilTile(wet) {
+  const p = pic(16, 16);
+  p.r(0, 0, 16, 16, wet ? '#5b3b26' : '#8a5c3d');
+  // 垄沟
+  for (let y = 3; y < 16; y += 5) {
+    p.r(1, y, 14, 1, wet ? '#4a2f1d' : '#764c30');
+    p.r(1, y + 1, 14, 1, wet ? '#6b452d' : '#9a6c48');
+  }
+  for (let i = 0; i < 10; i++) {
+    p.dot(2 + (i * 5) % 12, 2 + (i * 7) % 13, wet ? '#4f3422' : '#7a5033');
+  }
+  if (wet) {
+    for (let i = 0; i < 5; i++) p.dot(3 + i * 3, 6 + (i % 3) * 4, '#7d5a3d');
+  }
+  return p.c;
+}
+
+function woodFloorTile(v) {
+  const p = pic(16, 16);
+  p.r(0, 0, 16, 16, '#96683f');
+  for (let i = 0; i < 2; i++) {
+    p.r(0, i * 8, 16, 1, '#7d5433');
+    p.r(0, i * 8 + 7, 16, 1, '#ae7e52');
+  }
+  p.r(v % 2 ? 6 : 10, 0, 1, 8, '#7d5433');
+  p.r(v % 2 ? 4 : 12, 8, 1, 8, '#7d5433');
+  p.dot(2, 3, '#b9885c'); p.dot(9, 11, '#b9885c');
+  return p.c;
+}
+
+function stoneFloorTile(v) {
+  const p = pic(16, 16);
+  p.r(0, 0, 16, 16, '#9aa0a6');
+  p.r(0, 0, 16, 1, '#b6bcc2');
+  for (let i = 0; i < 2; i++) {
+    p.r(0, 8 * i, 16, 1, '#7f858b');
+  }
+  p.r(v % 2 ? 8 : 4, 0, 1, 8, '#7f858b');
+  p.r(v % 2 ? 3 : 11, 8, 1, 8, '#7f858b');
+  return p.c;
+}
+
+function wallTile(v) {
+  const p = pic(16, 16);
+  p.r(0, 0, 16, 16, v ? '#c6ad86' : '#d0b791');
+  // 竖条纹壁纸
+  p.r(3, 0, 2, 16, v ? '#bda47d' : '#c6ad86');
+  p.r(11, 0, 1, 16, '#b39a74');
+  // 顶部压条与底部踢脚线
+  p.r(0, 0, 16, 1, '#8a6a4c');
+  p.r(0, 12, 16, 4, '#a8895f');
+  p.r(0, 12, 16, 1, '#c6a878');
+  p.r(0, 15, 16, 1, '#7d5f43');
+  p.dot(6, 5, '#d8c1a1'); p.dot(14, 8, '#bda47d');
+  return p.c;
+}
+
+/* ---------- 树与植被 ---------- */
+function treeSprite(kind, season) {
+  const snow = season === 3;
+  const p = pic(32, 48);
+  const trunk = '#6a472c', trunkD = '#52361f', trunkL = '#84603e';
+  if (kind === 'pine') {
+    p.r(14, 34, 4, 14, trunk);
+    p.r(14, 34, 1, 14, trunkL);
+    p.r(17, 34, 1, 14, trunkD);
+    const layers = [[8, 26, 10, 12], [10, 18, 12, 10], [12, 11, 8, 8], [14, 4, 4, 7]];
+    const col = snow ? '#2f5a4a' : (season === 2 ? '#4f6b38' : '#2f5f3e');
+    layers.forEach(([x, y, w, h], i) => {
+      p.r(x - 2, y + h - 1, w + 4, 2, snow ? '#24503f' : '#27513a');
+      for (let row = 0; row < h; row++) {
+        const ww = w - Math.floor((row / h) * w * 0.55);
+        p.r(x + Math.floor((w - ww) / 2), y + row, ww, 1, i === 0 ? col : shade(col, 4));
+      }
+    });
+    if (snow) {
+      p.r(9, 26, 14, 2, '#e8f2f8'); p.r(11, 18, 10, 2, '#e8f2f8'); p.r(14, 11, 5, 2, '#e8f2f8');
+    } else {
+      p.r(11, 25, 5, 2, shade(col, 18));
+      p.r(13, 16, 4, 2, shade(col, 18));
+    }
+    return p.c;
+  }
+  // 阔叶树
+  p.r(14, 32, 5, 16, trunk);
+  p.r(14, 32, 1, 16, trunkL);
+  p.r(18, 32, 1, 16, trunkD);
+  p.r(11, 44, 3, 4, trunkD);
+  p.r(18, 44, 3, 4, trunkD);
+  const leaf = snow ? '#3e6b53' : (kind === 'maple' ? (season === 2 ? '#b8642f' : '#7a8f3f') : (season === 2 ? '#8a7a34' : '#2f6b3f'));
+  const leafL = snow ? '#57876e' : shade(leaf, 22);
+  const leafD = snow ? '#2f5744' : shade(leaf, -18);
+  blob(p, 16, 22, 14, 13, leafD);
+  blob(p, 15, 20, 13, 12, leaf);
+  blob(p, 10, 17, 7, 7, leafL);
+  blob(p, 22, 15, 6, 6, leafL);
+  blob(p, 20, 27, 8, 6, shade(leaf, -8));
+  blob(p, 9, 27, 7, 5, shade(leaf, -14));
+  if (snow) {
+    blob(p, 14, 13, 8, 3, '#eef6fb');
+    blob(p, 22, 17, 5, 2, '#eef6fb');
+  } else {
+    blob(p, 13, 15, 5, 3, leafL);
+  }
+  p.r(15, 30, 3, 2, leafD);
+  return p.c;
+}
+
+function stumpSprite() {
+  const p = pic(16, 12);
+  p.r(3, 4, 10, 7, '#6a472c');
+  p.r(3, 4, 10, 2, '#8a6040');
+  p.r(5, 6, 6, 3, '#c49a6c');
+  p.r(7, 7, 3, 1, '#a37c52');
+  p.r(1, 10, 14, 2, '#52361f');
+  return p.c;
+}
+
+function bushSprite(season) {
+  const p = pic(24, 18);
+  const col = season === 3 ? '#4a6b5a' : (season === 2 ? '#7a7f35' : '#3e7a42');
+  p.r(6, 12, 12, 3, shade(col, -30));
+  blob(p, 12, 10, 10, 7, col);
+  blob(p, 8, 8, 5, 4, shade(col, 18));
+  blob(p, 16, 7, 4, 3, shade(col, 12));
+  if (season !== 3 && season !== 2) {
+    p.dot(7, 9, '#d94f5c'); p.dot(15, 11, '#d94f5c'); p.dot(11, 7, '#e86f8a');
+  }
+  if (season === 3) blob(p, 12, 5, 8, 2, '#e8f2f8');
+  return p.c;
+}
+
+function weedSprite() {
+  const p = pic(16, 16);
+  const g = ['#4c7c38', '#5f9349', '#3d6531'];
+  p.r(7, 9, 1, 6, g[2]);
+  for (let i = 0; i < 5; i++) {
+    const x = 3 + i * 3, y = 6 + (i % 2) * 3;
+    p.r(x, y, 1, 4, g[i % 3]);
+    p.dot(x + 1, y - 1, g[1]);
+  }
+  p.r(2, 14, 12, 1, g[2]);
+  return p.c;
+}
+
+function flowerObjSprite(v) {
+  const p = pic(16, 16);
+  const stem = '#3f6b32';
+  p.r(8, 8, 1, 7, stem);
+  p.r(6, 10, 2, 1, stem); p.r(9, 12, 2, 1, stem);
+  const cols = [['#f2e05a', '#f7d24a'], ['#e86f8a', '#f6a0b4'], ['#c9b6f0', '#a98ce0']][v % 3];
+  p.dot(7, 5, cols[0]); p.dot(9, 5, cols[0]); p.dot(8, 4, cols[0]); p.dot(8, 6, cols[0]);
+  p.dot(8, 5, cols[1]);
+  return p.c;
+}
+
+function rockSprite() {
+  const p = pic(20, 14);
+  p.r(4, 4, 13, 9, '#7b8086');
+  p.r(2, 7, 16, 5, '#6a6f75');
+  p.r(5, 2, 9, 3, '#9ba1a7');
+  p.r(6, 3, 6, 2, '#b7bdc3');
+  p.r(5, 8, 5, 2, '#5d6267');
+  p.r(12, 6, 3, 2, '#8f959b');
+  p.r(1, 11, 18, 2, '#4d5257');
+  return p.c;
+}
+
+/* ---------- 建筑 ---------- */
+function houseSprite() {
+  const p = pic(80, 76);
+  // 墙体
+  p.r(6, 34, 68, 40, '#d8b389');
+  p.r(6, 34, 68, 2, '#e6c79e');
+  p.r(6, 70, 68, 4, '#b08a63');
+  for (let x = 8; x < 72; x += 14) p.r(x, 36, 3, 38, '#b8916a');
+  p.r(6, 52, 68, 2, '#c09a72');
+  // 屋顶
+  for (let i = 0; i < 20; i++) {
+    const w = 10 + i * 3.6;
+    p.r(40 - w, 8 + i, w * 2, 2, i % 4 === 0 ? '#b4553f' : '#a14833');
+  }
+  p.r(4, 46, 72, 3, '#8a3a28');
+  p.r(38, 2, 6, 8, '#7d5f43');
+  p.r(37, 0, 8, 3, '#5f452f');
+  // 门
+  p.r(33, 48, 14, 26, '#6f4a2c');
+  p.r(35, 50, 10, 22, '#8a5c38');
+  p.r(35, 50, 10, 1, '#a9764c');
+  p.dot(42, 61, '#e8c56a');
+  // 窗
+  [[16, 42], [58, 42], [16, 58], [58, 58]].forEach(([x, y], i) => {
+    p.r(x, y, 12, 11, '#7d5f43');
+    p.r(x + 1, y + 1, 10, 9, i % 2 ? '#a9cde0' : '#bcd9e8');
+    p.r(x + 5, y + 1, 2, 9, '#7d5f43');
+    p.r(x + 1, y + 5, 10, 2, '#7d5f43');
+    p.dot(x + 2, y + 2, '#dff0f8');
+  });
+  // 花箱
+  p.r(14, 66, 16, 4, '#8a5c38');
+  p.r(15, 65, 14, 2, '#4f7f3e');
+  p.dot(17, 64, '#e86f8a'); p.dot(22, 63, '#f2e05a'); p.dot(26, 64, '#e86f8a');
+  return p.c;
+}
+
+function shopSprite() {
+  const p = pic(96, 80);
+  p.r(4, 30, 88, 46, '#e3c49b');
+  p.r(4, 30, 88, 2, '#f0d5b1');
+  p.r(4, 74, 88, 2, '#b08a63');
+  // 屋顶
+  for (let i = 0; i < 15; i++) {
+    const w = 12 + i * 4.2;
+    p.r(48 - w, 6 + i, w * 2, 2, i % 3 === 0 ? '#5f8f6a' : '#4e7a5a');
+  }
+  p.r(0, 36, 96, 3, '#3f6549');
+  // 条纹遮阳棚
+  for (let x = 4; x < 92; x += 8) {
+    p.r(x, 38, 8, 10, ((x / 8) | 0) % 2 ? '#f2e8d3' : '#d05f55');
+  }
+  p.r(4, 48, 88, 2, '#8a3a28');
+  // 门与窗
+  p.r(38, 52, 20, 22, '#6f4a2c');
+  p.r(40, 54, 16, 20, '#a0c9dc');
+  p.r(47, 54, 2, 20, '#6f4a2c');
+  p.r(40, 63, 16, 2, '#6f4a2c');
+  p.r(10, 52, 18, 14, '#7d5f43');
+  p.r(11, 53, 16, 12, '#bcd9e8');
+  p.r(69, 52, 18, 14, '#7d5f43');
+  p.r(70, 53, 16, 12, '#bcd9e8');
+  // 招牌
+  p.r(14, 22, 22, 12, '#8a5c38');
+  p.r(15, 23, 20, 10, '#e8d5a8');
+  // 种子袋图标
+  p.r(21, 25, 7, 8, '#c9a05e');
+  p.r(21, 25, 7, 2, '#a3763f');
+  p.r(23, 23, 3, 2, '#4e7a5a');
+  p.dot(23, 28, '#7d5a2a'); p.dot(25, 29, '#7d5a2a');
+  // 花坛
+  p.r(6, 72, 84, 4, '#8a5c38');
+  p.r(8, 71, 80, 2, '#4f7f3e');
+  for (let x = 12; x < 84; x += 10) p.dot(x, 70, x % 20 ? '#e86f8a' : '#f2e05a');
+  return p.c;
+}
+
+function cabinSprite() {
+  const p = pic(64, 60);
+  p.r(4, 26, 56, 32, '#d9b98e');
+  for (let i = 0; i < 14; i++) {
+    const w = 8 + i * 4;
+    p.r(32 - w, 4 + i, w * 2, 2, i % 3 ? '#8a6a4c' : '#7d5f43');
+  }
+  p.r(0, 34, 64, 3, '#6b4f36');
+  p.r(26, 34, 12, 22, '#6f4a2c');
+  p.r(28, 36, 8, 18, '#8a5c38');
+  p.r(29, 36, 8, 10, '#a9cde0');
+  p.r(32, 36, 2, 10, '#6f4a2c');
+  p.dot(33, 49, '#e8c56a');
+  return p.c;
+}
+
+function fountainSprite() {
+  const p = pic(40, 32);
+  p.r(4, 6, 32, 20, '#9aa0a6');
+  p.r(6, 8, 28, 16, '#7fa8bd');
+  p.r(8, 10, 24, 12, '#5f95b0');
+  p.r(10, 11, 20, 2, '#8cc6d9');
+  p.r(18, 2, 4, 10, '#b6bcc2');
+  p.r(16, 0, 8, 3, '#c8ced4');
+  p.r(15, 4, 10, 2, '#9aa0a6');
+  p.dot(16, 12, '#cfeaf4'); p.dot(22, 14, '#cfeaf4'); p.dot(20, 9, '#e8f6fb');
+  p.r(2, 26, 36, 3, '#8a8f95');
+  return p.c;
+}
+
+function binSprite() {
+  const p = pic(16, 20);
+  p.r(2, 6, 12, 12, '#8a5c38');
+  p.r(2, 6, 12, 2, '#a9764c');
+  p.r(3, 8, 10, 9, '#7a4f30');
+  p.r(3, 8, 10, 2, '#6b432a');
+  p.r(1, 14, 14, 3, '#6b432a');
+  p.r(4, 3, 8, 3, '#a9764c');
+  p.r(6, 1, 4, 2, '#8a5c38');
+  // 出货标记
+  p.r(6, 9, 4, 4, '#e0c25e');
+  p.r(7, 10, 2, 2, '#7d5a2a');
+  return p.c;
+}
+
+function fenceSprite() {
+  const p = pic(16, 16);
+  p.r(1, 2, 3, 14, '#8a6040');
+  p.r(1, 2, 1, 14, '#a9764c');
+  p.r(12, 2, 3, 14, '#8a6040');
+  p.r(12, 2, 1, 14, '#a9764c');
+  p.r(1, 6, 14, 3, '#a9764c');
+  p.r(1, 6, 14, 1, '#c49a6c');
+  p.r(1, 12, 14, 3, '#96693f');
+  return p.c;
+}
+
+function lampSprite() {
+  const p = pic(16, 32);
+  p.r(7, 12, 2, 18, '#5f452f');
+  p.r(6, 29, 4, 3, '#4a3524');
+  p.r(4, 2, 8, 10, '#4a3524');
+  p.r(5, 3, 6, 8, '#f6e2a0');
+  p.r(6, 4, 4, 6, '#fff3c9');
+  p.r(3, 0, 10, 3, '#3a2a1c');
+  return p.c;
+}
+
+function mailboxSprite() {
+  const p = pic(16, 26);
+  p.r(7, 12, 2, 14, '#7a5637');
+  p.r(6, 24, 4, 2, '#5f452f');
+  p.r(2, 3, 12, 10, '#b5533e');
+  p.r(3, 4, 10, 8, '#d9775c');
+  p.r(3, 8, 10, 2, '#8f3f30');
+  p.r(14, 2, 2, 7, '#e8d9b8');
+  p.r(13, 5, 3, 3, '#d05f55');
+  p.r(5, 5, 6, 1, '#f4e3cf');
+  return p.c;
+}
+
+function noticeSprite() {
+  const p = pic(32, 30);
+  p.r(4, 14, 3, 16, '#7a5637');
+  p.r(25, 14, 3, 16, '#7a5637');
+  p.r(2, 2, 28, 18, '#6b432a');
+  p.r(4, 4, 24, 14, '#d9c39a');
+  p.r(7, 6, 7, 9, '#f6efd8');
+  p.r(16, 6, 9, 6, '#f6efd8');
+  p.r(16, 13, 9, 4, '#f6efd8');
+  p.r(8, 8, 5, 1, '#8a6a4c'); p.r(8, 10, 5, 1, '#8a6a4c'); p.r(8, 12, 4, 1, '#8a6a4c');
+  p.r(17, 8, 7, 1, '#8a6a4c'); p.r(17, 10, 5, 1, '#8a6a4c');
+  p.r(17, 14, 7, 1, '#8a6a4c');
+  return p.c;
+}
+
+function stumpSprite() {
+  const p = pic(16, 12);
+  p.r(3, 6, 10, 5, '#7a5537');
+  p.r(4, 3, 8, 3, '#a97a4c');
+  p.r(5, 4, 6, 1, '#c99a63');
+  p.r(2, 10, 12, 2, '#5f452f');
+  p.r(7, 7, 2, 4, '#5f452f');
+  return p.c;
+}
+
+/* ---------- 室内 ---------- */
+function bedSprite() {
+  const p = pic(32, 26);
+  p.r(2, 4, 28, 20, '#8a5c38');
+  p.r(3, 5, 26, 18, '#b79a72');
+  p.r(3, 5, 26, 6, '#e8dcc4');
+  p.r(5, 7, 10, 5, '#f6f0e4');
+  p.r(3, 11, 26, 11, '#6b8fb0');
+  p.r(3, 11, 26, 3, '#8fb3cd');
+  for (let x = 6; x < 28; x += 6) p.r(x, 15, 1, 6, '#5d7f9c');
+  p.r(2, 22, 28, 3, '#6b432a');
+  return p.c;
+}
+
+function counterSprite() {
+  const p = pic(32, 20);
+  p.r(1, 4, 30, 14, '#8a5c38');
+  p.r(1, 4, 30, 4, '#b08a5e');
+  p.r(2, 8, 28, 8, '#7a4f30');
+  p.r(1, 16, 30, 3, '#6b432a');
+  p.dot(8, 11, '#a9764c'); p.dot(20, 11, '#a9764c');
+  return p.c;
+}
+
+function shelfSprite() {
+  const p = pic(32, 34);
+  p.r(1, 0, 30, 34, '#8a5c38');
+  p.r(2, 2, 28, 30, '#6b432a');
+  for (let y = 4; y < 30; y += 10) {
+    p.r(2, y + 6, 28, 2, '#a9764c');
+    for (let i = 0; i < 4; i++) {
+      p.r(4 + i * 7, y, 5, 6, ['#c9a05e', '#7fa86a', '#d98a6a', '#8fb3cd'][i]);
+    }
+  }
+  return p.c;
+}
+
+function carpetSprite() {
+  const p = pic(16, 16);
+  p.r(0, 0, 16, 16, '#8a5a4e');
+  p.r(1, 1, 14, 14, '#9c6a5c');
+  p.r(2, 2, 12, 12, '#8f5f52');
+  p.r(6, 6, 4, 4, '#b08a5e');
+  p.r(7, 7, 2, 2, '#c9a05e');
+  return p.c;
+}
+
+/* ---------- 节日物件 ---------- */
+function stallSprite() {
+  const p = pic(40, 40);
+  p.r(4, 100, 0, 0, '#000'); // noop
+  p.r(4, 16, 32, 24, '#8a5c38');
+  p.r(6, 18, 28, 20, '#a9764c');
+  for (let i = 0; i < 4; i++) p.r(6 + i * 7, 2, 7, 3, '#f2e8d3');
+  p.r(4, 2, 32, 14, '#d05f55');
+  for (let x = 8; x < 36; x += 8) p.r(x, 2, 4, 14, '#f2e8d3');
+  p.r(2, 14, 36, 3, '#8a3a28');
+  p.r(8, 22, 8, 8, '#e0c25e');
+  p.r(18, 22, 14, 6, '#c9a05e');
+  return p.c;
+}
+
+function potSprite() {
+  const p = pic(24, 20);
+  p.r(4, 8, 16, 10, '#5f6b72');
+  p.r(2, 6, 20, 4, '#7b8790');
+  p.r(6, 10, 12, 6, '#4a545a');
+  p.r(10, 2, 4, 5, '#a8b2b8');
+  p.dot(9, 4, '#e8d5a8'); p.dot(14, 3, '#e8d5a8');
+  return p.c;
+}
+
+function eggSprite(col) {
+  const p = pic(10, 12);
+  p.r(3, 1, 4, 2, col);
+  p.r(2, 3, 6, 4, col);
+  p.r(1, 6, 8, 4, col);
+  p.r(2, 9, 6, 2, col);
+  p.dot(3, 3, '#ffffff'); p.dot(2, 5, shade(col, 20));
+  return p.c;
+}
+
+function giftSprite() {
+  const p = pic(16, 16);
+  p.r(2, 4, 12, 12, '#d05f55');
+  p.r(2, 4, 12, 2, '#e07a6e');
+  p.r(7, 4, 2, 12, '#f2e8d3');
+  p.r(2, 8, 12, 2, '#f2e8d3');
+  p.r(6, 1, 4, 3, '#f2e8d3');
+  p.dot(5, 2, '#e0c25e'); p.dot(10, 2, '#e0c25e');
+  return p.c;
+}
+
+function balloonSprite(col) {
+  const p = pic(12, 24);
+  blob(p, 6, 6, 5, 6, col);
+  p.r(5, 12, 2, 2, shade(col, -20));
+  p.r(6, 14, 1, 8, '#f2e8d3');
+  p.dot(4, 3, '#ffffff');
+  return p.c;
+}
+
+/* ---------- 作物 ---------- */
+const CROP_STYLE = {
+  parsnip: { type: 'root', fruit: '#e8d5a0', leaf: '#5f9349' },
+  potato: { type: 'root', fruit: '#b08a5e', leaf: '#4f7f3e' },
+  cauliflower: { type: 'head', fruit: '#f2eddc', leaf: '#3f7a3a' },
+  blueberry: { type: 'berry', fruit: '#4a6fb0', leaf: '#3f7a3a' },
+  melon: { type: 'fruit', fruit: '#8fb36a', leaf: '#4f7f3e' },
+  pepper: { type: 'fruit', fruit: '#d94f3a', leaf: '#3f7a3a' },
+  pumpkin: { type: 'fruit', fruit: '#d98a3a', leaf: '#4f7f3e' },
+  corn: { type: 'tall', fruit: '#e8c25e', leaf: '#6b9a4a' },
+  cranberry: { type: 'berry', fruit: '#c23c4a', leaf: '#3f6b32' },
+  strawberry: { type: 'berry', fruit: '#e05a5a', leaf: '#4f8a3e' }
+};
+
+function cropSprite(id, stage) {
+  const st = CROP_STYLE[id] || CROP_STYLE.parsnip;
+  const p = pic(16, 22);
+  const g1 = st.leaf, g2 = shade(g1, 18), g3 = shade(g1, -22);
+  const fruit = st.fruit, fruitD = shade(fruit, -20), fruitL = shade(fruit, 22);
+  const baseY = 21;
+  if (stage === 0) {
+    p.r(7, baseY - 3, 2, 3, g3);
+    p.dot(6, baseY - 4, g2); p.dot(9, baseY - 4, g1);
+    return p.c;
+  }
+  if (stage === 1) {
+    p.r(7, baseY - 6, 2, 6, g3);
+    p.r(4, baseY - 6, 3, 2, g1); p.r(9, baseY - 8, 4, 2, g2);
+    p.dot(5, baseY - 7, g2); p.dot(11, baseY - 9, g1);
+    return p.c;
+  }
+  if (stage === 2) {
+    p.r(7, baseY - 10, 2, 10, g3);
+    p.r(3, baseY - 9, 4, 3, g1); p.r(9, baseY - 11, 4, 3, g2);
+    p.r(4, baseY - 6, 2, 3, g2); p.r(11, baseY - 8, 2, 3, g1);
+    return p.c;
+  }
+  // 成株
+  const tall = st.type === 'tall';
+  const h = tall ? 16 : 12;
+  p.r(7, baseY - h, 2, h, g3);
+  p.r(7, baseY - h, 1, h, g1);
+  for (let i = 0; i < 4; i++) {
+    const y = baseY - h + 2 + i * 3;
+    if (i % 2 === 0) { p.r(2, y, 5, 2, g1); p.r(1, y + 2, 3, 1, g2); }
+    else { p.r(9, y, 5, 2, g2); p.r(12, y + 2, 3, 1, g1); }
+  }
+  if (stage === 3) {
+    p.r(5, baseY - 5, 6, 4, g1);
+    p.r(6, baseY - 6, 4, 2, g2);
+    return p.c;
+  }
+  // 成熟
+  if (tall) {
+    p.r(4, baseY - 18, 3, 16, g3);
+    p.r(10, baseY - 18, 3, 16, g3);
+    p.r(5, baseY - 18, 1, 15, g1);
+    p.r(3, baseY - 14, 2, 6, g1); p.r(12, baseY - 12, 2, 6, g2);
+    p.r(7, baseY - 16, 2, 7, fruitD);
+    p.r(8, baseY - 16, 2, 7, fruit);
+    p.r(8, baseY - 15, 1, 2, fruitL);
+    p.r(6, baseY - 18, 5, 2, g2);
+    return p.c;
+  }
+  if (st.type === 'root') {
+    // 地下根茎露头
+    blob(p, 8, baseY - 3, 5, 4, fruitD);
+    blob(p, 8, baseY - 4, 4, 3, fruit);
+    p.r(6, baseY - 6, 2, 2, fruitL);
+    p.r(3, baseY - 9, 4, 2, g1); p.r(10, baseY - 9, 4, 2, g2);
+  } else if (st.type === 'head') {
+    blob(p, 8, baseY - 7, 7, 6, g3);
+    blob(p, 8, baseY - 8, 6, 5, g1);
+    blob(p, 8, baseY - 9, 4, 3, fruit);
+    p.dot(6, baseY - 10, fruitL);
+    p.r(1, baseY - 8, 4, 3, g2); p.r(11, baseY - 9, 4, 3, g1);
+  } else if (st.type === 'berry') {
+    blob(p, 8, baseY - 8, 7, 6, g3);
+    blob(p, 7, baseY - 9, 6, 5, g1);
+    p.dot(4, baseY - 10, fruit); p.dot(10, baseY - 11, fruit); p.dot(7, baseY - 6, fruitD);
+    p.dot(11, baseY - 6, fruit); p.dot(5, baseY - 5, fruitD);
+    p.dot(9, baseY - 12, fruitL);
+    p.r(2, baseY - 5, 4, 2, g2); p.r(10, baseY - 4, 4, 2, g1);
+  } else {
+    // 果实类
+    blob(p, 8, baseY - 6, 6, 5, fruitD);
+    blob(p, 7, baseY - 7, 5, 4, fruit);
+    p.r(5, baseY - 9, 2, 2, fruitL);
+    if (id === 'melon') { p.r(5, baseY - 8, 1, 5, fruitD); p.r(9, baseY - 8, 1, 5, fruitD); }
+    if (id === 'pepper') { blob(p, 9, baseY - 9, 3, 3, fruit); p.r(9, baseY - 12, 1, 2, g2); }
+    p.r(1, baseY - 7, 4, 3, g2); p.r(11, baseY - 8, 4, 3, g1);
+  }
+  return p.c;
+}
+
+/* ---------- 角色 ---------- */
+function humanoid(pal, dir, frame, action) {
+  const p = pic(16, 24);
+  const skin = pal.skin || '#f0c8a2';
+  const skinD = shade(skin, -30);
+  const shirt = pal.shirt, shirtD = shade(shirt, -28), shirtL = shade(shirt, 20);
+  const pants = pal.pants || '#3b4a63', pantsD = shade(pants, -22);
+  const hair = pal.hair || '#5a3a22', hairD = shade(hair, -25);
+  const boot = pal.boots || '#4a3320';
+  const bob = frame === 1 || frame === 3 ? -1 : 0;
+  const legA = frame === 1 ? -1 : frame === 3 ? 1 : 0;
+  const legB = -legA;
+  const y0 = bob;
+
+  // 腿
+  p.r(4, 18 + y0, 3, 4, pants);
+  p.r(9, 18 + y0, 3, 4, pants);
+  p.r(4, 22 + y0 + Math.max(0, legA), 3, 2, boot);
+  p.r(9, 22 + y0 + Math.max(0, legB), 3, 2, boot);
+  if (legA < 0) p.r(5, 20, 2, 2, pantsD);
+  if (legB < 0) p.r(10, 20, 2, 2, pantsD);
+
+  // 身体
+  p.r(4, 10 + y0, 8, 8, shirt);
+  p.r(4, 10 + y0, 8, 1, shirtL);
+  p.r(4, 16 + y0, 8, 2, shirtD);
+  p.r(7, 10 + y0, 2, 3, shirtD);
+  // 手臂
+  const armY = 11 + y0;
+  p.r(2, armY, 2, 5, shirt);
+  p.r(12, armY, 2, 5, shirt);
+  p.r(2, armY + 5, 2, 2, skin);
+  p.r(12, armY + 5, 2, 2, skin);
+  if (pal.apron) p.r(5, 14, 6, 4, pal.apron);
+
+  // 头
+  if (dir === 'down') {
+    p.r(4, 2, 8, 8, skin);
+    p.r(4, 2, 8, 3, hair);
+    p.r(3, 4, 1, 4, hair);
+    p.r(12, 4, 1, 4, hair);
+    p.r(4, 5, 8, 1, hairD);
+    p.r(5, 6, 1, 1, '#2a1a12');
+    p.r(10, 6, 1, 1, '#2a1a12');
+    p.r(6, 8, 4, 1, skinD);
+    p.r(3, 2, 3, 2, hairD);
+  } else if (dir === 'up') {
+    p.r(4, 1, 8, 9, hair);
+    p.r(5, 3, 6, 6, hairD);
+    p.r(5, 2, 6, 3, hair);
+  } else if (dir === 'left') {
+    p.r(4, 2, 8, 8, skin);
+    p.r(3, 2, 8, 3, hair);
+    p.r(9, 4, 3, 5, hair);
+    p.r(11, 2, 2, 2, hairD);
+    p.r(5, 6, 1, 1, '#2a1a12');
+    p.r(4, 8, 3, 1, skinD);
+  } else {
+    p.r(4, 2, 8, 8, skin);
+    p.r(5, 2, 8, 3, hair);
+    p.r(4, 4, 3, 5, hair);
+    p.r(3, 2, 2, 2, hairD);
+    p.r(10, 6, 1, 1, '#2a1a12');
+    p.r(9, 8, 3, 1, skinD);
+  }
+  // 帽子 / 发饰
+  if (pal.hat) {
+    p.r(2, 0, 12, 2, pal.hat);
+    p.r(3, 2, 10, 1, shade(pal.hat, -25));
+    p.r(2, 3, 12, 1, shade(pal.hat, 10));
+  }
+  if (pal.hatStraw) {
+    p.r(1, 1, 14, 2, '#d9b86a');
+    p.r(3, 0, 10, 1, '#c9a05e');
+    p.r(1, 3, 14, 1, '#b08a4e');
+  }
+  if (pal.bun) {
+    p.r(6, 0, 4, 2, hair);
+    p.r(5, 1, 2, 1, hairD);
+  }
+  if (pal.band) {
+    p.r(3, 3, 10, 1, pal.band);
+    p.r(3, 3, 2, 2, shade(pal.band, -20));
+  }
+  if (pal.scarf) {
+    p.r(4, 9, 8, 2, pal.scarf);
+    p.r(4, 10, 3, 1, shade(pal.scarf, -20));
+  }
+  // 工具动作
+  if (action) {
+    const t = action; // 0..2
+    if (dir === 'down') {
+      p.r(12, 10 + y0 + t, 2, 2, skin);
+      p.r(14, 9 + y0 + t, 2, 2, skin);
+    } else if (dir === 'up') {
+      p.r(12, 8 + y0, 2, 2, skin);
+    } else if (dir === 'left') {
+      p.r(0, 10 + y0 + t, 2, 2, skin);
+      p.r(-1, 9 + y0 + t, 2, 2, skin);
+    } else {
+      p.r(14, 10 + y0 + t, 2, 2, skin);
+      p.r(15, 9 + y0 + t, 2, 2, skin);
+    }
+  }
+  return p.c;
+}
+
+
+function rugSprite(w, h, col) {
+  const p = pic(w, h);
+  const base = col || '#8f5a4e';
+  p.r(0, 0, w, h, '#6d4238');
+  p.r(2, 2, w - 4, h - 4, base);
+  p.r(4, 4, w - 8, h - 8, shade(base, 10));
+  p.r(6, 6, w - 12, h - 12, shade(base, -6));
+  // 边框花纹
+  p.r(2, 2, w - 4, 2, '#c9a05e');
+  p.r(2, h - 4, w - 4, 2, '#c9a05e');
+  p.r(2, 2, 2, h - 4, '#c9a05e');
+  p.r(w - 4, 2, 2, h - 4, '#c9a05e');
+  // 菱形点缀
+  for (let x = 10; x < w - 8; x += 14) {
+    const y = h / 2;
+    p.r(x, y - 1, 3, 1, '#d9b86a');
+    p.r(x + 1, y - 2, 1, 1, '#d9b86a');
+    p.r(x + 1, y, 1, 1, '#d9b86a');
+  }
+  return p.c;
+}
+
+
+/* ===== 02_art_more.js ===== */
+'use strict';
+
+/* ============================================================
+   图标与头像（纯绘制函数）
+   ============================================================ */
+function toolIcon(kind) {
+  const p = pic(16, 16);
+  const wood = '#8a5c38', woodD = '#6b432a', steel = '#b6bcc2', steelD = '#7b8086';
+  if (kind === 'hoe') {
+    p.r(3, 11, 10, 2, wood);
+    p.r(3, 11, 10, 1, '#a9764c');
+    p.r(3, 9, 2, 4, woodD);
+    p.r(1, 6, 6, 2, steel);
+    p.r(1, 6, 6, 1, '#d4dade');
+    p.r(1, 8, 2, 4, steelD);
+  } else if (kind === 'can') {
+    p.r(3, 6, 8, 8, '#5f8fb0');
+    p.r(3, 6, 8, 2, '#7fa8c4');
+    p.r(2, 8, 2, 4, '#4a7694');
+    p.r(11, 5, 2, 2, '#4a7694');
+    p.r(12, 3, 4, 3, '#7fa8c4');
+    p.r(13, 2, 2, 2, '#cfe3ee');
+    p.r(5, 12, 4, 2, '#4a7694');
+    p.r(4, 5, 5, 1, '#9bc0d6');
+    p.dot(12, 7, '#8cc6d9'); p.dot(14, 6, '#8cc6d9');
+  } else if (kind === 'axe') {
+    p.r(4, 8, 3, 7, wood);
+    p.r(4, 8, 1, 7, '#a9764c');
+    p.r(5, 3, 3, 6, steel);
+    p.r(2, 3, 4, 4, steel);
+    p.r(2, 3, 4, 1, '#d4dade');
+    p.r(1, 5, 2, 2, steelD);
+    p.r(6, 7, 2, 3, steelD);
+  } else if (kind === 'pick') {
+    p.r(7, 6, 2, 9, wood);
+    p.r(7, 6, 1, 9, '#a9764c');
+    p.r(2, 4, 11, 2, steel);
+    p.r(2, 3, 3, 2, steelD);
+    p.r(11, 3, 3, 2, steelD);
+    p.r(4, 5, 7, 1, '#d4dade');
+  } else if (kind === 'scythe') {
+    p.r(8, 4, 2, 11, wood);
+    p.r(8, 4, 1, 11, '#a9764c');
+    p.r(3, 2, 2, 3, steel);
+    p.r(4, 3, 6, 2, steel);
+    p.r(9, 4, 3, 1, steelD);
+    p.r(3, 2, 1, 1, '#d4dade');
+  } else {
+    // rod
+    p.r(4, 13, 9, 1, wood);
+    p.r(12, 3, 1, 10, '#6b8f5a');
+    p.r(9, 2, 4, 1, '#5f8fb0');
+    p.r(6, 4, 1, 9, '#cfe3ee');
+    p.r(5, 13, 2, 2, steelD);
+    p.r(4, 4, 1, 1, '#d05f55');
+  }
+  return p.c;
+}
+
+function seedIcon(col) {
+  const p = pic(16, 16);
+  p.r(3, 4, 10, 10, '#c9a05e');
+  p.r(3, 4, 10, 2, '#b08a4e');
+  p.r(4, 3, 8, 2, '#a3763f');
+  p.r(5, 2, 6, 1, '#8a5c38');
+  p.r(6, 2, 4, 2, col);
+  p.r(4, 7, 8, 6, '#e0c9a0');
+  p.dot(5, 8, col); p.dot(8, 9, col); p.dot(10, 11, col); p.dot(6, 12, col);
+  p.r(4, 13, 8, 1, '#a3763f');
+  return p.c;
+}
+
+function cropIcon(style, fruit, id) {
+  const p = pic(16, 16);
+  const leaf = '#4f8a3e', leafD = '#3f6b32';
+  if (style.type === 'root') {
+    blob(p, 8, 10, 5, 5, shade(fruit, -25));
+    blob(p, 8, 9, 4, 4, fruit);
+    p.r(6, 8, 2, 1, shade(fruit, 24));
+    p.r(6, 4, 1, 4, leafD); p.r(9, 3, 1, 5, leaf);
+    p.r(7, 4, 1, 3, leaf);
+    p.r(5, 6, 2, 1, leaf); p.r(9, 6, 2, 1, leafD);
+    return p.c;
+  }
+  if (style.type === 'head') {
+    blob(p, 8, 8, 6, 6, '#e8e2cf');
+    blob(p, 7, 7, 4, 4, '#f6f2e2');
+    p.r(4, 11, 9, 2, leafD);
+    p.r(5, 12, 2, 2, leaf); p.r(10, 12, 2, 2, leaf);
+    p.dot(6, 6, '#fffdf2');
+    return p.c;
+  }
+  if (style.type === 'berry') {
+    blob(p, 8, 9, 5, 5, leafD);
+    blob(p, 7, 8, 4, 4, leaf);
+    p.dot(5, 9, fruit); p.dot(9, 7, fruit); p.dot(11, 10, fruit); p.dot(7, 12, shade(fruit, -20));
+    p.r(7, 3, 1, 4, leafD); p.r(8, 3, 2, 1, leaf);
+    return p.c;
+  }
+  if (style.type === 'tall') {
+    p.r(7, 4, 4, 11, shade(fruit, -25));
+    p.r(8, 3, 3, 12, fruit);
+    p.r(8, 4, 1, 2, shade(fruit, 30));
+    for (let y = 6; y < 15; y += 3) p.r(8, y, 3, 1, shade(fruit, -18));
+    p.r(4, 2, 3, 10, leaf); p.r(12, 4, 2, 8, leafD);
+    return p.c;
+  }
+  blob(p, 8, 9, 6, 5, shade(fruit, -25));
+  blob(p, 7, 8, 5, 4, fruit);
+  p.r(5, 6, 2, 2, shade(fruit, 24));
+  p.r(8, 2, 1, 6, leafD); p.r(6, 3, 2, 2, leaf);
+  if (id === 'melon') { p.r(6, 8, 1, 4, shade(fruit, -30)); p.r(9, 7, 1, 5, shade(fruit, -30)); }
+  return p.c;
+}
+
+function miscIcon(kind) {
+  const p = pic(16, 16);
+  if (kind === 'wood') {
+    p.r(1, 6, 14, 4, '#8a5c38');
+    p.r(1, 6, 14, 1, '#a9764c');
+    p.r(3, 10, 11, 4, '#6b432a');
+    p.r(3, 10, 11, 1, '#8a5c38');
+    p.r(1, 6, 2, 4, '#b08a5e'); p.r(12, 6, 2, 4, '#a9764c');
+    p.dot(4, 8, '#5a3a22'); p.dot(9, 12, '#4a2f1d');
+  } else if (kind === 'stone') {
+    blob(p, 8, 9, 6, 5, '#7b8086');
+    blob(p, 7, 8, 4, 3, '#9ba1a7');
+    p.r(4, 10, 4, 2, '#5d6267');
+    p.dot(6, 7, '#c8ced4');
+  } else if (kind === 'fiber') {
+    for (let i = 0; i < 5; i++) {
+      const x = 3 + i * 2;
+      p.r(x, 4 + (i % 3), 1, 9, i % 2 ? '#5f9349' : '#4c7c38');
+      p.dot(x + 1, 5 + (i % 3), '#79a95c');
+    }
+    p.r(3, 12, 10, 2, '#3f6b32');
+  } else if (kind === 'egg') {
+    const e = eggSprite('#f6f0e4');
+    p.g.drawImage(e, 3, 2);
+  } else if (kind === 'bread') {
+    p.r(2, 5, 12, 7, '#c99a5e');
+    p.r(2, 5, 12, 2, '#e0b878');
+    p.r(3, 7, 10, 4, '#d9a966');
+    p.dot(5, 7, '#b8863f'); p.dot(9, 9, '#b8863f');
+    p.r(2, 11, 12, 1, '#a9764c');
+  } else if (kind === 'flower') {
+    p.r(8, 8, 1, 6, '#3f6b32');
+    p.r(6, 10, 2, 1, '#4f8a3e');
+    p.dot(7, 5, '#e86f8a'); p.dot(9, 5, '#e86f8a'); p.dot(8, 4, '#f6a0b4'); p.dot(8, 6, '#e86f8a');
+    p.dot(8, 5, '#f2e05a');
+  } else if (kind === 'berrywild') {
+    p.dot(4, 8, '#c23c6a'); p.dot(7, 6, '#c23c6a'); p.dot(6, 10, '#d94f7c'); p.dot(9, 9, '#a8305a');
+    p.r(4, 3, 4, 1, '#4f8a3e'); p.r(8, 2, 3, 1, '#4f8a3e');
+    p.dot(5, 7, '#e86f9a');
+  } else if (kind === 'daffodil') {
+    p.r(8, 7, 1, 7, '#3f6b32');
+    p.dot(6, 4, '#f2e05a'); p.dot(10, 4, '#f2e05a'); p.dot(8, 3, '#f6ec8a'); p.dot(8, 5, '#f7d24a');
+    p.dot(7, 5, '#f2e05a'); p.dot(9, 5, '#f2e05a');
+  } else if (kind === 'hazelnut') {
+    blob(p, 8, 9, 5, 5, '#8a5c34');
+    blob(p, 8, 8, 4, 4, '#a9764c');
+    p.r(5, 4, 6, 3, '#6b8f3f');
+    p.dot(7, 7, '#c9a05e');
+  } else if (kind === 'winterroot') {
+    blob(p, 8, 10, 4, 5, '#c9b6a0');
+    p.r(6, 5, 2, 4, '#e0d2c0');
+    p.r(9, 6, 1, 3, '#b0a08e');
+    p.dot(6, 9, '#8a7a68');
+  }
+  return p.c;
+}
+
+function portrait(pal, kind) {
+  const p = pic(40, 40);
+  p.r(0, 0, 40, 40, pal.bg || '#efe3c4');
+  p.r(0, 0, 40, 4, shade(pal.bg || '#efe3c4', -18));
+  // 肩
+  p.r(6, 30, 28, 10, pal.shirt);
+  p.r(6, 30, 28, 2, shade(pal.shirt, 22));
+  p.r(16, 30, 8, 6, pal.apron || shade(pal.shirt, -18));
+  p.r(18, 26, 5, 6, pal.skin);
+  p.r(18, 26, 5, 1, shade(pal.skin, -28));
+  // 头
+  p.r(9, 8, 22, 20, pal.skin);
+  p.r(9, 8, 22, 3, shade(pal.skin, 14));
+  p.r(9, 26, 22, 2, shade(pal.skin, -22));
+  // 头发
+  p.r(8, 4, 24, 8, pal.hair);
+  p.r(8, 4, 24, 2, shade(pal.hair, 18));
+  p.r(7, 9, 4, 12, pal.hair);
+  p.r(29, 9, 4, 12, pal.hair);
+  p.r(10, 11, 20, 2, shade(pal.hair, -18));
+  // 眼睛
+  p.r(14, 16, 3, 4, '#fffdf4');
+  p.r(23, 16, 3, 4, '#fffdf4');
+  p.r(15, 17, 2, 2, '#3a2a1a');
+  p.r(24, 17, 2, 2, '#3a2a1a');
+  p.dot(15, 17, '#000'); p.dot(24, 17, '#000');
+  // 眉毛/腮红
+  p.r(14, 14, 3, 1, shade(pal.hair, -20));
+  p.r(23, 14, 3, 1, shade(pal.hair, -20));
+  p.r(12, 21, 3, 1, '#e8a08a'); p.r(25, 21, 3, 1, '#e8a08a');
+  // 嘴
+  if (kind === 'smile') { p.r(18, 22, 4, 1, '#a04a4a'); p.dot(17, 21, '#a04a4a'); p.dot(22, 21, '#a04a4a'); }
+  else if (kind === 'grin') { p.r(17, 22, 6, 2, '#a04a4a'); p.r(18, 23, 4, 1, '#e8d5d0'); }
+  else { p.r(18, 22, 4, 1, '#8a4a42'); }
+  // 帽子
+  if (pal.hatStraw) { p.r(6, 1, 28, 3, '#c9a05e'); p.r(11, 0, 18, 2, '#d9b86a'); p.r(6, 4, 28, 1, '#a3763f'); }
+  if (pal.hat) { p.r(8, 0, 24, 4, pal.hat); p.r(8, 4, 24, 1, shade(pal.hat, -25)); }
+  if (pal.bun) { p.r(16, 0, 8, 4, pal.hair); p.r(17, 1, 6, 2, shade(pal.hair, 12)); }
+  if (pal.band) { p.r(8, 10, 24, 2, pal.band); }
+  if (pal.scarf) { p.r(10, 28, 20, 3, pal.scarf); p.r(10, 30, 6, 4, pal.scarf); }
+  return p.c;
+}
+
+/* ---------- 室内家具 ---------- */
+function doorSprite() {
+  const p = pic(16, 26);
+  p.r(1, 2, 14, 24, '#6b432a');
+  p.r(2, 4, 12, 21, '#8a5c38');
+  p.r(2, 4, 12, 1, '#a9764c');
+  p.r(4, 7, 8, 7, '#7a4f30');
+  p.r(5, 8, 6, 5, '#a9cde0');
+  p.r(4, 17, 8, 6, '#7a4f30');
+  p.r(10, 16, 2, 2, '#e8c56a');
+  p.r(0, 0, 16, 2, '#4a3220');
+  return p.c;
+}
+function windowSprite() {
+  const p = pic(16, 16);
+  p.r(1, 1, 14, 14, '#5f452f');
+  p.r(2, 2, 12, 12, '#bcd9e8');
+  p.r(3, 3, 10, 10, '#a9cde0');
+  p.r(7, 2, 2, 12, '#5f452f');
+  p.r(2, 7, 12, 2, '#5f452f');
+  p.r(3, 3, 3, 3, '#e8f6fc');
+  p.r(1, 13, 14, 2, '#8a6040');
+  return p.c;
+}
+function stoolSprite() {
+  const p = pic(16, 12);
+  p.r(2, 2, 12, 3, '#a9764c');
+  p.r(2, 2, 12, 1, '#c49a6c');
+  p.r(3, 5, 2, 7, '#8a5c38');
+  p.r(11, 5, 2, 7, '#8a5c38');
+  p.r(2, 8, 12, 2, '#6b432a');
+  return p.c;
+}
+function crateSprite() {
+  const p = pic(16, 16);
+  p.r(1, 2, 14, 13, '#a9764c');
+  p.r(2, 3, 12, 11, '#c49a6c');
+  p.r(1, 2, 14, 2, '#8a5c38');
+  p.r(1, 11, 14, 2, '#8a5c38');
+  p.r(3, 4, 2, 8, '#8a5c38');
+  p.r(11, 4, 2, 8, '#8a5c38');
+  p.dot(5, 7, '#7a4f30'); p.dot(9, 7, '#7a4f30');
+  return p.c;
+}
+function plantPotSprite() {
+  const p = pic(16, 24);
+  p.r(4, 12, 8, 9, '#b06a4a');
+  p.r(4, 12, 8, 2, '#d0865e');
+  p.r(3, 10, 10, 2, '#96543a');
+  p.r(7, 4, 2, 7, '#3f6b32');
+  p.r(3, 0, 4, 8, '#4f8a3e');
+  p.r(9, 2, 4, 8, '#5f9349');
+  p.r(6, 4, 4, 5, '#6b9a4a');
+  p.dot(5, 3, '#79a95c'); p.dot(11, 5, '#79a95c');
+  return p.c;
+}
+function stoveSprite() {
+  const p = pic(32, 24);
+  p.r(2, 6, 28, 17, '#7b8086');
+  p.r(3, 7, 26, 15, '#9099a0');
+  p.r(2, 6, 28, 2, '#a8b2b8');
+  p.r(4, 9, 11, 8, '#4a545a');
+  p.r(5, 10, 9, 6, '#e8a04a');
+  p.r(18, 9, 10, 8, '#4a545a');
+  p.r(19, 10, 8, 6, '#2a3034');
+  p.r(4, 19, 24, 3, '#5d6267');
+  p.dot(22, 8, '#d05f55');
+  return p.c;
+}
+
+
+/* ===== 03_data.js ===== */
+'use strict';
+
+/* ============================================================
+   物品 / 作物 / NPC / 节日 数据
+   ============================================================ */
+
+const CROPS = {
+  parsnip:     { name: '防风草', season: 0, growth: [1, 1, 1, 1], sell: 35,  energy: 12, style: 'root',  seedCost: 20, bag: '#e8d5a0', yield: 1, regrow: 0 },
+  potato:      { name: '土豆',   season: 0, growth: [1, 2, 2, 1], sell: 80,  energy: 15, style: 'root',  seedCost: 30, bag: '#b08a5e', yield: 1, regrow: 0 },
+  cauliflower: { name: '花椰菜', season: 0, growth: [2, 3, 4, 3], sell: 175, energy: 20, style: 'head',  seedCost: 60, bag: '#f2eddc', yield: 1, regrow: 0 },
+  strawberry:  { name: '草莓',   season: 0, growth: [2, 2, 2, 2], sell: 120, energy: 18, style: 'berry', seedCost: 100, bag: '#e05a5a', yield: 1, regrow: 3 },
+  blueberry:   { name: '蓝莓',   season: 1, growth: [2, 2, 2, 1], sell: 50,  energy: 12, style: 'berry', seedCost: 40, bag: '#4a6fb0', yield: 3, regrow: 4 },
+  melon:       { name: '甜瓜',   season: 1, growth: [2, 3, 4, 3], sell: 250, energy: 25, style: 'fruit', seedCost: 70, bag: '#8fb36a', yield: 1, regrow: 0 },
+  pepper:      { name: '辣椒',   season: 1, growth: [1, 1, 2, 1], sell: 55,  energy: 10, style: 'fruit', seedCost: 30, bag: '#d94f3a', yield: 1, regrow: 2 },
+  pumpkin:     { name: '南瓜',   season: 2, growth: [2, 3, 5, 3], sell: 320, energy: 22, style: 'fruit', seedCost: 80, bag: '#d98a3a', yield: 1, regrow: 0 },
+  corn:        { name: '玉米',   season: 2, growth: [2, 2, 2, 2], sell: 90,  energy: 18, style: 'tall',  seedCost: 50, bag: '#e8c25e', yield: 1, regrow: 3 },
+  cranberry:   { name: '蔓越莓', season: 2, growth: [2, 2, 3, 2], sell: 60,  energy: 12, style: 'berry', seedCost: 60, bag: '#c23c4a', yield: 2, regrow: 4 }
+};
+
+const ITEMS = {};
+
+function defItem(id, o) { ITEMS[id] = Object.assign({ id, sell: 0, stack: 99 }, o); }
+
+defItem('hoe', { name: '锄头', type: 'tool', tool: 'hoe', stack: 1, desc: '把草地或泥土翻成耕地' });
+defItem('can', { name: '水壶', type: 'tool', tool: 'can', stack: 1, desc: '给耕地浇水，作物才会生长' });
+defItem('axe', { name: '斧头', type: 'tool', tool: 'axe', stack: 1, desc: '砍树，获得木材' });
+defItem('pick', { name: '镐', type: 'tool', tool: 'pick', stack: 1, desc: '敲碎石头，获得石料' });
+defItem('scythe', { name: '镰刀', type: 'tool', tool: 'scythe', stack: 1, desc: '割草，获得纤维' });
+defItem('rod', { name: '鱼竿', type: 'tool', tool: 'rod', stack: 1, desc: '装饰品，这一版还不能钓鱼' });
+
+for (const [id, c] of Object.entries(CROPS)) {
+  defItem(id + '_seed', {
+    name: c.name + '种子', type: 'seed', crop: id, buy: c.seedCost, sell: Math.floor(c.seedCost / 2),
+    color: c.bag, desc: '种在耕地上，记得每天浇水'
+  });
+  defItem(id, {
+    name: c.name, type: 'crop', crop: id, sell: c.sell, energy: c.energy,
+    desc: c.name + '，可以卖钱或吃掉回复体力'
+  });
+}
+
+defItem('wood', { name: '木材', type: 'material', sell: 2, desc: '建造和修理的基础材料' });
+defItem('stone', { name: '石料', type: 'material', sell: 2, desc: '从石头里敲出来' });
+defItem('fiber', { name: '纤维', type: 'material', sell: 1, desc: '割草得到的纤维' });
+defItem('sap', { name: '树液', type: 'material', sell: 2, desc: '砍树时偶尔掉落' });
+defItem('berrywild', { name: '野莓', type: 'forage', sell: 12, energy: 10, desc: '春天野地里的酸甜小果' });
+defItem('daffodil', { name: '水仙', type: 'forage', sell: 18, energy: 0, desc: '春天的黄色小花，很适合送人' });
+defItem('hazelnut', { name: '榛子', type: 'forage', sell: 25, energy: 12, desc: '秋天掉落的坚果' });
+defItem('winterroot', { name: '冬根', type: 'forage', sell: 30, energy: 14, desc: '冬天埋在雪下的根茎' });
+defItem('flower', { name: '野花', type: 'gift', sell: 20, desc: '一束刚摘的野花' });
+defItem('egg', { name: '鸡蛋', type: 'gift', sell: 40, energy: 15, desc: '节日的彩蛋，也能吃' });
+defItem('bread', { name: '面包', type: 'food', sell: 20, energy: 35, buy: 40, desc: '吃一个回复 35 体力' });
+
+const TOOL_IDS = ['hoe', 'can', 'axe', 'pick', 'scythe'];
+const FORAGE_BY_SEASON = {
+  0: ['daffodil', 'berrywild'],
+  1: ['berrywild', 'flower'],
+  2: ['hazelnut', 'berrywild'],
+  3: ['winterroot']
+};
+
+const SEASONS = [
+  { name: '春', days: 28, tint: 'rgba(255,190,120,0.06)' },
+  { name: '夏', days: 28, tint: 'rgba(120,200,255,0.05)' },
+  { name: '秋', days: 28, tint: 'rgba(255,150,80,0.08)' },
+  { name: '冬', days: 28, tint: 'rgba(150,200,255,0.12)' }
+];
+
+const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+const WEATHER = {
+  sun: { name: '晴', icon: '☀' },
+  cloud: { name: '阴', icon: '☁' },
+  rain: { name: '雨', icon: '☂' },
+  snow: { name: '雪', icon: '❄' }
+};
+
+/* ---------------- NPC ---------------- */
+const NPC_DEFS = [
+  {
+    id: 'lina', name: '莉娜', role: '种子店主', bg: '#f3e2c4', skin: '#f2c9a0',
+    hair: '#8a4b2a', shirt: '#c85a6a', pants: '#5a4050', apron: '#f2e8d3', bun: true,
+    loves: ['flower', 'strawberry', 'cauliflower'], likes: ['parsnip', 'melon', 'egg', 'bread'],
+    hates: ['wood', 'stone', 'fiber'],
+    greet: [
+      ['早上好呀！今天的种子我都摆好了。', '你家的地翻过了吗？记得先锄地再播种哦。'],
+      ['又见面啦。看你干活挺利索的。', '要不要试试草莓？虽然贵一点，但卖得很好。'],
+      ['你最近来得真勤，我都不好意思了。', '有什么想要的种子尽管说，我给你留着。'],
+      ['认识你真好。这个小镇因为你热闹了不少。', '下次赶集我们一起摆摊吧？']
+    ],
+    gift: { love: '天哪，这正是我喜欢的！你太懂我了。', like: '谢谢你，我很喜欢。', neutral: '谢谢你的心意。', hate: '呃……这个我用不上，还是你留着吧。' },
+    sched: [
+      { h: 8, map: 'town', x: 6, y: 9, dir: 'down' },
+      { h: 11, map: 'shop', x: 10, y: 7, dir: 'down' },
+      { h: 17, map: 'town', x: 14, y: 12, dir: 'down' },
+      { h: 21, map: 'home', x: 0, y: 0, dir: 'down' }
+    ]
+  },
+  {
+    id: 'mai', name: '老麦', role: '隔壁农夫', bg: '#e8e0c8', skin: '#e0b184',
+    hair: '#d8d4cc', shirt: '#5f8a5a', pants: '#4a5a3a', hatStraw: true,
+    loves: ['pumpkin', 'potato', 'bread'], likes: ['wood', 'fiber', 'corn', 'egg'],
+    hates: ['stone', 'flower'],
+    greet: [
+      ['小伙子，起这么早？地里的活儿可不等人。', '我像你这么大的时候，天不亮就下地了。'],
+      ['你那块地种得不错，比我年轻时强。', '记着，作物一天不浇水就不长，别偷懒。'],
+      ['咱们这片土啊，养人。你好好干。', '等秋天我请你喝南瓜汤。'],
+      ['有你在，我这把老骨头也能歇歇了。', '以后这片农场，就靠你啦。']
+    ],
+    gift: { love: '哈！这可是好东西，我收下了。', like: '不错不错，实在。', neutral: '行，我拿着。', hate: '你拿这个糊弄我？' },
+    sched: [
+      { h: 7, map: 'farm', x: 12, y: 7, dir: 'down' },
+      { h: 10, map: 'town', x: 20, y: 9, dir: 'down' },
+      { h: 16, map: 'farm', x: 12, y: 7, dir: 'down' },
+      { h: 20, map: 'home', x: 0, y: 0, dir: 'down' }
+    ]
+  },
+  {
+    id: 'you', name: '小柚', role: '镇上的孩子', bg: '#e4ecf2', skin: '#f6d2b0',
+    hair: '#3a2a1e', shirt: '#e8b84a', pants: '#4a6a8a', hat: '#d05f55',
+    loves: ['berrywild', 'melon', 'egg'], likes: ['blueberry', 'strawberry', 'flower'],
+    hates: ['wood', 'stone', 'fiber'],
+    greet: [
+      ['哇，你就是新来的农场主？', '我妈妈说你家门口有只特别大的蜗牛。'],
+      ['今天我能去你农场玩吗？', '我保证不踩坏你的菜！'],
+      ['你是我最好的朋友之一！', '等我长大也要种一大片地。'],
+      ['我把秘密基地的位置告诉你好不好？', '就在喷泉后面，别告诉别人哦。']
+    ],
+    gift: { love: '哇！这是给我的吗？我最喜欢这个了！', like: '嘿嘿，谢谢！', neutral: '嗯……谢谢你啦。', hate: '这个不好玩，我不要。' },
+    sched: [
+      { h: 9, map: 'town', x: 22, y: 14, dir: 'down' },
+      { h: 13, map: 'town', x: 10, y: 16, dir: 'down' },
+      { h: 18, map: 'town', x: 22, y: 14, dir: 'down' },
+      { h: 21, map: 'home', x: 0, y: 0, dir: 'down' }
+    ]
+  },
+  {
+    id: 'lan', name: '阿岚', role: '镇上的铁匠', bg: '#e6dcd0', skin: '#d9a878',
+    hair: '#2f2a26', shirt: '#6a6f8a', pants: '#3a3a4a', band: '#c05a4a', scarf: '#c05a4a',
+    loves: ['stone', 'corn', 'pepper'], likes: ['wood', 'sap', 'pumpkin'],
+    hates: ['flower', 'berrywild'],
+    greet: [
+      ['……你挡着光了。有事？', '石头敲碎了给我，我帮你打成工具。'],
+      ['听说你把荒地支棱起来了，不错。', '手上起茧了吧？那才像干活的人。'],
+      ['有空来炉子边坐坐，暖和。', '你比镇上那些光说不练的强。'],
+      ['要是哪天你想盖谷仓，叫我。', '……别误会，我只是顺手。']
+    ],
+    gift: { love: '……这个我确实用得上。谢了。', like: '嗯，收下。', neutral: '放那儿吧。', hate: '你拿我寻开心？' },
+    sched: [
+      { h: 9, map: 'town', x: 30, y: 12, dir: 'down' },
+      { h: 12, map: 'town', x: 26, y: 16, dir: 'down' },
+      { h: 18, map: 'town', x: 30, y: 12, dir: 'down' },
+      { h: 22, map: 'home', x: 0, y: 0, dir: 'down' }
+    ]
+  }
+];
+
+/* ---------------- 节日 ---------------- */
+const FESTIVALS = [
+  { id: 'egg', season: 0, day: 13, name: '蛋蛋节', color: '#e8b84a', desc: '广场上藏了彩蛋，60 秒内找得越多越好。', start: { x: 18, y: 16 } },
+  { id: 'dance', season: 0, day: 24, name: '花舞节', color: '#e86f8a', desc: '牵起一位好友的手，在花丛中跳一支舞。', start: { x: 18, y: 16 } },
+  { id: 'luau', season: 1, day: 11, name: '夏威夷宴', color: '#4f9a8a', desc: '往大锅里放一样食材，全镇一起打分。', start: { x: 16, y: 15 } },
+  { id: 'fair', season: 2, day: 16, name: '丰收祭', color: '#d98a3a', desc: '把今年最好的三样作物摆上展台。', start: { x: 18, y: 15 } },
+  { id: 'winter', season: 3, day: 25, name: '冬星节', color: '#5f8fb0', desc: '交换礼物，把温暖送给镇上的人。', start: { x: 18, y: 16 } }
+];
+
+function festivalFor(season, day) {
+  return FESTIVALS.find(f => f.season === season && f.day === day) || null;
+}
+
+/* 商店库存：当季种子 + 常用品 */
+function shopStock(season) {
+  const seeds = Object.entries(CROPS).filter(([, c]) => c.season === season).map(([id]) => id + '_seed');
+  return seeds.concat(['bread']);
+}
+
+
+/* ===== 04_artinit.js ===== */
+'use strict';
+
+/* ============================================================
+   生成全部美术资源
+   ============================================================ */
+function initArt() {
+  // ---------- 地面 ----------
+  for (let s = 0; s < 4; s++) {
+    const pal = SEASON_PAL[s];
+    const set = { g: [], f: [], p: [], dirt: [], sand: [], water: [waterTile(0), waterTile(1)] };
+    for (let v = 0; v < 3; v++) set.g.push(grassTile(pal, v + s * 3));
+    for (let v = 0; v < 4; v++) set.f.push(flowerTile(pal, v + s * 4));
+    for (let v = 0; v < 3; v++) set.p.push(pathTile(v + s));
+    for (let v = 0; v < 2; v++) set.dirt.push(dirtTile(v + s));
+    for (let v = 0; v < 2; v++) set.sand.push(sandTile(v + s));
+    set.snow = [snowTile(0), snowTile(1), snowTile(2)];
+    ART.ground.push(set);
+  }
+  ART.soil.dry = soilTile(false);
+  ART.soil.wet = soilTile(true);
+  ART.floor = {
+    wood: [woodFloorTile(0), woodFloorTile(1)],
+    stone: [stoneFloorTile(0), stoneFloorTile(1)],
+    carpet: carpetSprite(),
+    wall: [wallTile(0), wallTile(1)]
+  };
+
+  // ---------- 树 ----------
+  ART.trees.oak = [0, 1, 2, 3].map(s => treeSprite('oak', s));
+  ART.trees.maple = [0, 1, 2, 3].map(s => treeSprite('maple', s));
+  ART.trees.pine = [0, 1, 2, 3].map(s => treeSprite('pine', s));
+  ART.trees.stump = stumpSprite();
+  ART.objects.bush = [0, 1, 2, 3].map(s => bushSprite(s));
+
+  // ---------- 物件 ----------
+  ART.objects.weed = weedSprite();
+  ART.objects.rock = rockSprite();
+  ART.objects.flower = [0, 1, 2].map(v => flowerObjSprite(v));
+  ART.objects.fence = fenceSprite();
+  ART.objects.bin = binSprite();
+  ART.objects.fountain = fountainSprite();
+  ART.objects.lamp = lampSprite();
+  ART.objects.mailbox = mailboxSprite();
+  ART.objects.stump = stumpSprite();
+  ART.objects.notice = noticeSprite();
+  ART.objects.stall = stallSprite();
+  ART.objects.pot = potSprite();
+  ART.objects.gift = giftSprite();
+  ART.objects.balloon = ['#d05f55', '#e8b84a', '#5f8fb0', '#8fbf6a'].map(c => balloonSprite(c));
+  ART.objects.eggs = ['#f6f0e4', '#e86f8a', '#e8b84a', '#8fb3cd', '#a8d8a0', '#d9b6f0'].map(c => eggSprite(c));
+
+  // ---------- 建筑 ----------
+  ART.buildings.house = houseSprite();
+  ART.buildings.shop = shopSprite();
+  ART.buildings.cabin = cabinSprite();
+  ART.buildings.bed = bedSprite();
+  ART.buildings.counter = counterSprite();
+  ART.buildings.shelf = shelfSprite();
+  ART.objects.door = doorSprite();
+  ART.objects.window = windowSprite();
+  ART.objects.stool = stoolSprite();
+  ART.objects.crate = crateSprite();
+  ART.objects.plant = plantPotSprite();
+  ART.objects.stove = stoveSprite();
+  ART.objects.rugHouse = rugSprite(80, 64, '#8f5a4e');
+  ART.objects.rugShop = rugSprite(48, 32, '#7a5a4a');
+  ART.objects.rugSmall = rugSprite(48, 32, '#6f5a7a');
+
+  // ---------- 作物 ----------
+  for (const id of Object.keys(CROPS)) {
+    ART.crops[id] = [];
+    for (let st = 0; st < 5; st++) ART.crops[id].push(cropSprite(id, st));
+  }
+
+  // ---------- 角色 ----------
+  const playerPal = { skin: '#f2c9a0', hair: '#5a3a22', shirt: '#4f7fb0', pants: '#3f4a63', boots: '#5a3a28' };
+  const dirs = ['down', 'up', 'left', 'right'];
+  ART.chars.player = { walk: {}, act: {} };
+  for (const d of dirs) {
+    ART.chars.player.walk[d] = [0, 1, 2, 3].map(f => humanoid(playerPal, d, f, 0));
+    ART.chars.player.act[d] = [0, 1, 2].map(t => humanoid(playerPal, d, 0, t));
+  }
+  ART.chars.npc = {};
+  for (const npc of NPC_DEFS) {
+    const pal = {
+      skin: npc.skin, hair: npc.hair, shirt: npc.shirt, pants: npc.pants,
+      apron: npc.apron, hat: npc.hat, hatStraw: npc.hatStraw, bun: npc.bun, band: npc.band, scarf: npc.scarf
+    };
+    ART.chars.npc[npc.id] = { walk: {}, act: {} };
+    for (const d of dirs) {
+      ART.chars.npc[npc.id].walk[d] = [0, 1, 2, 3].map(f => humanoid(pal, d, f, 0));
+      ART.chars.npc[npc.id].act[d] = [0].map(t => humanoid(pal, d, 0, 0));
+    }
+    ART.portraits[npc.id] = portrait(pal, npc.id === 'you' ? 'grin' : npc.id === 'lan' ? 'flat' : 'smile');
+  }
+
+  // ---------- 图标 ----------
+  for (const t of ['hoe', 'can', 'axe', 'pick', 'scythe', 'rod']) ART.icons[t] = toolIcon(t);
+  for (const [id, c] of Object.entries(CROPS)) {
+    ART.icons[id] = cropIcon(CROP_STYLE[id], CROP_STYLE[id].fruit, id);
+    ART.icons[id + '_seed'] = seedIcon(c.bag);
+  }
+  ART.icons.wood = miscIcon('wood');
+  ART.icons.stone = miscIcon('stone');
+  ART.icons.fiber = miscIcon('fiber');
+  ART.icons.egg = miscIcon('egg');
+  ART.icons.bread = miscIcon('bread');
+  ART.icons.flower = miscIcon('flower');
+  ART.icons.berrywild = miscIcon('berrywild');
+  ART.icons.daffodil = miscIcon('daffodil');
+  ART.icons.hazelnut = miscIcon('hazelnut');
+  ART.icons.winterroot = miscIcon('winterroot');
+  ART.icons.sap = miscIcon('wood');
+  ART.icons._unknown = miscIcon('stone');
+
+  // 图标 dataURL 缓存
+  ART.iconUrl = {};
+  for (const [k, v] of Object.entries(ART.icons)) ART.iconUrl[k] = v.toDataURL();
+}
+
+function iconFor(id) { return ART.icons[id] || ART.icons._unknown; }
+function iconUrl(id) { return ART.iconUrl[id] || ART.iconUrl._unknown; }
+
+
+/* ===== 05_maps.js ===== */
+'use strict';
+
+/* ============================================================
+   地图：农舍 / 农场 / 小镇 / 室内
+   ============================================================ */
+const MAPS = {};
+
+function createMap(id, w, h, fill, name) {
+  const base = [];
+  const solid = [];
+  for (let y = 0; y < h; y++) {
+    base.push(new Array(w).fill(fill));
+    solid.push(new Array(w).fill(false));
+  }
+  const m = {
+    id, w, h, name, base, solid,
+    objs: [], buildings: [], exits: [],
+    objAt: [], acts: [],
+    staticCanvas: null, staticDirty: true
+  };
+  for (let y = 0; y < h; y++) { m.objAt.push(new Array(w).fill(null)); m.acts.push(new Array(w).fill(null)); }
+  MAPS[id] = m;
+  return m;
+}
+
+function fillRect(m, x, y, w, h, ch, isSolid) {
+  for (let yy = y; yy < y + h; yy++) {
+    for (let xx = x; xx < x + w; xx++) {
+      if (xx < 0 || yy < 0 || xx >= m.w || yy >= m.h) continue;
+      m.base[yy][xx] = ch;
+      if (isSolid) m.solid[yy][xx] = true;
+    }
+  }
+}
+
+function fillEllipse(m, cx, cy, rx, ry, ch, isSolid) {
+  for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
+    for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+      if (x < 0 || y < 0 || x >= m.w || y >= m.h) continue;
+      const dx = (x - cx) / rx, dy = (y - cy) / ry;
+      if (dx * dx + dy * dy <= 1) {
+        m.base[y][x] = ch;
+        if (isSolid) m.solid[y][x] = true;
+      }
+    }
+  }
+}
+
+function addObj(m, type, x, y, opts = {}) {
+  const o = Object.assign({ type, x, y }, opts);
+  m.objs.push(o);
+  if (x >= 0 && y >= 0 && x < m.w && y < m.h) m.objAt[y][x] = o;
+  if (o.solid !== false) m.solid[y][x] = true;
+  if (o.act) m.acts[y][x] = typeof o.act === 'string' ? { kind: o.act } : o.act;
+  return o;
+}
+
+function addBuilding(m, type, x, y, w, h, door, opts = {}) {
+  const b = Object.assign({ type, x, y, w, h, door }, opts);
+  m.buildings.push(b);
+  for (let yy = y - 1; yy < y + h; yy++) {
+    for (let xx = x; xx < x + w; xx++) {
+      if (xx < 0 || yy < 0 || xx >= m.w || yy >= m.h) continue;
+      m.solid[yy][xx] = true;
+    }
+  }
+  if (door) m.solid[door.y][door.x] = false;
+  if (door) m.acts[door.y][door.x] = { kind: 'door', door };
+  return b;
+}
+
+function addExit(m, x, y, w, h, to, tx, ty) {
+  m.exits.push({ x, y, w, h, to, tx, ty });
+}
+
+/* ---------------- 农场 ---------------- */
+function buildFarm() {
+  const m = createMap('farm', 40, 30, 'g', '农场');
+  // 草地碎花
+  for (let y = 0; y < m.h; y++) {
+    for (let x = 0; x < m.w; x++) {
+      if (hash2(x * 7 + 3, y * 5 + 11) > 0.94) m.base[y][x] = 'f';
+    }
+  }
+  // 农舍
+  addBuilding(m, 'house', 2, 2, 5, 4, { x: 4, y: 5, to: 'house', tx: 15, ty: 10 });
+  // 道路
+  fillRect(m, 4, 6, 1, 9, 'p');
+  fillRect(m, 4, 14, 17, 1, 'p');
+  fillRect(m, 20, 14, 1, 15, 'p');
+  fillRect(m, 6, 7, 4, 1, 'p');
+  // 池塘
+  fillEllipse(m, 32, 24.5, 6.2, 4.2, 's', false);
+  fillEllipse(m, 32, 24.5, 5.2, 3.3, 'w', true);
+  // 农舍前小花坛
+  fillRect(m, 1, 6, 3, 1, 'f');
+  // 出货箱与信箱
+  addObj(m, 'bin', 6, 15, { act: 'ship', solid: true });
+  addObj(m, 'mailbox', 7, 6, { act: 'mail', solid: true });
+  // 树（沿边与池塘）
+  const trees = [
+    [0, 1, 'oak'], [1, 0, 'pine'], [31, 0, 'pine'], [35, 0, 'oak'], [38, 2, 'pine'],
+    [0, 9, 'oak'], [0, 19, 'maple'], [1, 27, 'oak'], [4, 28, 'pine'], [9, 29, 'oak'],
+    [26, 0, 'maple'], [39, 9, 'pine'], [39, 18, 'oak'], [37, 28, 'maple'], [29, 29, 'pine'],
+    [24, 2, 'oak'], [20, 1, 'pine'], [33, 6, 'oak'],
+    [26, 16, 'oak'], [29, 18, 'maple'], [36, 15, 'pine'], [25, 22, 'oak'],
+    [10, 21, 'maple'], [15, 24, 'oak'], [22, 26, 'pine'], [8, 25, 'oak'], [1, 14, 'maple']
+  ];
+  for (const [x, y, kind] of trees) {
+    if (m.solid[y][x]) continue;
+    addObj(m, 'tree', x, y, { kind, hp: 3, solid: true });
+    if (y > 0) m.solid[y - 1][x] = true;
+  }
+  // 石头与杂草
+  const rocks = [[12, 19], [17, 20], [24, 8], [33, 12], [5, 22], [28, 5], [36, 21], [19, 25]];
+  for (const [x, y] of rocks) if (!m.solid[y][x]) addObj(m, 'rock', x, y, { hp: 2, solid: true });
+  const weeds = [[7, 9], [10, 9], [13, 10], [16, 8], [18, 11], [9, 12], [15, 12], [19, 9],
+    [8, 18], [12, 17], [16, 16], [21, 20], [24, 15], [27, 12], [5, 20], [7, 24], [14, 27], [18, 22]];
+  for (const [x, y] of weeds) if (!m.solid[y][x] && m.base[y][x] !== 'p') addObj(m, 'weed', x, y, { solid: false });
+  // 花（装饰性对象）
+  const flowers = [[22, 7], [23, 11], [10, 6], [3, 12], [25, 28], [30, 16], [18, 5], [7, 27], [35, 24]];
+  flowers.forEach(([x, y], i) => { if (!m.solid[y][x]) addObj(m, 'flower', x, y, { v: i % 3, solid: false }); });
+  // 出口：向南去小镇
+  addExit(m, 18, 29, 5, 1, 'town', 20, 23);
+  m.spawn = { x: 4, y: 7 };
+  // 可开垦区域（默认草地即可）
+  return m;
+}
+
+/* ---------------- 小镇 ---------------- */
+function buildTown() {
+  const m = createMap('town', 40, 26, 'g', '小镇');
+  for (let y = 0; y < m.h; y++) {
+    for (let x = 0; x < m.w; x++) {
+      if (hash2(x * 9 + 5, y * 7 + 13) > 0.95) m.base[y][x] = 'f';
+    }
+  }
+  // 南入口到广场
+  fillRect(m, 20, 13, 1, 13, 'p');
+  // 广场
+  fillEllipse(m, 20, 12, 9, 5.5, 'S', false);
+  fillEllipse(m, 20, 12, 6, 3.6, 'S', false);
+  // 商店
+  addBuilding(m, 'shop', 3, 2, 6, 4, { x: 6, y: 5, to: 'shop', tx: 15, ty: 10 });
+  // 民宅
+  addBuilding(m, 'cabin', 30, 2, 4, 3, { x: 32, y: 4, locked: '门锁着，主人不在家。' });
+  addBuilding(m, 'cabin', 32, 8, 4, 3, { x: 34, y: 10, locked: '门锁着，主人不在家。' });
+  addBuilding(m, 'cabin', 5, 18, 4, 3, { x: 7, y: 20, locked: '门锁着，主人不在家。' });
+  addBuilding(m, 'cabin', 26, 19, 4, 3, { x: 28, y: 21, locked: '门锁着，主人不在家。' });
+  // 道路
+  fillRect(m, 6, 6, 1, 4, 'p');
+  fillRect(m, 6, 9, 10, 1, 'p');
+  fillRect(m, 16, 9, 1, 4, 'p');
+  fillRect(m, 20, 12, 8, 1, 'p');
+  fillRect(m, 28, 6, 1, 7, 'p');
+  fillRect(m, 20, 17, 1, 5, 'p');
+  fillRect(m, 10, 12, 10, 1, 'p');
+  // 喷泉
+  const fountain = { type: 'fountain', x: 19, y: 10, solid: true };
+  m.objs.push(fountain);
+  for (let y = 9; y <= 11; y++) for (let x = 19; x <= 21; x++) if (x < m.w && y < m.h) { m.solid[y][x] = true; m.objAt[y][x] = fountain; }
+  // 树
+  const trees = [
+    [1, 1, 'oak'], [12, 1, 'pine'], [18, 1, 'oak'], [25, 1, 'maple'], [37, 1, 'pine'],
+    [0, 12, 'oak'], [0, 22, 'maple'], [10, 23, 'oak'], [16, 24, 'pine'], [24, 24, 'maple'],
+    [33, 24, 'pine'], [38, 15, 'oak'], [36, 6, 'maple'], [11, 8, 'pine'], [29, 16, 'oak']
+  ];
+  for (const [x, y, kind] of trees) {
+    if (m.solid[y][x]) continue;
+    addObj(m, 'tree', x, y, { kind, hp: 3 });
+    if (y > 0) m.solid[y - 1][x] = true;
+  }
+  // 路灯
+  [[16, 7], [24, 7], [16, 16], [24, 16], [11, 11], [29, 11]].forEach(([x, y]) => {
+    if (!m.solid[y][x]) addObj(m, 'lamp', x, y, { solid: true });
+  });
+  // 公告板、长椅与摊位
+  addObj(m, 'notice', 9, 15, { act: 'notice', solid: true });
+  addObj(m, 'stall', 20, 18, { solid: true, deco: true });
+  // 花坛
+  for (let i = 0; i < 6; i++) addObj(m, 'flower', 13 + i * 3, 14, { v: i % 3, solid: false });
+  // 出口：向南回农场
+  addExit(m, 19, 25, 3, 1, 'farm', 20, 28);
+  m.spawn = { x: 20, y: 23 };
+  return m;
+}
+
+/* ---------------- 农舍室内 ---------------- */
+function buildHouse() {
+  const m = createMap('house', 30, 17, 'W', '农舍');
+  fillRect(m, 0, 0, 30, 3, 'H', true);
+  fillRect(m, 0, 0, 1, 17, 'H', true);
+  fillRect(m, 29, 0, 1, 17, 'H', true);
+  fillRect(m, 0, 15, 30, 2, 'H', true);
+  fillRect(m, 14, 14, 3, 1, 'W', false);
+  for (let x = 14; x <= 16; x++) m.solid[14][x] = false;
+  addObj(m, 'window', 7, 2, { solid: false });
+  addObj(m, 'window', 21, 2, { solid: false });
+  // 地毯 + 桌椅
+  addObj(m, 'rugHouse', 9, 10, { solid: false });
+  addObj(m, 'counter', 12, 12, { solid: true });
+  m.solid[12][13] = true;
+  addObj(m, 'stool', 11, 12, { solid: true });
+  addObj(m, 'stool', 13, 12, { solid: true });
+  // 床
+  addObj(m, 'bed', 2, 8, { solid: true, act: 'sleep' });
+  for (let y = 8; y <= 9; y++) for (let x = 2; x <= 3; x++) m.solid[y][x] = true;
+  m.acts[8][3] = { kind: 'sleep' };
+  // 厨房
+  addObj(m, 'stove', 23, 5, { solid: true });
+  m.solid[5][24] = true;
+  addObj(m, 'counter', 26, 5, { solid: true });
+  m.solid[5][27] = true;
+  addObj(m, 'shelf', 27, 3, { solid: true });
+  m.solid[3][28] = true; m.solid[4][28] = true;
+  // 盆栽与木箱
+  addObj(m, 'plant', 8, 4, { solid: true });
+  addObj(m, 'plant', 18, 4, { solid: true });
+  addObj(m, 'crate', 25, 13, { solid: true });
+  // 门口
+  addObj(m, 'door', 15, 14, { solid: false });
+  addExit(m, 14, 15, 3, 1, 'farm', 4, 6);
+  for (let x = 14; x <= 16; x++) m.solid[15][x] = false;
+  m.spawn = { x: 15, y: 10 };
+  return m;
+}
+
+/* ---------------- 商店室内 ---------------- */
+function buildShop() {
+  const m = createMap('shop', 30, 17, 'W', '种子商店');
+  fillRect(m, 0, 0, 30, 3, 'H', true);
+  fillRect(m, 0, 0, 1, 17, 'H', true);
+  fillRect(m, 29, 0, 1, 17, 'H', true);
+  fillRect(m, 0, 15, 30, 2, 'H', true);
+  fillRect(m, 14, 14, 3, 1, 'W', false);
+  for (let x = 14; x <= 16; x++) m.solid[14][x] = false;
+  addObj(m, 'window', 8, 2, { solid: false });
+  addObj(m, 'window', 23, 2, { solid: false });
+  // 柜台
+  addObj(m, 'counter', 10, 8, { solid: true, act: 'shop' });
+  m.solid[8][11] = true;
+  m.acts[8][11] = { kind: 'shop' };
+  // 货架
+  addObj(m, 'shelf', 2, 3, { solid: true });
+  addObj(m, 'shelf', 6, 3, { solid: true });
+  m.solid[3][7] = true; m.solid[4][7] = true;
+  m.solid[3][3] = true; m.solid[4][3] = true;
+  addObj(m, 'shelf', 27, 3, { solid: true });
+  m.solid[3][28] = true; m.solid[4][28] = true;
+  // 木箱与盆栽
+  addObj(m, 'crate', 19, 4, { solid: true });
+  addObj(m, 'crate', 20, 4, { solid: true });
+  addObj(m, 'crate', 21, 5, { solid: true });
+  addObj(m, 'plant', 5, 4, { solid: true });
+  addObj(m, 'plant', 24, 12, { solid: true });
+  addObj(m, 'crate', 14, 4, { solid: true });
+  addObj(m, 'crate', 15, 4, { solid: true });
+  // 第二个陈列柜台
+  addObj(m, 'counter', 18, 9, { solid: true, act: 'shop' });
+  m.solid[9][19] = true;
+  m.acts[9][19] = { kind: 'shop' };
+  // 入口地毯与门
+  addObj(m, 'rugShop', 13, 12, { solid: false });
+  addObj(m, 'door', 15, 14, { solid: false });
+  addExit(m, 14, 15, 3, 1, 'town', 6, 6);
+  for (let x = 14; x <= 16; x++) m.solid[15][x] = false;
+  m.spawn = { x: 15, y: 10 };
+  return m;
+}
+
+function buildAllMaps() {
+  buildFarm();
+  buildTown();
+  buildHouse();
+  buildShop();
+}
+
+/* ---------------- 地图静态层 ---------------- */
+const GROUND_ART_KEY = { g: 'g', f: 'f', p: 'p', d: 'dirt', s: 'sand', w: 'water', W: 'wood', S: 'stone', c: 'carpet', H: 'wall' };
+
+function tileArt(map, x, y) {
+  const ch = map.base[y][x];
+  const season = (STATE && STATE.season) || 0;
+  const g = ART.ground[season];
+  const h = hash2(x * 13 + 7, y * 17 + 3);
+  switch (ch) {
+    case 'g': return g.g[Math.floor(h * 3) % 3];
+    case 'f': return g.f[Math.floor(h * 4) % 4];
+    case 'p': return g.p[Math.floor(h * 3) % 3];
+    case 'd': return g.dirt[Math.floor(h * 2) % 2];
+    case 's': return g.sand[Math.floor(h * 2) % 2];
+    case 'w': return g.water[Math.floor(h * 2) % 2];
+    case 'W': return ART.floor.wood[Math.floor(h * 2) % 2];
+    case 'S': return ART.floor.stone[Math.floor(h * 2) % 2];
+    case 'c': return ART.floor.carpet;
+    case 'H': return ART.floor.wall[Math.floor(h * 2) % 2];
+    default: return g.g[0];
+  }
+}
+
+function objectArt(o) {
+  if (o.dead) return null;
+  const season = (STATE && STATE.season) || 0;
+  if (o.type === 'tree') {
+    if (o.dead) return null;
+    const arr = ART.trees[o.kind] || ART.trees.oak;
+    return { img: arr[season], ax: 16, ay: 48 };
+  }
+  if (o.type === 'rock') return { img: ART.objects.rock, ax: 10, ay: 14 };
+  if (o.type === 'weed') return { img: ART.objects.weed, ax: 8, ay: 16 };
+  if (o.type === 'flower') return { img: ART.objects.flower[o.v || 0], ax: 8, ay: 16 };
+  if (o.type === 'bin') return { img: ART.objects.bin, ax: 8, ay: 20 };
+  if (o.type === 'fountain') return { img: ART.objects.fountain, ax: 20, ay: 32 };
+  if (o.type === 'lamp') return { img: ART.objects.lamp, ax: 8, ay: 32 };
+  if (o.type === 'mailbox') return { img: ART.objects.mailbox, ax: 8, ay: 26 };
+  if (o.type === 'notice') return { img: ART.objects.notice, ax: 16, ay: 30 };
+  if (o.type === 'forage') return { img: ART.icons[o.item], ax: 8, ay: 16 };
+  if (o.type === 'stump') return { img: ART.objects.stump, ax: 8, ay: 12 };
+  if (o.type === 'stall') return { img: ART.objects.stall, ax: 20, ay: 40 };
+  if (o.type === 'pot') return { img: ART.objects.pot, ax: 12, ay: 20 };
+  if (o.type === 'egg') return { img: ART.objects.eggs[o.colorIdx || 0], ax: 5, ay: 12 };
+  if (o.type === 'gift') return { img: ART.objects.gift, ax: 8, ay: 16 };
+  if (o.type === 'bed') return { img: ART.buildings.bed, ax: 0, ay: 26 };
+  if (o.type === 'door') return { img: ART.objects.door, ax: 0, ay: 26 };
+  if (o.type === 'window') return { img: ART.objects.window, ax: 0, ay: 16 };
+  if (o.type === 'stool') return { img: ART.objects.stool, ax: 0, ay: 12 };
+  if (o.type === 'crate') return { img: ART.objects.crate, ax: 0, ay: 16 };
+  if (o.type === 'plant') return { img: ART.objects.plant, ax: 0, ay: 24 };
+  if (o.type === 'stove') return { img: ART.objects.stove, ax: 0, ay: 24 };
+  if (o.type === 'rugHouse') return { img: ART.objects.rugHouse, ax: 0, ay: 64 };
+  if (o.type === 'rugShop') return { img: ART.objects.rugShop, ax: 0, ay: 32 };
+  if (o.type === 'counter') return { img: ART.buildings.counter, ax: 0, ay: 20 };
+  if (o.type === 'shelf') return { img: ART.buildings.shelf, ax: 0, ay: 34 };
+  if (o.type === 'balloon') return { img: ART.objects.balloon[o.v || 0], ax: 6, ay: 24 };
+  if (o.type === 'bush') return { img: ART.objects.bush[season], ax: 12, ay: 18 };
+  return null;
+}
+
+function buildingArt(b) {
+  if (b.type === 'house') return { img: ART.buildings.house, ax: 0, ay: 76 };
+  if (b.type === 'shop') return { img: ART.buildings.shop, ax: 0, ay: 80 };
+  if (b.type === 'cabin') return { img: ART.buildings.cabin, ax: 0, ay: 60 };
+  return null;
+}
+
+function buildStatic(map) {
+  const c = makeCanvas(map.w * TS, map.h * TS);
+  const g = c.g;
+  // 地面（水面之外）
+  for (let y = 0; y < map.h; y++) {
+    for (let x = 0; x < map.w; x++) {
+      if (map.base[y][x] === 'w') continue;
+      g.drawImage(tileArt(map, x, y), x * TS, y * TS);
+    }
+  }
+  // 收集绘制项，按底边排序
+  const items = [];
+  for (const b of map.buildings) {
+    const a = buildingArt(b);
+    if (!a) continue;
+    items.push({ img: a.img, x: b.x * TS, y: (b.y + b.h) * TS - a.ay, sort: (b.y + b.h) * TS });
+  }
+  for (const o of map.objs) {
+    const a = objectArt(o);
+    if (!a) continue;
+    items.push({ img: a.img, x: o.x * TS + TS / 2 - a.ax, y: (o.y + 1) * TS - a.ay, sort: (o.y + 1) * TS + (a.ay > 16 ? 4 : 0) });
+  }
+  items.sort((p, q) => p.sort - q.sort);
+  for (const it of items) g.drawImage(it.img, Math.round(it.x), Math.round(it.y));
+  map.staticCanvas = c.c;
+  map.staticDirty = false;
+}
+
+function rebuildStatic(map) { map.staticDirty = true; buildStatic(map); }
+function rebuildAllStatic() { for (const m of Object.values(MAPS)) buildStatic(m); }
+
+/* ---------------- 采集物 ---------------- */
+function spawnForage() {
+  const ids = FORAGE_BY_SEASON[STATE.season] || [];
+  if (!ids.length) return;
+  for (const mapId of ['farm', 'town']) {
+    const m = MAPS[mapId];
+    let count = m.objs.filter(o => o.type === 'forage' && !o.dead).length;
+    let placed = 0;
+    for (let tries = 0; tries < 80 && placed < 2 && count < 5; tries++) {
+      const x = ri(1, m.w - 2), y = ri(1, m.h - 2);
+      if (m.solid[y][x] || m.objAt[y][x]) continue;
+      const base = m.base[y][x];
+      if (base === 'p' || base === 'w' || base === 'S' || base === 'H') continue;
+      if (STATE.soil[x + ',' + y]) continue;
+      addObj(m, 'forage', x, y, { item: pick(ids), solid: false });
+      count++; placed++;
+    }
+    if (placed) rebuildStatic(m);
+  }
+}
+
+function pickupForage(o) {
+  if (invAdd(o.item, 1) > 0) { toast('背包满了，先腾个格子吧。'); return; }
+  const m = currentMap();
+  o.dead = true;
+  if (m.objAt[o.y]) m.objAt[o.y][o.x] = null;
+  m.objs = m.objs.filter(x => x !== o);
+  rebuildStatic(m);
+  UI.updateHUD();
+  Audio.sfx('pick');
+  addParticles(o.x * TS + 8, o.y * TS + 10, '#e8d5a8', 6, 6);
+  floatText(o.x * TS + 8, o.y * TS - 2, '+' + ITEMS[o.item].name, '#ffe9b0');
+}
+
+
+/* ===== 06_state.js ===== */
+'use strict';
+
+/* ============================================================
+   游戏状态、背包、存档
+   ============================================================ */
+let STATE = null;
+
+const INV_SIZE = 20;
+const HOT_SIZE = 9;
+const SAVE_KEY = 'little-farm-save-v1';
+
+function emptyInv() { return new Array(INV_SIZE).fill(null); }
+
+function newState() {
+  const inv = emptyInv();
+  inv[0] = { id: 'hoe', count: 1 };
+  inv[1] = { id: 'can', count: 1 };
+  inv[2] = { id: 'axe', count: 1 };
+  inv[3] = { id: 'pick', count: 1 };
+  inv[4] = { id: 'scythe', count: 1 };
+  inv[5] = { id: 'rod', count: 1 };
+  inv[6] = { id: 'parsnip_seed', count: 15 };
+  inv[7] = { id: 'bread', count: 2 };
+  return {
+    version: 1,
+    map: 'farm',
+    player: { x: 4 * TS + 8, y: 7 * TS + 14, dir: 'down', frame: 0, animT: 0, moving: false, busy: 0, actT: 0 },
+    camera: { x: 0, y: 0 },
+    money: 500,
+    energy: 100, maxEnergy: 100,
+    inv, hot: 0,
+    year: 1, season: 0, day: 1, hour: 6, minute: 0,
+    weather: 'sun',
+    soil: {},
+    removed: {},
+    npc: {},
+    shipped: [],
+    flags: { festivalDone: [], eggBest: 0 },
+    stats: { harvest: 0, earned: 0, planted: 0, gifts: 0, talks: 0 },
+    totalDays: 0,
+    screen: 'play',
+    paused: false,
+    fade: 0,
+    toastT: 0,
+    particles: [],
+    npcPos: {},
+    festival: null,
+    lastSave: 0
+  };
+}
+
+/* ---------------- 背包 ---------------- */
+function invAdd(id, count = 1) {
+  const itemDef = ITEMS[id];
+  if (!itemDef) return count;
+  const stack = itemDef.stack || 99;
+  let left = count;
+  // 先叠加
+  for (let i = 0; i < INV_SIZE && left > 0; i++) {
+    const s = STATE.inv[i];
+    if (s && s.id === id && s.count < stack) {
+      const can = Math.min(stack - s.count, left);
+      s.count += can; left -= can;
+    }
+  }
+  // 再放空格
+  for (let i = 0; i < INV_SIZE && left > 0; i++) {
+    if (!STATE.inv[i]) {
+      const can = Math.min(stack, left);
+      STATE.inv[i] = { id, count: can };
+      left -= can;
+    }
+  }
+  return left;
+}
+
+function invCount(id) {
+  let n = 0;
+  for (const s of STATE.inv) if (s && s.id === id) n += s.count;
+  return n;
+}
+
+function invRemove(id, count = 1) {
+  let left = count;
+  for (let i = 0; i < INV_SIZE && left > 0; i++) {
+    const s = STATE.inv[i];
+    if (s && s.id === id) {
+      const take = Math.min(s.count, left);
+      s.count -= take; left -= take;
+      if (s.count <= 0) STATE.inv[i] = null;
+    }
+  }
+  return left === 0;
+}
+
+function invRemoveSlot(i, count = 1) {
+  const s = STATE.inv[i];
+  if (!s) return false;
+  s.count -= count;
+  if (s.count <= 0) STATE.inv[i] = null;
+  return true;
+}
+
+function selectedItem() { return STATE.inv[STATE.hot]; }
+
+function addParticles(x, y, color, n = 6, spread = 8) {
+  for (let i = 0; i < n; i++) {
+    STATE.particles.push({
+      x, y, vx: rnd(-spread, spread) / 20, vy: rnd(-38, -12) / 10,
+      life: rnd(14, 28), maxLife: 28, color, size: Math.random() > 0.5 ? 2 : 1
+    });
+  }
+}
+
+/* ---------------- 存档 ---------------- */
+function saveGame() {
+  try {
+    const snap = {
+      v: 1, map: STATE.map, player: { x: STATE.player.x, y: STATE.player.y, dir: STATE.player.dir },
+      money: STATE.money, energy: STATE.energy, inv: STATE.inv, hot: STATE.hot,
+      year: STATE.year, season: STATE.season, day: STATE.day, hour: STATE.hour, minute: STATE.minute,
+      weather: STATE.weather, soil: STATE.soil, removed: STATE.removed, npc: STATE.npc,
+      shipped: STATE.shipped, flags: STATE.flags, stats: STATE.stats, totalDays: STATE.totalDays
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(snap));
+    STATE.lastSave = Date.now();
+    return true;
+  } catch (e) {
+    console.warn('存档失败', e);
+    return false;
+  }
+}
+
+function hasSave() {
+  try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; }
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    STATE = newState();
+    STATE.map = s.map || 'farm';
+    STATE.player.x = s.player.x;
+    STATE.player.y = s.player.y;
+    STATE.player.dir = s.player.dir || 'down';
+    STATE.money = s.money;
+    STATE.energy = s.energy;
+    STATE.inv = s.inv && s.inv.length ? s.inv : emptyInv();
+    while (STATE.inv.length < INV_SIZE) STATE.inv.push(null);
+    STATE.hot = clamp(s.hot || 0, 0, HOT_SIZE - 1);
+    STATE.year = s.year; STATE.season = s.season; STATE.day = s.day;
+    STATE.hour = s.hour; STATE.minute = s.minute;
+    STATE.weather = s.weather || 'sun';
+    STATE.soil = s.soil || {};
+    STATE.removed = s.removed || {};
+    STATE.npc = s.npc || {};
+    STATE.shipped = s.shipped || [];
+    STATE.flags = Object.assign(newState().flags, s.flags || {});
+    STATE.stats = Object.assign(newState().stats, s.stats || {});
+    STATE.totalDays = s.totalDays || 0;
+    applyRemoved();
+    placeNPCs(true);
+    return true;
+  } catch (e) {
+    console.warn('读档失败', e);
+    return false;
+  }
+}
+
+function applyRemoved() {
+  for (const [mapId, list] of Object.entries(STATE.removed || {})) {
+    const m = MAPS[mapId];
+    if (!m) continue;
+    for (const key of list) {
+      const [x, y] = key.split(',').map(Number);
+      const o = m.objAt[y] && m.objAt[y][x];
+      if (o) { o.dead = true; m.solid[y][x] = false; if (y > 0) m.solid[y - 1][x] = false; }
+    }
+  }
+}
+
+function markRemoved(mapId, x, y) {
+  if (!STATE.removed[mapId]) STATE.removed[mapId] = [];
+  const key = x + ',' + y;
+  if (!STATE.removed[mapId].includes(key)) STATE.removed[mapId].push(key);
+}
+
+
+/* ===== 07_player.js ===== */
+'use strict';
+
+/* ============================================================
+   输入、移动、工具动作、农事
+   ============================================================ */
+const Input = { down: {}, pressed: new Set() };
+
+function bindInput() {
+  window.addEventListener('keydown', (e) => {
+    const code = e.code;
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(code)) e.preventDefault();
+    if (e.repeat) return;
+    Input.down[code] = true;
+    Input.pressed.add(code);
+    if (STATE.screen === 'title') {
+      if (UI.modalOpen) {
+        if (code === 'Escape' || code === 'Enter' || code === 'NumpadEnter') UI.closeModal();
+        return;
+      }
+      if (code === 'Enter' || code === 'NumpadEnter') {
+        e.preventDefault();
+        Audio.resume();
+        if (hasSave()) continueGame(); else startNewGame();
+        return;
+      }
+      if (code === 'KeyH') { UI.openHelp(); return; }
+      if (code === 'Escape' && UI.modalOpen) { UI.closeModal(); return; }
+    }
+    if (UI.handleKey(code)) return;
+    handleGameKey(code);
+  });
+  window.addEventListener('keyup', (e) => { Input.down[e.code] = false; });
+  window.addEventListener('blur', () => { Input.down = {}; });
+}
+
+function handleGameKey(code) {
+  if (STATE.screen !== 'play') return;
+  if (STATE.paused || UI.modalOpen) return;
+  if (code.startsWith('Digit')) {
+    const n = Number(code.slice(5));
+    if (n >= 1 && n <= 9) { STATE.hot = n - 1; UI.updateHUD(); Audio.sfx('tick'); }
+    return;
+  }
+  if (code === 'KeyJ' || code === 'Space') doAction();
+  else if (code === 'KeyE') interact();
+  else if (code === 'KeyF') eatSelected();
+  else if (code === 'Tab') { UI.openInventory(); }
+  else if (code === 'KeyR') UI.openRelations();
+  else if (code === 'Escape') UI.openPause();
+  else if (code === 'KeyM') Audio.toggleMute();
+  else if (code === 'KeyH') UI.openHelp();
+}
+
+/* ---------------- 地块辅助 ---------------- */
+function playerTile() {
+  const p = STATE.player;
+  return { x: Math.floor(p.x / TS), y: Math.floor((p.y - 2) / TS) };
+}
+
+function facingTile() {
+  const t = playerTile();
+  const d = STATE.player.dir;
+  return {
+    x: t.x + (d === 'left' ? -1 : d === 'right' ? 1 : 0),
+    y: t.y + (d === 'up' ? -1 : d === 'down' ? 1 : 0)
+  };
+}
+
+function currentMap() { return MAPS[STATE.map]; }
+
+function tileBlocked(px, py) {
+  const m = currentMap();
+  const tx = Math.floor(px / TS), ty = Math.floor(py / TS);
+  if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) return true;
+  return m.solid[ty][tx];
+}
+
+function canWalk(x, y) {
+  const m = currentMap();
+  const x0 = Math.floor((x - 5) / TS), x1 = Math.floor((x + 4) / TS);
+  const y0 = Math.floor((y - 7) / TS), y1 = Math.floor((y - 1) / TS);
+  for (let ty = y0; ty <= y1; ty++) {
+    for (let tx = x0; tx <= x1; tx++) {
+      if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) return false;
+      if (m.solid[ty][tx]) return false;
+    }
+  }
+  return true;
+}
+
+/* ---------------- 移动 ---------------- */
+function updatePlayer(dt) {
+  const p = STATE.player;
+  if (STATE.screen !== 'play' || UI.modalOpen || STATE.paused) { p.moving = false; return; }
+  if (p.busy > 0) {
+    p.busy -= dt;
+    p.actT += dt;
+    p.moving = false;
+    if (p.busy <= 0) { p.busy = 0; p.actT = 0; }
+  }
+  let vx = 0, vy = 0;
+  if (Input.down.KeyW || Input.down.ArrowUp) vy -= 1;
+  if (Input.down.KeyS || Input.down.ArrowDown) vy += 1;
+  if (Input.down.KeyA || Input.down.ArrowLeft) vx -= 1;
+  if (Input.down.KeyD || Input.down.ArrowRight) vx += 1;
+  if (p.busy > 0) { vx = 0; vy = 0; }
+  if (vx || vy) {
+    p.moving = true;
+    if (Math.abs(vx) > Math.abs(vy)) p.dir = vx < 0 ? 'left' : 'right';
+    else if (vy !== 0) p.dir = vy < 0 ? 'up' : 'down';
+    if (vx && vy) { const k = Math.sqrt(2) / 2; vx *= k; vy *= k; }
+    const sprint = Input.down.ShiftLeft || Input.down.ShiftRight;
+    const spd = (sprint ? 104 : 66) * dt;
+    const nx = p.x + vx * spd;
+    if (canWalk(nx, p.y)) p.x = nx;
+    const ny = p.y + vy * spd;
+    if (canWalk(p.x, ny)) p.y = ny;
+    p.animT += dt;
+    if (p.animT > (sprint ? 0.12 : 0.16)) { p.animT = 0; p.frame = (p.frame + 1) % 4; }
+  } else {
+    p.moving = false;
+    p.frame = 0;
+    p.animT = 0;
+  }
+  // 相机
+  const m = currentMap();
+  const camTargetX = clamp(p.x - W / 2, 0, Math.max(0, m.w * TS - W));
+  const camTargetY = clamp(p.y - H / 2 - 8, 0, Math.max(0, m.h * TS - H));
+  STATE.camera.x = lerp(STATE.camera.x, camTargetX, Math.min(1, dt * 8));
+  STATE.camera.y = lerp(STATE.camera.y, camTargetY, Math.min(1, dt * 8));
+  if (m.w * TS < W) STATE.camera.x = (m.w * TS - W) / 2;
+  if (m.h * TS < H) STATE.camera.y = (m.h * TS - H) / 2;
+  // 出口
+  const t = playerTile();
+  for (const ex of m.exits) {
+    if (t.x >= ex.x && t.x < ex.x + ex.w && t.y >= ex.y && t.y < ex.y + ex.h) {
+      travelTo(ex.to, ex.tx, ex.ty);
+      break;
+    }
+  }
+}
+
+/* ---------------- 场景切换 ---------------- */
+function travelTo(mapId, tx, ty) {
+  if (STATE.transition) return;
+  STATE.transition = { phase: 'out', t: 0, mapId, tx, ty };
+  Audio.sfx('door');
+}
+
+function applyTravel() {
+  const tr = STATE.transition;
+  STATE.map = tr.mapId;
+  STATE.player.x = tr.tx * TS + 8;
+  STATE.player.y = tr.ty * TS + 14;
+  STATE.player.frame = 0;
+  STATE.player.busy = 0;
+  const m = currentMap();
+  if (m.staticDirty) buildStatic(m);
+  STATE.camera.x = clamp(STATE.player.x - W / 2, 0, Math.max(0, m.w * TS - W));
+  STATE.camera.y = clamp(STATE.player.y - H / 2 - 8, 0, Math.max(0, m.h * TS - H));
+  placeNPCs(true);
+  UI.setArea(m.name);
+  // 节日
+  const f = festivalFor(STATE.season, STATE.day);
+  if (f && (STATE.map === 'town') && !STATE.flags.festivalDone.includes(f.id + '-Y' + STATE.year)) {
+    startFestival(f);
+  }
+}
+
+/* ---------------- 当前动作 ---------------- */
+function doAction() {
+  const p = STATE.player;
+  if (p.busy > 0 || STATE.paused || UI.modalOpen) return;
+  const m = currentMap();
+  const f = facingTile();
+  if (f.x < 0 || f.y < 0 || f.x >= m.w || f.y >= m.h) return;
+  const sel = selectedItem();
+  const soil = STATE.soil[f.x + ',' + f.y];
+  const obj = m.objAt[f.y] && m.objAt[f.y][f.x];
+  const baseCh = m.base[f.y][f.x];
+
+  // 收获优先
+  if (soil && soil.crop && soil.crop.ready && !soil.crop.dead) {
+    harvestCrop(f.x, f.y);
+    return;
+  }
+  // 播种
+  if (sel && ITEMS[sel.id] && ITEMS[sel.id].type === 'seed' && soil && soil.till && !soil.crop) {
+    plantSeed(f, sel.id);
+    return;
+  }
+  // 物件操作
+  if (obj && !obj.dead) {
+    if (obj.type === 'tree' && sel && sel.id === 'axe') return chopTree(obj, f, 4);
+    if (obj.type === 'rock' && sel && sel.id === 'pick') return mineRock(obj, f, 4);
+    if (obj.type === 'weed' && sel && sel.id === 'scythe') return cutWeed(obj, f, 1);
+    if (obj.type === 'tree') return toast('要用斧头才能砍树。');
+    if (obj.type === 'rock') return toast('要用镐才能敲碎石头。');
+    if (obj.type === 'weed') return toast('用镰刀割掉杂草。');
+    if (obj.solid) return toast('这里被挡住了。');
+  }
+  // 地块操作
+  if (sel && (sel.id === 'hoe' || sel.id === 'can')) {
+    if (sel.id === 'hoe') return useHoe(f, baseCh);
+    if (sel.id === 'can') return useCan(f, soil);
+  }
+  if (sel && sel.id === 'scythe') {
+    if (soil && soil.crop && !soil.crop.ready) return toast('作物还没成熟。');
+    addParticles(f.x * TS + 8, f.y * TS + 12, '#8fb36a', 4, 6);
+    return swing(1, f, f.x * TS + 8, f.y * TS + 12);
+  }
+  if (!sel) return toast('先选一个工具或种子（按 1~9）。');
+}
+
+function spendEnergy(n) {
+  if (STATE.energy < n) {
+    toast('体力不足，回屋睡一觉吧。');
+    if (STATE.energy <= 0) forceSleep();
+    return false;
+  }
+  STATE.energy -= n;
+  UI.updateHUD();
+  return true;
+}
+
+function swing(cost, f, worldX, worldY) {
+  const p = STATE.player;
+  p.busy = 0.32;
+  p.actT = 0;
+  if (!spendEnergy(cost)) return false;
+  addMinutes(2);
+  return true;
+}
+
+/* ---------------- 田地 ---------------- */
+function useHoe(f, baseCh) {
+  const soil = STATE.soil[f.x + ',' + f.y];
+  if (STATE.map !== 'farm') return toast('这里不能开垦。');
+  if (baseCh === 'w') return toast('水面没法开垦。');
+  if (baseCh === 'p') return toast('小路上不能开垦。');
+  if (soil && soil.till) return toast('这块地已经开垦过了。');
+  if (!spendEnergy(2)) return;
+  STATE.soil[f.x + ',' + f.y] = { till: true, wet: false, crop: null };
+  STATE.player.busy = 0.32; STATE.player.actT = 0;
+  addMinutes(2);
+  Audio.sfx('hoe');
+  addParticles(f.x * TS + 8, f.y * TS + 12, '#8a5c3d', 7, 7);
+}
+
+function useCan(f, soil) {
+  if (!soil || !soil.till) return toast('先用锄头开垦，再浇水。');
+  if (soil.wet) return toast('这里已经浇过水了。');
+  if (!spendEnergy(2)) return;
+  soil.wet = true;
+  if (soil.crop) soil.crop.watered = true;
+  STATE.player.busy = 0.32; STATE.player.actT = 0;
+  addMinutes(2);
+  Audio.sfx('water');
+  addParticles(f.x * TS + 8, f.y * TS + 10, '#8cc6d9', 8, 8);
+}
+
+function plantSeed(f, seedId) {
+  const def = ITEMS[seedId];
+  const crop = CROPS[def.crop];
+  if (crop.season !== STATE.season) return toast('这个季节种不了' + crop.name + '。');
+  if (!spendEnergy(1)) return;
+  invRemove(seedId, 1);
+  const key = f.x + ',' + f.y;
+  const soil = STATE.soil[key];
+  soil.crop = { id: def.crop, g: 0, days: 0, watered: soil.wet, ready: false, dead: false };
+  soil.till = true;
+  STATE.stats.planted++;
+  STATE.player.busy = 0.25; STATE.player.actT = 0;
+  Audio.sfx('plant');
+  addParticles(f.x * TS + 8, f.y * TS + 14, '#c9a05e', 5, 5);
+  toast('种下了' + crop.name + '。');
+  if (invCount(seedId) === 0) {
+    // 自动切回锄头
+    const idx = STATE.inv.findIndex(s => s && s.id === 'hoe');
+    if (idx >= 0) STATE.hot = idx;
+    UI.updateHUD();
+  }
+}
+
+function harvestCrop(x, y) {
+  const key = x + ',' + y;
+  const soil = STATE.soil[key];
+  const crop = soil.crop;
+  const def = CROPS[crop.id];
+  if (!spendEnergy(1)) return;
+  let n = def.yield || 1;
+  if (Math.random() < 0.18) n += 1;
+  const left = invAdd(crop.id, n);
+  if (left > 0) toast('背包满了，' + (n - left) + ' 个放不下。');
+  STATE.stats.harvest += n;
+  STATE.player.busy = 0.3; STATE.player.actT = 0;
+  Audio.sfx('harvest');
+  addParticles(x * TS + 8, y * TS + 6, def.style === 'berry' ? CROP_STYLE[crop.id].fruit : '#f2e05a', 8, 9);
+  floatText(x * TS + 8, y * TS - 4, '+' + n + ' ' + def.name, '#f6f0e4');
+  if (def.regrow > 0) {
+    crop.g = Math.max(0, def.growth.reduce((a, b) => a + b, 0) - def.regrow);
+    crop.ready = false;
+  } else {
+    soil.crop = null;
+  }
+  UI.updateHUD();
+}
+
+/* ---------------- 资源 ---------------- */
+function chopTree(obj, f, cost) {
+  if (!spendEnergy(cost)) return;
+  STATE.player.busy = 0.34; STATE.player.actT = 0;
+  addMinutes(3);
+  obj.hp--;
+  Audio.sfx('chop');
+  addParticles(f.x * TS + 8, f.y * TS + 8, '#a9764c', 8, 8);
+  if (obj.hp <= 0) {
+    obj.dead = true;
+    obj.type = 'stump';
+    obj.solid = false;
+    currentMap().solid[f.y][f.x] = false;
+    if (f.y > 0) currentMap().solid[f.y - 1][f.x] = false;
+    markRemoved(STATE.map, f.x, f.y);
+    const wood = 3 + ri(0, 2);
+    invAdd('wood', wood);
+    if (Math.random() < 0.6) invAdd('sap', 1);
+    floatText(f.x * TS + 8, f.y * TS - 8, '+' + wood + ' 木材', '#e8d5a8');
+    rebuildStatic(currentMap());
+    Audio.sfx('fall');
+  }
+}
+
+function mineRock(obj, f, cost) {
+  if (!spendEnergy(cost)) return;
+  STATE.player.busy = 0.32; STATE.player.actT = 0;
+  addMinutes(3);
+  obj.hp--;
+  Audio.sfx('pick');
+  addParticles(f.x * TS + 8, f.y * TS + 6, '#9ba1a7', 7, 7);
+  if (obj.hp <= 0) {
+    obj.dead = true;
+    currentMap().solid[f.y][f.x] = false;
+    markRemoved(STATE.map, f.x, f.y);
+    const st = 2 + ri(0, 2);
+    invAdd('stone', st);
+    floatText(f.x * TS + 8, f.y * TS - 6, '+' + st + ' 石料', '#e8e8e8');
+    rebuildStatic(currentMap());
+    Audio.sfx('fall');
+  }
+}
+
+function cutWeed(obj, f, cost) {
+  if (!spendEnergy(cost)) return;
+  obj.dead = true;
+  currentMap().solid[f.y][f.x] = false;
+  markRemoved(STATE.map, f.x, f.y);
+  const n = 1 + (Math.random() < 0.3 ? 1 : 0);
+  invAdd('fiber', n);
+  STATE.player.busy = 0.26; STATE.player.actT = 0;
+  addMinutes(1);
+  Audio.sfx('cut');
+  addParticles(f.x * TS + 8, f.y * TS + 12, '#6b9a4a', 7, 7);
+  floatText(f.x * TS + 8, f.y * TS - 4, '+' + n + ' 纤维', '#cfe8c0');
+  rebuildStatic(currentMap());
+}
+
+/* ---------------- 交互 ---------------- */
+function interact() {
+  if (STATE.paused || UI.modalOpen || STATE.player.busy > 0) return;
+  const m = currentMap();
+  const f = facingTile();
+  // 节日互动优先
+  if (STATE.festival && festivalInteract(f.x, f.y)) return;
+  // NPC
+  const npc = npcAtTile(f.x, f.y);
+  if (npc) { startDialogue(npc.id); return; }
+  if (f.x < 0 || f.y < 0 || f.x >= m.w || f.y >= m.h) return;
+  const objHere = m.objAt[f.y] && m.objAt[f.y][f.x];
+  if (objHere && objHere.type === 'forage' && !objHere.dead) { pickupForage(objHere); return; }
+  const act = m.acts[f.y][f.x];
+  if (act) {
+    if (act.kind === 'ship') { UI.openShipping(); return; }
+    if (act.kind === 'door') {
+      const d = act.door;
+      if (d.locked) { toast(d.locked); return; }
+      travelTo(d.to, d.tx, d.ty);
+      return;
+    }
+    if (act.kind === 'sleep') { openSleepConfirm(); return; }
+    if (act.kind === 'shop') { UI.openShop(); return; }
+    if (act.kind === 'mail') { UI.openMailbox(); return; }
+    if (act.kind === 'notice') { UI.openNotice(); return; }
+  }
+  // 附近家具/出货箱
+  for (const o of m.objs) {
+    if (o.dead) continue;
+    const near = Math.abs(o.x - f.x) <= 1 && Math.abs(o.y - f.y) <= 1;
+    if (o.act === 'ship' && near) { UI.openShipping(); return; }
+    if (o.type === 'bed' && Math.abs(o.x - f.x) <= 2 && Math.abs(o.y - f.y) <= 2) { openSleepConfirm(); return; }
+    if (o.type === 'counter' && STATE.map === 'shop' && Math.abs(o.x - f.x) <= 2 && Math.abs(o.y - f.y) <= 2) { UI.openShop(); return; }
+  }
+  // 篝火/节日物件
+  if (STATE.festival && festivalInteract(f.x, f.y)) return;
+  // 环境提示
+  if (m.base[f.y][f.x] === 'w') return toast('水面一闪一闪的，好像有小鱼。');
+  if (m.objs.some(o => !o.dead && o.type === 'fountain' && Math.abs(o.x + 1 - f.x) <= 2 && Math.abs(o.y - f.y) <= 2)) return toast('喷泉的水真凉。');
+  toast('这里没什么可以互动的。');
+}
+
+function eatSelected() {
+  const sel = selectedItem();
+  if (!sel) return toast('没有选中的东西。');
+  const def = ITEMS[sel.id];
+  if (!def || !def.energy) return toast(def ? def.name + '不能吃。' : '这个不能吃。');
+  if (STATE.energy >= STATE.maxEnergy) return toast('你现在一点也不饿。');
+  invRemoveSlot(STATE.hot, 1);
+  STATE.energy = Math.min(STATE.maxEnergy, STATE.energy + def.energy);
+  UI.updateHUD();
+  Audio.sfx('eat');
+  floatText(STATE.player.x, STATE.player.y - 26, '+' + def.energy + ' 体力', '#a8e0a0');
+  if (STATE.inv[STATE.hot] === null) UI.updateHUD();
+}
+
+/* ---------------- 飘字 ---------------- */
+function floatText(x, y, text, color) {
+  STATE.particles.push({ x, y, text, color, life: 60, maxLife: 60, vy: -0.5, float: true });
+}
+
+
+/* ===== 08_time.js ===== */
+'use strict';
+
+/* ============================================================
+   时间、天气、生长、睡觉结算
+   ============================================================ */
+const TIME_RATE = 0.55; // 现实秒 / 游戏分钟
+
+function updateClock(dt) {
+  if (STATE.screen !== 'play' || STATE.paused || UI.modalOpen) return;
+  if (STATE.transition) { updateTransition(dt); return; }
+  if (STATE.festival) return;
+  STATE.timeAccum = (STATE.timeAccum || 0) + dt;
+  while (STATE.timeAccum >= TIME_RATE) {
+    STATE.timeAccum -= TIME_RATE;
+    addMinutes(1);
+    if (STATE.transition) break;
+  }
+  UI.updateClock();
+}
+
+function addMinutes(n) {
+  for (let i = 0; i < n; i++) {
+    STATE.minute++;
+    if (STATE.minute >= 60) {
+      STATE.minute = 0;
+      STATE.hour++;
+      if (STATE.hour >= 24) STATE.hour = 0;
+      onHourChange();
+    }
+    if (STATE.hour >= 2 && STATE.hour < 6) {
+      forceSleep('已经凌晨两点了，你累得睁不开眼……');
+      return;
+    }
+  }
+}
+
+function onHourChange() {
+  updateNPCs(false);
+}
+
+function forceSleep(msg) {
+  if (STATE.transition) return;
+  toast(msg);
+  sleepNow(true);
+}
+
+function openSleepConfirm() {
+  UI.openConfirm('睡觉', '现在睡下，结束今天吗？出货箱里的东西会在明早结算。', () => {
+    UI.closeModal();
+    sleepNow(false);
+  });
+}
+
+function sleepNow(forced) {
+  if (STATE.transition) return;
+  STATE.transition = { phase: 'out', t: 0, sleep: true, forced: !!forced };
+  Audio.sfx('sleep');
+  UI.closeModal();
+}
+
+function updateTransition(dt) {
+  const tr = STATE.transition;
+  if (!tr) return;
+  tr.t += dt;
+  if (tr.phase === 'out') {
+    STATE.fade = Math.min(1, tr.t / 0.28);
+    if (tr.t >= 0.28) {
+      if (tr.sleep) {
+        advanceDay(tr.forced);
+      } else {
+        applyTravel();
+      }
+      tr.phase = 'in';
+      tr.t = 0;
+    }
+  } else {
+    STATE.fade = 1 - Math.min(1, tr.t / 0.28);
+    if (tr.t >= 0.28) {
+      STATE.fade = 0;
+      STATE.transition = null;
+      UI.updateHUD();
+    }
+  }
+}
+
+/* ---------------- 天气 ---------------- */
+function rollWeather() {
+  if (STATE.season === 3) {
+    const r = Math.random();
+    return r < 0.55 ? 'snow' : r < 0.8 ? 'cloud' : 'sun';
+  }
+  const r = Math.random();
+  if (r < 0.22) return 'rain';
+  if (r < 0.4) return 'cloud';
+  return 'sun';
+}
+
+function weatherName(w) { return (WEATHER[w] || WEATHER.sun).name; }
+function weatherIcon(w) { return (WEATHER[w] || WEATHER.sun).icon; }
+
+/* ---------------- 睡觉 → 新的一天 ---------------- */
+function advanceDay(forced) {
+  // 1) 作物生长（按昨晚是否浇水）
+  for (const key of Object.keys(STATE.soil)) {
+    const soil = STATE.soil[key];
+    if (!soil || !soil.till) continue;
+    const crop = soil.crop;
+    if (crop && !crop.dead) {
+      const def = CROPS[crop.id];
+      if (crop.ready) {
+        // 已成熟保持
+      } else if (crop.watered) {
+        crop.g = (crop.g || 0) + 1;
+        crop.days = (crop.days || 0) + 1;
+        if (crop.g >= def.growth.reduce((a, b) => a + b, 0)) crop.ready = true;
+      }
+    }
+    soil.wet = false;
+    if (crop) crop.watered = false;
+  }
+
+  // 2) 出货结算
+  let income = 0;
+  for (const it of STATE.shipped) {
+    const def = ITEMS[it.id];
+    if (def) income += (def.sell || 0) * it.count;
+  }
+  if (income > 0) {
+    STATE.money += income;
+    STATE.stats.earned += income;
+  }
+  STATE.shipped = [];
+
+  // 3) 日历
+  STATE.totalDays++;
+  STATE.day++;
+  if (STATE.day > SEASONS[STATE.season].days) {
+    STATE.day = 1;
+    STATE.season++;
+    if (STATE.season > 3) { STATE.season = 0; STATE.year++; }
+    // 换季：非本季作物枯萎
+    for (const key of Object.keys(STATE.soil)) {
+      const soil = STATE.soil[key];
+      if (soil.crop && CROPS[soil.crop.id].season !== STATE.season) {
+        soil.crop.dead = true;
+      }
+    }
+    rebuildAllStatic();
+  }
+
+  // 4) 起床
+  STATE.hour = 6; STATE.minute = 0;
+  STATE.energy = STATE.maxEnergy;
+
+  // 5) 天气
+  STATE.weather = rollWeather();
+  if (STATE.weather === 'rain') {
+    for (const key of Object.keys(STATE.soil)) {
+      const soil = STATE.soil[key];
+      if (soil.till) {
+        soil.wet = true;
+        if (soil.crop && !soil.crop.dead) soil.crop.watered = true;
+      }
+    }
+  }
+
+  // 6) NPC 重置
+  for (const npc of NPC_DEFS) {
+    const rel = ensureRel(npc.id);
+    rel.talkedDay = '';
+    rel.giftedDay = '';
+  }
+  updateNPCs(true);
+
+  // 7) 野草与采集物
+  if (STATE.totalDays % 2 === 0) respawnWeeds();
+  spawnForage();
+
+  // 8) 回到农舍
+  STATE.map = 'house';
+  STATE.player.x = 7 * TS + 8;
+  STATE.player.y = 8 * TS + 14;
+  STATE.player.dir = 'down';
+  STATE.player.busy = 0;
+  const m = currentMap();
+  STATE.camera.x = clamp(STATE.player.x - W / 2, 0, Math.max(0, m.w * TS - W));
+  STATE.camera.y = clamp(STATE.player.y - H / 2 - 8, 0, Math.max(0, m.h * TS - H));
+  STATE.fade = 0;
+  UI.setArea(m.name);
+  UI.updateHUD();
+
+  const msgs = [];
+  msgs.push(`${SEASONS[STATE.season].name} ${STATE.day}日 · ${weatherName(STATE.weather)}`);
+  if (income > 0) msgs.push(`出货收入 ${income}G`);
+  const fest = festivalFor(STATE.season, STATE.day);
+  if (fest && !STATE.flags.festivalDone.includes(fest.id + '-Y' + STATE.year)) msgs.push(`今天是${fest.name}，去小镇广场`);
+  toast(msgs.join('　|　'), 3);
+  saveGame();
+  Audio.sfx('morning');
+}
+
+function respawnWeeds() {
+  const m = MAPS.farm;
+  let placed = 0;
+  for (let tries = 0; tries < 40 && placed < 2; tries++) {
+    const x = ri(2, m.w - 3), y = ri(3, m.h - 3);
+    if (m.solid[y][x]) continue;
+    if (m.objAt[y][x]) continue;
+    if (m.base[y][x] === 'p' || m.base[y][x] === 'w') continue;
+    if (STATE.soil[x + ',' + y] && STATE.soil[x + ',' + y].till) continue;
+    addObj(m, 'weed', x, y, { solid: false });
+    placed++;
+  }
+  if (placed) rebuildStatic(m);
+}
+
+/* ---------------- 光照 ---------------- */
+function lightingInfo() {
+  const h = STATE.hour;
+  if (h >= 6 && h < 8) return { color: 'rgba(255,190,120,0.10)' };
+  if (h >= 8 && h < 17) return { color: 'rgba(255,240,200,0.03)' };
+  if (h >= 17 && h < 19) return { color: 'rgba(255,150,80,0.15)' };
+  if (h >= 19 && h < 21) return { color: 'rgba(120,80,150,0.26)' };
+  if (h >= 21 || h < 1) return { color: 'rgba(40,50,110,0.38)' };
+  return { color: 'rgba(20,25,70,0.50)' };
+}
+
+
+/* ===== 09_npc.js ===== */
+'use strict';
+
+/* ============================================================
+   NPC：日程、寻路、对话、送礼、好感
+   ============================================================ */
+const NPCS = [];
+
+function dayKey() { return STATE.year + '-' + STATE.season + '-' + STATE.day; }
+
+function ensureRel(id) {
+  if (!STATE.npc[id]) STATE.npc[id] = { points: 0, talkedDay: '', giftedDay: '' };
+  return STATE.npc[id];
+}
+
+function heartsOf(id) {
+  const rel = STATE.npc[id];
+  return rel ? Math.floor(rel.points / 100) : 0;
+}
+
+function heartsHTML(points) {
+  const full = Math.min(10, Math.floor(points / 100));
+  const half = points % 100 >= 50 && full < 10;
+  const off = 10 - full - (half ? 1 : 0);
+  return '♥'.repeat(full) + (half ? '<span class="half">♥</span>' : '') +
+    '<span class="off">' + '♡'.repeat(off) + '</span>';
+}
+
+function initNPCs() {
+  NPCS.length = 0;
+  for (const def of NPC_DEFS) {
+    NPCS.push({
+      id: def.id, def, map: null, tx: 0, ty: 0, px: 0, py: 0,
+      dir: 'down', path: [], moving: false, frame: 0, animT: 0, hidden: true, stepT: 0
+    });
+  }
+}
+
+function scheduleFor(def, hour) {
+  let s = def.sched[0];
+  for (const item of def.sched) if (hour >= item.h) s = item;
+  return s;
+}
+
+function placeNPCs(force) {
+  if (STATE.festival) return;
+  for (const n of NPCS) {
+    const s = scheduleFor(n.def, STATE.hour);
+    if (s.map === 'home') { n.hidden = true; n.map = null; continue; }
+    n.hidden = false;
+    if (force || n.map !== s.map) {
+      n.map = s.map;
+      n.tx = s.x; n.ty = s.y;
+      n.px = s.x * TS + 8; n.py = s.y * TS + 14;
+      n.path = [];
+      n.dir = s.dir || 'down';
+      n.moving = false;
+    } else if (n.tx !== s.x || n.ty !== s.y) {
+      const m = MAPS[s.map];
+      const path = bfsPath(m, { x: n.tx, y: n.ty }, { x: s.x, y: s.y });
+      if (path && path.length) { n.path = path; n.tx = s.x; n.ty = s.y; }
+      else { n.tx = s.x; n.ty = s.y; n.px = s.x * TS + 8; n.py = s.y * TS + 14; }
+    }
+  }
+}
+
+function updateNPCs(force) {
+  if (!STATE) return;
+  if (STATE.festival) return;
+  placeNPCs(force);
+}
+
+function bfsPath(m, from, to) {
+  if (from.x === to.x && from.y === to.y) return [];
+  if (to.x < 0 || to.y < 0 || to.x >= m.w || to.y >= m.h || m.solid[to.y][to.x]) return null;
+  const q = [from];
+  const seen = new Set([from.x + ',' + from.y]);
+  const prev = new Map();
+  let head = 0;
+  while (head < q.length) {
+    const cur = q[head++];
+    if (cur.x === to.x && cur.y === to.y) {
+      const path = [];
+      let c = cur;
+      while (c.x !== from.x || c.y !== from.y) {
+        path.push(c);
+        c = prev.get(c.x + ',' + c.y);
+        if (!c) return null;
+      }
+      return path.reverse();
+    }
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    for (const [dx, dy] of dirs) {
+      const nx = cur.x + dx, ny = cur.y + dy;
+      if (nx < 0 || ny < 0 || nx >= m.w || ny >= m.h) continue;
+      if (m.solid[ny][nx]) continue;
+      const k = nx + ',' + ny;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      prev.set(k, cur);
+      q.push({ x: nx, y: ny });
+    }
+  }
+  return null;
+}
+
+/* ---------------- 每帧移动 ---------------- */
+function updateNPCMovement(dt) {
+  for (const n of NPCS) {
+    if (n.hidden || n.map !== STATE.map || !n.path.length) continue;
+    const target = n.path[0];
+    const tx = target.x * TS + 8, ty = target.y * TS + 14;
+    const dx = tx - n.px, dy = ty - n.py;
+    const dist = Math.hypot(dx, dy);
+    const spd = 42 * dt;
+    if (dist <= spd) {
+      n.px = tx; n.py = ty;
+      n.path.shift();
+      n.moving = false;
+    } else {
+      n.px += dx / dist * spd;
+      n.py += dy / dist * spd;
+      n.moving = true;
+      if (Math.abs(dx) > Math.abs(dy)) n.dir = dx > 0 ? 'right' : 'left';
+      else n.dir = dy > 0 ? 'down' : 'up';
+      n.animT += dt;
+      if (n.animT > 0.18) { n.animT = 0; n.frame = (n.frame + 1) % 4; }
+    }
+  }
+}
+
+function npcAtTile(tx, ty) {
+  for (const n of NPCS) {
+    if (n.hidden || n.map !== STATE.map) continue;
+    const nx = Math.floor(n.px / TS), ny = Math.floor((n.py - 2) / TS);
+    if (nx === tx && ny === ty) return n;
+  }
+  return null;
+}
+
+function npcOnCurrentMap() {
+  return NPCS.filter(n => !n.hidden && n.map === STATE.map);
+}
+
+/* ---------------- 对话 ---------------- */
+function startDialogue(id) {
+  const n = NPCS.find(x => x.id === id);
+  if (!n) return;
+  const def = n.def;
+  const rel = ensureRel(id);
+  const first = rel.talkedDay !== dayKey();
+  if (first) {
+    rel.points = clamp(rel.points + 10, 0, 1000);
+    rel.talkedDay = dayKey();
+    STATE.stats.talks++;
+  }
+  const hearts = heartsOf(id);
+  const tier = hearts >= 8 ? 3 : hearts >= 5 ? 2 : hearts >= 2 ? 1 : 0;
+  const lineSet = def.greet[tier];
+  const line = lineSet[(STATE.day + def.name.length) % lineSet.length];
+  const gifted = rel.giftedDay === dayKey();
+  UI.openDialogue(id, line, [
+    { label: gifted ? '今天已送过礼物' : '送礼物', disabled: gifted, cb: () => UI.openGiftPicker(id) },
+    { label: '再见', cb: () => UI.closeModal() }
+  ], hearts);
+}
+
+function giftCategory(npcDef, itemId) {
+  if (npcDef.loves.includes(itemId)) return 'love';
+  if (npcDef.likes.includes(itemId)) return 'like';
+  if (npcDef.hates.includes(itemId)) return 'hate';
+  return 'neutral';
+}
+
+function giveGift(id, slot) {
+  const n = NPCS.find(x => x.id === id);
+  if (!n) return;
+  const s = STATE.inv[slot];
+  if (!s) return;
+  const def = ITEMS[s.id];
+  if (!def || def.type === 'tool') { toast('工具可不能送人。'); return; }
+  const npcDef = n.def;
+  const rel = ensureRel(id);
+  if (rel.giftedDay === dayKey()) { toast('今天已经送过礼物了。'); return; }
+  const cat = giftCategory(npcDef, s.id);
+  const delta = cat === 'love' ? 80 : cat === 'like' ? 45 : cat === 'hate' ? -30 : 20;
+  rel.points = clamp(rel.points + delta, 0, 1000);
+  rel.giftedDay = dayKey();
+  STATE.stats.gifts++;
+  invRemoveSlot(slot, 1);
+  Audio.sfx(cat === 'hate' ? 'bad' : 'gift');
+  floatText(n.px, n.py - 30, (delta > 0 ? '+' : '') + delta + ' 好感', delta > 0 ? '#f0a0b0' : '#d0d0d0');
+  if (delta > 0) addParticles(n.px, n.py - 14, '#f0a0b0', 6, 8);
+  UI.openDialogue(id, npcDef.gift[cat], [{ label: '再见', cb: () => UI.closeModal() }], heartsOf(id));
+  UI.updateHUD();
+}
+
+/* ---------------- 绘制 NPC ---------------- */
+function drawNPC(ctx, n) {
+  const spr = ART.chars.npc[n.id];
+  let img;
+  if (n.moving) img = spr.walk[n.dir][(n.frame % 3) + 1];
+  else img = spr.walk[n.dir][0];
+  shadowEllipse(ctx, n.px, n.py - 1, 6, 3);
+  ctx.drawImage(img, Math.round(n.px - 8), Math.round(n.py - 24));
+  // 头顶提示
+  const pd = Math.hypot(n.px - STATE.player.x, n.py - STATE.player.y);
+  if (pd < 44) {
+    ctx.fillStyle = '#f6f0e4';
+    ctx.fillRect(Math.round(n.px - 4), Math.round(n.py - 32), 8, 7);
+    ctx.strokeStyle = '#3a2a1a';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(Math.round(n.px - 4) + 0.5, Math.round(n.py - 32) + 0.5, 7, 6);
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(Math.round(n.px - 1), Math.round(n.py - 31), 2, 3);
+    ctx.fillRect(Math.round(n.px - 1), Math.round(n.py - 27), 2, 1);
+  }
+}
+
+
+/* ===== 10_festival.js ===== */
+'use strict';
+
+/* ============================================================
+   节日系统
+   ============================================================ */
+const FEST_NPC_SPOTS = [
+  { id: 'lina', x: 16, y: 16, dir: 'down' },
+  { id: 'mai', x: 24, y: 16, dir: 'down' },
+  { id: 'you', x: 21, y: 17, dir: 'up' },
+  { id: 'lan', x: 13, y: 15, dir: 'right' }
+];
+
+const EGG_SPOTS = [
+  { x: 11, y: 10 }, { x: 15, y: 15 }, { x: 22, y: 14 },
+  { x: 27, y: 12 }, { x: 30, y: 17 }, { x: 18, y: 18 }
+];
+
+function startFestival(def) {
+  STATE.festival = {
+    id: def.id, def, phase: 'intro', timer: 0, eggs: [], collected: 0,
+    resultShown: false, ingredient: null
+  };
+  STATE.hour = 9; STATE.minute = 0;
+  STATE.weather = 'sun';
+  STATE.map = 'town';
+  STATE.player.x = def.start.x * TS + 8;
+  STATE.player.y = def.start.y * TS + 14;
+  STATE.player.dir = 'up';
+  const m = MAPS.town;
+  STATE.camera.x = clamp(STATE.player.x - W / 2, 0, m.w * TS - W);
+  STATE.camera.y = clamp(STATE.player.y - H / 2 - 8, 0, m.h * TS - H);
+  // NPC 集合
+  for (const n of NPCS) {
+    const spot = FEST_NPC_SPOTS.find(s => s.id === n.id);
+    n.hidden = !spot; n.map = 'town';
+    if (spot) {
+      n.px = spot.x * TS + 8; n.py = spot.y * TS + 14;
+      n.tx = spot.x; n.ty = spot.y; n.dir = spot.dir; n.path = []; n.moving = false;
+    }
+  }
+  UI.setArea('小镇 · ' + def.name);
+  UI.updateHUD();
+  UI.openFestivalIntro(def, () => beginFestivalPlay());
+}
+
+function beginFestivalPlay() {
+  const f = STATE.festival;
+  if (!f) return;
+  UI.closeModal();
+  f.phase = 'play';
+  if (f.id === 'egg') {
+    f.timer = 60;
+    f.eggs = EGG_SPOTS.map((p, i) => ({ x: p.x, y: p.y, colorIdx: i % 6, taken: false }));
+    UI.setFestivalStatus('找彩蛋！剩余 60 秒　0/6');
+    toast('60 秒内把 6 颗彩蛋都找到！');
+  } else if (f.id === 'dance') {
+    UI.setFestivalStatus('找一位好感 ≥ 4 心的朋友跳舞（E 键对话）');
+    toast('和朋友们聊聊吧，也许有人愿意和你跳舞。');
+  } else if (f.id === 'luau') {
+    UI.setFestivalStatus('往大锅里放一样食材（靠近锅按 E）');
+    placeFestObj('pot', 16, 15);
+  } else if (f.id === 'fair') {
+    UI.setFestivalStatus('把最好的作物摆上展台（靠近展台按 E）');
+    placeFestObj('stallB', 20, 18);
+  } else if (f.id === 'winter') {
+    UI.setFestivalStatus('打开礼物盒，看看谁给你准备了礼物');
+    placeFestObj('gift', 18, 17);
+  }
+}
+
+function placeFestObj(type, x, y) {
+  if (type === 'stallB') return;
+  const m = MAPS.town;
+  const o = { type, x, y, solid: false, fest: true };
+  m.objs.push(o);
+  m.objAt[y][x] = o;
+}
+
+function updateFestival(dt) {
+  const f = STATE.festival;
+  if (!f || f.phase !== 'play') return;
+  if (f.id === 'egg') {
+    f.timer -= dt;
+    const tx = Math.floor(STATE.player.x / TS);
+    const ty = Math.floor((STATE.player.y - 2) / TS);
+    for (const e of f.eggs) {
+      if (!e.taken && e.x === tx && e.y === ty) {
+        e.taken = true;
+        f.collected++;
+        Audio.sfx('coin');
+        addParticles(e.x * TS + 8, e.y * TS + 8, '#f2e05a', 8, 9);
+        UI.setFestivalStatus('找彩蛋！剩余 ' + Math.max(0, Math.ceil(f.timer)) + ' 秒　' + f.collected + '/6');
+      }
+    }
+    if (f.collected >= 6 || f.timer <= 0) {
+      finishEggHunt();
+      return;
+    }
+    UI.setFestivalStatus('找彩蛋！剩余 ' + Math.max(0, Math.ceil(f.timer)) + ' 秒　' + f.collected + '/6');
+  }
+}
+
+function finishEggHunt() {
+  const f = STATE.festival;
+  const n = f.collected;
+  let reward = 0, extra = '';
+  if (n >= 6) {
+    reward = 200;
+    invAdd('strawberry_seed', 5);
+    extra = '，还获得 5 包草莓种子！';
+  } else if (n >= 4) { reward = 120; extra = '。'; }
+  else if (n >= 2) { reward = 60; extra = '。'; }
+  else { reward = 20; extra = '，下次跑快点哦。'; }
+  STATE.money += reward;
+  STATE.stats.earned += reward;
+  f.phase = 'result';
+  UI.setFestivalStatus(null);
+  UI.openResult('蛋蛋节 · 结束',
+    `<p>你找到了 <b>${n}/6</b> 颗彩蛋，获得 <b>${reward}G</b>${extra}</p>`,
+    () => finishFestival());
+  UI.updateHUD();
+}
+
+/* ---------------- 节日互动入口 ---------------- */
+function festivalInteract(tx, ty) {
+  const f = STATE.festival;
+  if (!f || f.phase !== 'play') return false;
+  const pt = playerTile();
+  const near = (x, y) => Math.abs(tx - x) <= 1 && Math.abs(ty - y) <= 1;
+  const nearP = (x, y) => Math.abs(pt.x - x) <= 1 && Math.abs(pt.y - y) <= 1;
+  const acted = f.id;
+  if (acted === 'dance') {
+    const n = npcAtTile(tx, ty);
+    if (n) { festivalTalkDance(n); return true; }
+    return false;
+  }
+  if (acted === 'luau') {
+    if (near(16, 15) || nearP(16, 15)) { openLuauPicker(); return true; }
+  }
+  if (acted === 'fair') {
+    if (near(20, 18) || nearP(20, 18)) { openFairDisplay(); return true; }
+  }
+  if (acted === 'winter') {
+    if (near(18, 17) || nearP(18, 17)) { openWinterGift(); return true; }
+  }
+  return false;
+}
+
+function festivalTalkDance(n) {
+  const hearts = heartsOf(n.id);
+  if (hearts < 4) {
+    UI.openDialogue(n.id, `朋友，我们还不算太熟呢（${hearts}/4 心）。多来聊聊天、送点礼物吧。`,
+      [{ label: '好吧', cb: () => UI.closeModal() }], hearts);
+    return;
+  }
+  // 跳舞
+  const f = STATE.festival;
+  f.phase = 'dance';
+  f.partner = n.id;
+  f.timer = 2.6;
+  STATE.player.x = n.px - 18;
+  STATE.player.y = n.py;
+  STATE.player.dir = 'right';
+  n.dir = 'left';
+  addParticles(STATE.player.x, STATE.player.y - 12, '#f0a0b0', 12, 14);
+  Audio.sfx('dance');
+  UI.setFestivalStatus('和 ' + n.def.name + ' 跳着舞……');
+  setTimeout(() => {
+    if (!STATE.festival) return;
+    const rel = ensureRel(n.id);
+    rel.points = clamp(rel.points + 40, 0, 1000);
+    STATE.festival.phase = 'result';
+    UI.setFestivalStatus(null);
+    UI.openResult('花舞节 · 结束',
+      `<p>你和 <b>${n.def.name}</b> 跳了一支舞，好感度 <b>+40</b>。</p><p>现在 ${heartsOf(n.id)} 心。</p>`,
+      () => finishFestival());
+    UI.updateHUD();
+  }, 2600);
+}
+
+function openLuauPicker() {
+  const list = [];
+  for (let i = 0; i < INV_SIZE; i++) {
+    const s = STATE.inv[i];
+    if (!s) continue;
+    const def = ITEMS[s.id];
+    if (!def || def.type === 'tool') continue;
+    const edible = def.type === 'crop' || def.type === 'food' || def.type === 'forage' || (def.type === 'gift' && def.energy > 0);
+    if (!edible) continue;
+    list.push({ slot: i, id: s.id, count: s.count });
+  }
+  if (!list.length) { toast('背包里没有可以下锅的食材。'); return; }
+  UI.openItemPicker('往锅里放什么？', list, (slot) => {
+    const s = STATE.inv[slot];
+    if (!s) return;
+    const def = ITEMS[s.id];
+    const score = (def.sell || 0) * 2 + ri(0, 20);
+    invRemoveSlot(slot, 1);
+    const reward = 100 + score;
+    STATE.money += reward;
+    STATE.stats.earned += reward;
+    STATE.festival.phase = 'result';
+    UI.setFestivalStatus(null);
+    Audio.sfx('coin');
+    UI.openResult('夏威夷宴 · 评分',
+      `<p>你把 <b>${def.name}</b> 放进了大锅。</p><p>评分 <b>${score}</b> 分，获得 <b>${reward}G</b>。</p><p>老麦：这锅汤有你的功劳！</p>`,
+      () => finishFestival());
+    UI.updateHUD();
+  });
+}
+
+function openFairDisplay() {
+  const crops = [];
+  for (const s of STATE.inv) {
+    if (!s) continue;
+    const def = ITEMS[s.id];
+    if (def && def.type === 'crop') crops.push({ id: s.id, count: s.count, sell: def.sell });
+  }
+  if (!crops.length) { toast('背包里还没有作物可以参展。'); return; }
+  crops.sort((a, b) => b.sell - a.sell);
+  const best = crops.slice(0, 3);
+  const score = best.reduce((sum, c) => sum + c.sell, 0) + 30;
+  const reward = Math.round(120 + score * 1.2);
+  STATE.money += reward;
+  STATE.stats.earned += reward;
+  STATE.festival.phase = 'result';
+  UI.setFestivalStatus(null);
+  Audio.sfx('coin');
+  const names = best.map(c => `${ITEMS[c.id].name}（${c.sell}G）`).join('、');
+  UI.openResult('丰收祭 · 评展',
+    `<p>你摆出了：${names}。</p><p>总分 <b>${score}</b>，获得 <b>${reward}G</b>，还赢下了一枚丰收奖章。</p>`,
+    () => finishFestival());
+  UI.updateHUD();
+}
+
+function openWinterGift() {
+  const n = pick(NPC_DEFS);
+  const gifts = ['bread', 'egg', 'hazelnut', 'flower', 'parsnip_seed'];
+  const giftId = pick(gifts);
+  invAdd(giftId, 1);
+  STATE.festival.phase = 'result';
+  UI.setFestivalStatus(null);
+  Audio.sfx('gift');
+  UI.openResult('冬星节 · 交换礼物',
+    `<p><b>${n.name}</b> 把一个小盒子塞到你手里：<b>${ITEMS[giftId].name}</b>。</p><p>「冬星节快乐，明年也一起过吧。」</p>`,
+    () => finishFestival());
+  UI.updateHUD();
+}
+
+function finishFestival() {
+  const f = STATE.festival;
+  if (!f) return;
+  STATE.flags.festivalDone.push(f.id + '-Y' + STATE.year);
+  STATE.festival = null;
+  // 移除节日临时物件
+  const m = MAPS.town;
+  m.objs = m.objs.filter(o => !o.fest);
+  for (const row of m.objAt) for (let i = 0; i < row.length; i++) if (row[i] && row[i].fest) row[i] = null;
+  rebuildStatic(m);
+  STATE.hour = 18; STATE.minute = 0;
+  UI.setFestivalStatus(null);
+  UI.closeModal();
+  STATE.transition = null;
+  STATE.fade = 0;
+  travelTo('farm', 4, 7);
+  toast('节日结束了，回到农场。', 2.5);
+  UI.updateHUD();
+}
+
+/* ---------------- 节日绘制 ---------------- */
+function drawFestivalDecor(ctx, cx, cy) {
+  const f = STATE.festival;
+  if (!f) return;
+  // 气球
+  const balloons = [[8, 12], [12, 11], [30, 12], [34, 13], [24, 11], [16, 10]];
+  balloons.forEach(([x, y], i) => {
+    const img = ART.objects.balloon[i % 4];
+    const bob = Math.sin(performance.now() / 700 + i) * 1.5;
+    ctx.drawImage(img, Math.round(x * TS - cx), Math.round(y * TS - 24 - cy + bob));
+  });
+  // 彩蛋
+  if (f.id === 'egg' && f.eggs) {
+    for (const e of f.eggs) {
+      if (e.taken) continue;
+      const img = ART.objects.eggs[e.colorIdx];
+      const bob = Math.sin(performance.now() / 500 + e.x) * 1;
+      ctx.drawImage(img, Math.round(e.x * TS + 3 - cx), Math.round(e.y * TS + 3 - cy + bob));
+    }
+  }
+}
+
+function drawFestPot(ctx, cx, cy) {
+  const f = STATE.festival;
+  if (!f) return;
+  if (f.id === 'luau') {
+    const img = ART.objects.pot;
+    ctx.drawImage(img, Math.round(16 * TS + 8 - 12 - cx), Math.round(16 * TS - cy));
+  }
+  if (f.id === 'winter') {
+    const img = ART.objects.gift;
+    ctx.drawImage(img, Math.round(18 * TS + 8 - 8 - cx), Math.round(17 * TS + 2 - cy));
+  }
+}
+
+
+/* ===== 11_ui.js ===== */
+'use strict';
+
+/* ============================================================
+   UI：HUD、背包、商店、出货、对话、关系、菜单
+   ============================================================ */
+const UI = {
+  modalOpen: false,
+  locked: false,
+  primaryBtn: null,
+  _toastTimer: 0,
+  _clockCache: '',
+
+  /* ---------- 基础 ---------- */
+  el(id) { return document.getElementById(id); },
+
+  handleKey(code) {
+    if (STATE && STATE.screen === 'title') return false;
+    if (code === 'Escape') {
+      if (this.modalOpen) {
+        if (!this.locked) { this.closeModal(); return true; }
+        return true;
+      }
+      return false;
+    }
+    if (this.modalOpen && (code === 'Space' || code === 'KeyE' || code === 'Enter' || code === 'NumpadEnter')) {
+      if (this.dialogueOpen) { this.closeModal(); return true; }
+      if (this.primaryBtn && !this.primaryBtn.disabled) { this.primaryBtn.click(); return true; }
+      return true;
+    }
+    return false;
+  },
+
+  closeModal() {
+    this.modalOpen = false;
+    this.locked = false;
+    this.primaryBtn = null;
+    this.dialogueOpen = false;
+    this.el('modal').classList.add('hidden');
+    this.el('dialogue').classList.add('hidden');
+    if (STATE) STATE.paused = false;
+  },
+
+  showBox(title, bodyHtml, buttons, opts = {}) {
+    this.modalOpen = true;
+    this.locked = !!opts.locked;
+    this.el('dialogue').classList.add('hidden');
+    this.dialogueOpen = false;
+    this.el('modal-title').textContent = title;
+    this.el('modal-body').innerHTML = bodyHtml;
+    const foot = this.el('modal-foot');
+    foot.innerHTML = '';
+    this.primaryBtn = null;
+    for (const b of buttons) {
+      const btn = document.createElement('button');
+      btn.className = 'btn ' + (b.cls || '');
+      btn.textContent = b.label;
+      if (b.disabled) btn.disabled = true;
+      if (b.cls === 'primary') this.primaryBtn = btn;
+      btn.addEventListener('click', () => b.cb && b.cb());
+      foot.appendChild(btn);
+    }
+    this.el('modal-close').style.display = opts.hideClose ? 'none' : '';
+    this.el('modal').classList.remove('hidden');
+    if (STATE) STATE.paused = true;
+    this.paintIconCanvases(this.el('modal-body'));
+    // 滚回顶部
+    this.el('modal-body').scrollTop = 0;
+  },
+
+  /* 用 canvas 画图标，避免某些 webview 拦截 data: 图片后快捷栏空白 */
+  paintIconCanvases(root) {
+    if (!root || typeof ART === 'undefined' || !ART) return;
+    root.querySelectorAll('canvas.ico[data-icon]').forEach(cv => {
+      const src = ART.icons[cv.dataset.icon] || ART.icons._unknown;
+      const g = cv.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      g.clearRect(0, 0, cv.width, cv.height);
+      g.drawImage(src, 0, 0);
+    });
+    root.querySelectorAll('canvas.pico[data-portrait]').forEach(cv => {
+      const src = ART.portraits[cv.dataset.portrait];
+      if (!src) return;
+      const g = cv.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      g.clearRect(0, 0, cv.width, cv.height);
+      g.drawImage(src, 0, 0);
+    });
+  },
+
+  iconTag(id, cls) {
+    return `<canvas class="${cls || 'ico'}" width="16" height="16" data-icon="${id}"></canvas>`;
+  },
+
+  /* ---------- HUD ---------- */
+  updateHUD() {
+    if (!STATE) return;
+    this.el('hud-money-val').textContent = amountStr(STATE.money);
+    const pct = Math.round(STATE.energy / STATE.maxEnergy * 100);
+    const fill = this.el('energy-fill');
+    fill.style.width = pct + '%';
+    fill.classList.toggle('low', pct < 30);
+    this.updateHotbar();
+    this.updateClock(true);
+  },
+
+  updateHotbar() {
+    const bar = this.el('hotbar');
+    if (!bar || !STATE) return;
+    bar.innerHTML = '';
+    for (let i = 0; i < HOT_SIZE; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'slot' + (i === STATE.hot ? ' sel' : '');
+      const s = STATE.inv[i];
+      if (!s) cell.classList.add('empty');
+      const num = document.createElement('span');
+      num.className = 'num'; num.textContent = String(i + 1);
+      cell.appendChild(num);
+      if (s) {
+        const icon = document.createElement('canvas');
+        icon.className = 'ico';
+        icon.width = 16; icon.height = 16;
+        const g = icon.getContext('2d');
+        g.imageSmoothingEnabled = false;
+        const src = ART.icons[s.id] || ART.icons._unknown;
+        g.drawImage(src, 0, 0);
+        cell.appendChild(icon);
+        if (s.count > 1) {
+          const c = document.createElement('span');
+          c.className = 'cnt'; c.textContent = s.count > 99 ? '99+' : s.count;
+          cell.appendChild(c);
+        }
+        cell.title = (ITEMS[s.id] ? ITEMS[s.id].name : '') + ' · ' + (ITEMS[s.id] ? ITEMS[s.id].desc || '' : '');
+      }
+      cell.addEventListener('click', () => {
+        if (STATE.paused || UI.modalOpen) return;
+        STATE.hot = i; this.updateHUD(); Audio.sfx('tick');
+      });
+      bar.appendChild(cell);
+    }
+  },
+
+  updateClock(force) {
+    if (!STATE) return;
+    const dEl = this.el('hud-date'), tEl = this.el('hud-time'), wEl = this.el('hud-weather');
+    if (!dEl) return;
+    const wk = WEEKDAYS[(STATE.day - 1) % 7];
+    const key = STATE.season + stateDayKey() + STATE.hour + ':' + Math.floor(STATE.minute / 10) + STATE.weather;
+    if (!force && key === this._clockCache) return;
+    this._clockCache = key;
+    dEl.textContent = `${SEASONS[STATE.season].name} ${STATE.day}日 · ${wk}`;
+    tEl.textContent = timeStr(STATE.hour, STATE.minute);
+    wEl.textContent = weatherIcon(STATE.weather) + ' ' + weatherName(STATE.weather);
+  },
+
+  setArea(name) {
+    const el = this.el('hud-area');
+    if (!el) return;
+    el.textContent = name;
+    el.style.opacity = '0.92';
+    clearTimeout(this._areaTimer);
+    this._areaTimer = setTimeout(() => { el.style.opacity = '0'; }, 2600);
+  },
+
+  setFestivalStatus(text) {
+    const el = this.el('hud-fest');
+    if (!el) return;
+    if (text) { el.textContent = text; el.style.display = 'block'; }
+    else { el.style.display = 'none'; }
+  },
+
+  toast(msg, sec = 2.2) {
+    const t = this.el('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => t.classList.remove('show'), sec * 1000);
+  },
+
+  /* ---------- 背包 ---------- */
+  openInventory() {
+    if (!STATE || STATE.paused) return;
+    const render = () => {
+      let grid = '<div class="grid-inv">';
+      for (let i = 0; i < INV_SIZE; i++) {
+        const s = STATE.inv[i];
+        const def = s ? ITEMS[s.id] : null;
+        grid += `<div class="inv-cell ${s ? '' : 'empty'}" data-slot="${i}" title="${def ? (def.desc || def.name) : '空格'}">`;
+        if (s) {
+          grid += `<span class="nm">${def ? def.name : s.id}</span>`;
+          grid += this.iconTag(s.id);
+          if (s.count > 1) grid += `<span class="n">${s.count}</span>`;
+        }
+        grid += '</div>';
+      }
+      grid += '</div>';
+      const body = `
+        <div class="hint-box">前 9 格显示在快捷栏。点击背包格可与当前手持格交换；点击快捷栏格可直接拿在手上。</div>
+        ${grid}
+        <div class="stat-line"><span>金币</span><b>${STATE.money} G</b></div>
+        <div class="stat-line"><span>体力</span><b>${Math.round(STATE.energy)}/${STATE.maxEnergy}</b></div>
+        <div class="stat-line"><span>累计收获</span><b>${STATE.stats.harvest} 个</b></div>
+        <div class="stat-line"><span>播种次数</span><b>${STATE.stats.planted} 次</b></div>
+        <div class="stat-line"><span>累计收入</span><b>${STATE.stats.earned} G</b></div>
+        <div class="stat-line"><span>出货箱待结算</span><b>${STATE.shipped.length} 项</b></div>`;
+      this.showBox('背包', body, [{ label: '关闭', cb: () => this.closeModal() }], { cls: '' });
+      this.el('modal-body').querySelectorAll('.inv-cell').forEach(cell => {
+        cell.addEventListener('click', () => {
+          const i = Number(cell.dataset.slot);
+          if (!STATE.inv[i]) return;
+          if (i < HOT_SIZE) { STATE.hot = i; }
+          else {
+            const tmp = STATE.inv[STATE.hot];
+            STATE.inv[STATE.hot] = STATE.inv[i];
+            STATE.inv[i] = tmp;
+            this.toast('已与快捷栏第 ' + (STATE.hot + 1) + ' 格交换。', 1.4);
+          }
+          this.updateHUD();
+          render();
+        });
+      });
+    };
+    render();
+  },
+
+  /* ---------- 商店 ---------- */
+  openShop() {
+    if (!STATE) return;
+    const render = () => {
+      const stock = shopStock(STATE.season);
+      let rows = '';
+      for (const id of stock) {
+        const def = ITEMS[id];
+        const price = def.buy || 0;
+        rows += `<div class="shop-row">
+          ${this.iconTag(id)}
+          <div class="info"><div class="nm">${def.name}</div><div class="ds">${def.desc || ''}</div></div>
+          <div class="price">${price} G</div>
+          <div class="btns">
+            <button class="btn" data-buy="${id}" data-n="1" ${STATE.money < price ? 'disabled' : ''}>买1</button>
+            <button class="btn" data-buy="${id}" data-n="5" ${STATE.money < price * 5 ? 'disabled' : ''}>买5</button>
+          </div>
+        </div>`;
+      }
+      const body = `
+        <div class="hint-box">莉娜：“当季的种子才有好收成。买回去记得每天浇水。”</div>
+        <div style="font-weight:700;margin-bottom:4px">${SEASONS[STATE.season].name}季种子</div>
+        ${rows}
+        <div class="stat-line" style="margin-top:8px"><span>你的金币</span><b>${STATE.money} G</b></div>`;
+      this.showBox('种子商店', body, [
+        { label: '关闭', cb: () => this.closeModal() }
+      ]);
+      this.el('modal-body').querySelectorAll('[data-buy]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.buy, n = Number(btn.dataset.n);
+          const def = ITEMS[id];
+          const total = (def.buy || 0) * n;
+          if (STATE.money < total) { this.toast('金币不够。'); return; }
+          const left = invAdd(id, n);
+          const added = n - left;
+          if (added <= 0) { this.toast('背包满了。'); return; }
+          STATE.money -= (def.buy || 0) * added;
+          if (left > 0) this.toast('背包满了，只买到 ' + added + ' 包。', 1.6);
+          Audio.sfx('coin');
+          this.updateHUD();
+          render();
+        });
+      });
+    };
+    render();
+  },
+
+  /* ---------- 出货箱 ---------- */
+  openMailbox() {
+    if (!STATE) return;
+    if (!STATE.flags.mailRead) {
+      STATE.flags.mailRead = true;
+      STATE.money += 100;
+      STATE.stats.earned += 100;
+      invAdd('parsnip_seed', 4);
+      this.updateHUD();
+      saveGame();
+      Audio.sfx('coin');
+      this.showBox('镇长来信', `
+        <p>欢迎来到小镇，新农场主。</p>
+        <p>这片地荒了很久，现在总算有人愿意接手了。随信附上 <b>100G</b> 和 <b>4 包防风草种子</b>，就当是见面礼。</p>
+        <p>有空去小镇广场转转，公告板上写着今年的节日安排。<br>——镇长</p>
+      `, [{ label: '收下', cls: 'primary', cb: () => this.closeModal() }]);
+    } else {
+      this.showBox('信箱', '<p>信箱里空空的，只有几片叶子。</p>', [{ label: '关上', cb: () => this.closeModal() }]);
+    }
+  },
+
+  openNotice() {
+    if (!STATE) return;
+    const rows = FESTIVALS.map(f => {
+      const done = STATE.flags.festivalDone.includes(f.id + '-Y' + STATE.year);
+      return `<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px dashed #c9b38c">
+        <div style="width:92px;color:#7a6246">${SEASONS[f.season].name} ${f.day} 日</div>
+        <div style="flex:1"><b>${f.name}</b>　<span style="font-size:12px;color:#7a6246">${done ? '今年已参加' : '未参加'}</span>
+        <div style="font-size:12px;color:#6b5236;margin-top:2px">${f.desc}</div></div>
+      </div>`;
+    }).join('');
+    this.showBox('小镇公告板', `<p style="margin:0 0 6px">今年的节日安排：</p>${rows}`,
+      [{ label: '看完了', cb: () => this.closeModal() }]);
+  },
+
+  openShipping() {
+    if (!STATE) return;
+    const render = () => {
+      let rows = '';
+      for (let i = 0; i < INV_SIZE; i++) {
+        const s = STATE.inv[i];
+        if (!s) continue;
+        const def = ITEMS[s.id];
+        if (!def || def.type === 'tool' || !def.sell) continue;
+        rows += `<div class="shop-row">
+          ${this.iconTag(s.id)}
+          <div class="info"><div class="nm">${def.name} ×${s.count}</div><div class="ds">单价 ${def.sell} G</div></div>
+          <div class="price">${def.sell * s.count} G</div>
+          <div class="btns">
+            <button class="btn" data-ship="${i}" data-n="1">放1</button>
+            <button class="btn" data-ship="${i}" data-n="all">全放</button>
+          </div>
+        </div>`;
+      }
+      let queue = STATE.shipped.reduce((a, b) => a + (ITEMS[b.id] ? ITEMS[b.id].sell * b.count : 0), 0);
+      const body = `
+        <div class="hint-box">把东西放进出货箱，明早结算成金币。今天已放入：<b>${STATE.shipped.length}</b> 项，预计 <b>${queue} G</b>。</div>
+        ${rows || '<p>背包里没有可以卖的东西。</p>'}
+        <div style="margin-top:8px"><button class="btn" id="ship-all">全部放入</button></div>`;
+      this.showBox('出货箱', body, [{ label: '关闭', cb: () => this.closeModal() }]);
+      const ship = (slot, n) => {
+        const s = STATE.inv[slot];
+        if (!s) return;
+        const def = ITEMS[s.id];
+        const cnt = n === 'all' ? s.count : 1;
+        STATE.shipped.push({ id: s.id, count: cnt });
+        invRemoveSlot(slot, cnt);
+        Audio.sfx('coin');
+        this.updateHUD();
+        render();
+      };
+      this.el('modal-body').querySelectorAll('[data-ship]').forEach(btn => {
+        btn.addEventListener('click', () => ship(Number(btn.dataset.ship), btn.dataset.n));
+      });
+      const allBtn = this.el('ship-all');
+      if (allBtn) allBtn.addEventListener('click', () => {
+        for (let i = 0; i < INV_SIZE; i++) {
+          const s = STATE.inv[i];
+          if (!s) continue;
+          const def = ITEMS[s.id];
+          if (!def || def.type === 'tool' || !def.sell) continue;
+          STATE.shipped.push({ id: s.id, count: s.count });
+          STATE.inv[i] = null;
+        }
+        this.updateHUD();
+        render();
+      });
+    };
+    render();
+  },
+
+  /* ---------- 关系 ---------- */
+  openRelations() {
+    if (!STATE) return;
+    let rows = '';
+    for (const def of NPC_DEFS) {
+      const rel = STATE.npc[def.id];
+      const pts = rel ? rel.points : 0;
+      rows += `<div class="rel-row">
+        <canvas class="pico" width="40" height="40" data-portrait="${def.id}"></canvas>
+        <div class="who"><b>${def.name}</b><span>${def.role}</span></div>
+        <div class="hearts">${heartsHTML(pts)}</div>
+        <div style="font-size:11px;color:#7a6246;width:74px;text-align:right">${pts}/1000</div>
+      </div>`;
+    }
+    const body = `
+      <div class="hint-box">每天聊一次天 +10 好感，每天可送一次礼物；送对了东西好感加得更多。</div>
+      ${rows}`;
+    this.showBox('小镇关系', body, [{ label: '关闭', cb: () => this.closeModal() }]);
+  },
+
+  portraitUrl(id) {
+    if (!this._portraitUrls) this._portraitUrls = {};
+    if (!this._portraitUrls[id]) this._portraitUrls[id] = ART.portraits[id].toDataURL();
+    return this._portraitUrls[id];
+  },
+
+  /* ---------- 对话 ---------- */
+  openDialogue(npcId, text, options, hearts) {
+    const def = NPC_DEFS.find(n => n.id === npcId);
+    this.dialogueOpen = true;
+    this.modalOpen = true;
+    this.el('modal').classList.add('hidden');
+    this.el('dialogue').classList.remove('hidden');
+    const pc = this.el('dlg-portrait');
+    const pg = pc.getContext('2d');
+    pg.imageSmoothingEnabled = false;
+    pg.clearRect(0, 0, pc.width, pc.height);
+    pg.drawImage(ART.portraits[npcId], 0, 0);
+    this.el('dlg-name').innerHTML = `<b>${def.name}</b> <span style="color:#8a6a4c">${def.role}</span> <span id="dlg-hearts">${heartsHTML((STATE.npc[npcId] && STATE.npc[npcId].points) || (hearts || 0) * 100)}</span>`;
+    this.el('dlg-text').textContent = text;
+    const opts = this.el('dlg-opts');
+    opts.innerHTML = '';
+    for (const o of options) {
+      const b = document.createElement('button');
+      b.className = 'btn ' + (o.cls || '');
+      b.textContent = o.label;
+      if (o.disabled) b.disabled = true;
+      b.addEventListener('click', () => { b.disabled = true; o.cb && o.cb(); });
+      opts.appendChild(b);
+    }
+    if (STATE) STATE.paused = true;
+  },
+
+  openGiftPicker(npcId) {
+    const items = [];
+    for (let i = 0; i < INV_SIZE; i++) {
+      const s = STATE.inv[i];
+      if (!s) continue;
+      const def = ITEMS[s.id];
+      if (!def || def.type === 'tool') continue;
+      items.push({ slot: i, id: s.id, count: s.count });
+    }
+    if (!items.length) { this.toast('背包里没有可以送的东西。'); this.openDialogue(npcId, '你摸了摸口袋，空空如也。', [{ label: '回去准备', cb: () => this.closeModal() }], heartsOf(npcId)); return; }
+    this.openItemPicker('送什么礼物？', items, (slot) => {
+      this.closeModal();
+      giveGift(npcId, slot);
+    }, () => { this.closeModal(); startDialogue(npcId); });
+  },
+
+  openItemPicker(title, list, cb, onCancel) {
+    let grid = '<div class="grid-inv">';
+    for (const it of list) {
+      const def = ITEMS[it.id];
+      grid += `<div class="inv-cell" data-slot="${it.slot}" title="${def ? def.name : it.id}">
+        <span class="nm">${def ? def.name : it.id}</span>
+        ${this.iconTag(it.id)}
+        ${it.count > 1 ? `<span class="n">${it.count}</span>` : ''}
+      </div>`;
+    }
+    grid += '</div>';
+    this.showBox(title, grid, [
+      { label: '取消', cb: () => { this.closeModal(); if (onCancel) onCancel(); } }
+    ]);
+    this.el('modal-body').querySelectorAll('.inv-cell').forEach(cell => {
+      cell.addEventListener('click', () => cb(Number(cell.dataset.slot)));
+    });
+  },
+
+  /* ---------- 通用弹窗 ---------- */
+  openConfirm(title, text, onYes, onNo) {
+    this.showBox(title, `<p>${text}</p>`, [
+      { label: '好', cls: 'primary', cb: () => onYes && onYes() },
+      { label: '再想想', cb: () => { this.closeModal(); onNo && onNo(); } }
+    ]);
+  },
+
+  openResult(title, html, cb) {
+    this.showBox(title, html, [{ label: '确定', cls: 'primary', cb: () => { this.closeModal(); cb && cb(); } }], { hideClose: true, locked: true });
+  },
+
+  openFestivalIntro(def, cb) {
+    this.showBox(def.name, `
+      <p style="font-size:16px;margin:0 0 8px"><b>${SEASONS[def.season].name} ${def.day}日 · 小镇广场</b></p>
+      <p>${def.desc}</p>
+      <div class="hint-box">今天是节日，农场暂停营业。走过去、按 <span class="kbd">E</span> 互动，结束后自动回家。</div>
+    `, [{ label: '开始', cls: 'primary', cb: cb }], { hideClose: true, locked: true });
+  },
+
+  /* ---------- 菜单 ---------- */
+  openPause() {
+    if (!STATE || STATE.transition) return;
+    const body = `
+      <div class="hint-box">
+        <b>操作</b><br>
+        <span class="kbd">WASD</span>/方向键 移动　<span class="kbd">Shift</span> 快跑<br>
+        <span class="kbd">J</span>/<span class="kbd">空格</span> 使用工具、收获、播种<br>
+        <span class="kbd">E</span> 对话 / 开门 / 睡觉 / 商店 / 出货<br>
+        <span class="kbd">1~9</span> 选择快捷栏　<span class="kbd">F</span> 吃东西　<span class="kbd">Tab</span> 背包<br>
+        <span class="kbd">R</span> 关系　<span class="kbd">M</span> 静音　<span class="kbd">H</span> 帮助
+      </div>
+      <div class="stat-line"><span>日期</span><b>第 ${STATE.year} 年 ${SEASONS[STATE.season].name} ${STATE.day}日</b></div>
+      <div class="stat-line"><span>金币</span><b>${STATE.money} G</b></div>
+      <div class="stat-line"><span>体力</span><b>${Math.round(STATE.energy)}/${STATE.maxEnergy}</b></div>`;
+    this.showBox('暂停', body, [
+      { label: '继续游戏', cls: 'primary', cb: () => this.closeModal() },
+      { label: '保存', cb: () => { saveGame(); this.toast('已保存。'); this.closeModal(); } },
+      { label: '回到标题', cls: 'danger', cb: () => { saveGame(); this.closeModal(); showTitle(); } }
+    ]);
+  },
+
+  openHelp() {
+    const body = `
+      <div class="hint-box"><b>怎么玩</b><br>
+      1. 用锄头（<span class="kbd">1</span>）在农场草地上开垦，选种子（<span class="kbd">7</span>）按 <span class="kbd">J</span> 种下。<br>
+      2. 拿起水壶（<span class="kbd">2</span>）对着耕地按 <span class="kbd">J</span> 浇水；作物只在浇过水的第二天长大。<br>
+      3. 成熟的作物按 <span class="kbd">J</span> 收获，放进农舍旁的出货箱，第二天早上结算。<br>
+      4. 回农舍对着床按 <span class="kbd">E</span> 睡觉，出货箱里的东西明早结算。<br>
+      5. 去小镇和居民聊天、送礼（<span class="kbd">E</span> 对话里的“送礼物”），好感 4 心可邀舞，节日当天进镇自动开始。</div>
+      <div class="hint-box"><b>键位</b><br>
+      <span class="kbd">WASD</span> 移动　<span class="kbd">J</span> 使用　<span class="kbd">E</span> 交互　<span class="kbd">F</span> 吃<br>
+      <span class="kbd">1~9</span> 快捷栏　<span class="kbd">Tab</span> 背包　<span class="kbd">R</span> 关系　<span class="kbd">Esc</span> 暂停　<span class="kbd">M</span> 静音</div>
+      <div class="hint-box"><b>小提示</b><br>
+      门口的邮箱里有镇长留下的信；小镇公告板写着今年的节日安排。<br>
+      体力用完会自动昏睡；凌晨 2 点也会强制结束一天。<br>
+      雨天会自动给所有耕地浇水。<br>
+      换季时不属于该季的作物会枯萎。</div>`;
+    this.showBox('操作说明', body, [{ label: '明白', cls: 'primary', cb: () => this.closeModal() }]);
+  },
+
+  hideHUD(hide) {
+    const hud = this.el('hud');
+    if (hud) hud.classList.toggle('hidden', hide);
+  }
+};
+
+function stateDayKey() { return STATE.year + '-' + STATE.season + '-' + STATE.day; }
+function toast(msg, sec = 2.2) { UI.toast(msg, sec); }
+
+
+/* ===== 12_audio.js ===== */
+'use strict';
+
+/* ============================================================
+   WebAudio 音效与简单 BGM
+   ============================================================ */
+const Audio = {
+  ctx: null,
+  master: null,
+  muted: false,
+  bgmTimer: null,
+  started: false,
+
+  init() {
+    if (this.ctx) return;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.35;
+      this.master.connect(this.ctx.destination);
+    } catch (e) { this.ctx = null; }
+  },
+
+  resume() {
+    this.init();
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  },
+
+  beep(freq, dur = 0.08, type = 'square', gain = 0.08, slide = 0) {
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), t + dur);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(gain, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.master);
+    o.start(t); o.stop(t + dur + 0.02);
+  },
+
+  noise(dur = 0.12, gain = 0.06, filterFreq = 1200) {
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    const buf = this.ctx.createBuffer(1, Math.ceil(this.ctx.sampleRate * dur), this.ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    const src = this.ctx.createBufferSource(); src.buffer = buf;
+    const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = filterFreq;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(gain, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(this.master);
+    src.start(t);
+  },
+
+  sfx(name) {
+    this.resume();
+    switch (name) {
+      case 'tick': this.beep(880, 0.03, 'square', 0.04); break;
+      case 'hoe': this.noise(0.1, 0.07, 500); this.beep(160, 0.06, 'triangle', 0.05, -40); break;
+      case 'water': this.noise(0.22, 0.05, 900); this.beep(520, 0.14, 'sine', 0.03, -200); break;
+      case 'plant': this.beep(420, 0.07, 'sine', 0.04, 120); break;
+      case 'harvest': this.beep(660, 0.07, 'square', 0.05); setTimeout(() => this.beep(990, 0.1, 'square', 0.05), 70); break;
+      case 'chop': this.noise(0.09, 0.08, 380); this.beep(120, 0.08, 'triangle', 0.06); break;
+      case 'pick': this.beep(180, 0.05, 'square', 0.05); this.noise(0.07, 0.05, 700); break;
+      case 'cut': this.noise(0.1, 0.04, 1600); break;
+      case 'fall': this.noise(0.35, 0.08, 300); this.beep(90, 0.2, 'triangle', 0.05, -30); break;
+      case 'door': this.beep(260, 0.09, 'triangle', 0.05, -60); break;
+      case 'coin': this.beep(1040, 0.05, 'square', 0.05); setTimeout(() => this.beep(1560, 0.08, 'square', 0.04), 55); break;
+      case 'gift': this.beep(660, 0.08, 'sine', 0.05); setTimeout(() => this.beep(880, 0.12, 'sine', 0.05), 80); break;
+      case 'bad': this.beep(220, 0.14, 'square', 0.05, -80); break;
+      case 'eat': this.beep(300, 0.06, 'sine', 0.04); setTimeout(() => this.beep(380, 0.06, 'sine', 0.04), 60); break;
+      case 'sleep': this.beep(400, 0.3, 'sine', 0.04, -260); break;
+      case 'morning': [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => this.beep(f, 0.16, 'sine', 0.05), i * 130)); break;
+      case 'dance': [523, 659, 784, 1046, 784].forEach((f, i) => setTimeout(() => this.beep(f, 0.12, 'triangle', 0.05), i * 110)); break;
+      default: this.beep(600, 0.05, 'square', 0.03);
+    }
+  },
+
+  toggleMute() {
+    this.muted = !this.muted;
+    UI.toast(this.muted ? '已静音（按 M 恢复）' : '声音已开启', 1.4);
+    if (this.muted) this.stopBGM(); else this.startBGM();
+  },
+
+  motifs: [
+    [392, 440, 523, 440, 392, 349, 392, 523],
+    [440, 523, 587, 523, 494, 440, 392, 494],
+    [349, 392, 440, 523, 440, 392, 349, 294],
+    [294, 349, 392, 349, 440, 392, 349, 262]
+  ],
+  bgmIndex: 0,
+
+  startBGM() {
+    if (!this.ctx || this.muted || this.bgmTimer) return;
+    const playBar = () => {
+      if (!STATE || STATE.screen !== 'play' || STATE.paused) return;
+      const motif = this.motifs[STATE.season];
+      const base = 0.028;
+      motif.forEach((f, i) => {
+        setTimeout(() => { if (!this.muted) this.beep(f, 0.22, 'triangle', base); }, i * 560);
+      });
+      this.bgmTimer = setTimeout(playBar, 4800);
+    };
+    playBar();
+  },
+
+  stopBGM() {
+    if (this.bgmTimer) { clearTimeout(this.bgmTimer); this.bgmTimer = null; }
+  }
+};
+
+window.addEventListener('pointerdown', () => Audio.resume(), { once: true });
+window.addEventListener('keydown', () => Audio.resume(), { once: true });
+
+
+/* ===== 13_render.js ===== */
+'use strict';
+
+/* ============================================================
+   渲染
+   ============================================================ */
+let canvas, ctx, VIEW = { k: 1 };
+
+function initRender() {
+  canvas = document.getElementById('game');
+  ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  resizeView();
+  window.addEventListener('resize', resizeView);
+}
+
+function resizeView() {
+  const kw = window.innerWidth / W;
+  const kh = window.innerHeight / H;
+  let k = Math.min(kw, kh);
+  if (k >= 1) k = Math.floor(k * 100) / 100;
+  if (k >= 1.5) k = Math.floor(k);
+  k = Math.max(0.5, k);
+  VIEW.k = k;
+  const wrap = document.getElementById('stage-wrap');
+  const stage = document.getElementById('stage');
+  if (wrap) { wrap.style.width = (W * k) + 'px'; wrap.style.height = (H * k) + 'px'; }
+  if (stage) stage.style.transform = 'scale(' + k + ')';
+}
+
+function cropStage(c) {
+  if (c.ready) return 4;
+  const grow = CROPS[c.id].growth;
+  let acc = 0, st = 0;
+  for (const d of grow) {
+    acc += d;
+    if ((c.g || 0) >= acc) st++; else break;
+  }
+  return Math.min(3, st);
+}
+
+function render(now) {
+  if (!STATE) return;
+  ctx.clearRect(0, 0, W, H);
+  if (STATE.screen === 'title') { renderTitleScene(now); updateFadeEl(); return; }
+  const cam = STATE.camera;
+  ctx.save();
+  ctx.translate(-Math.round(cam.x), -Math.round(cam.y));
+  const m = currentMap();
+  if (m.staticDirty) buildStatic(m);
+  if (m.staticCanvas) ctx.drawImage(m.staticCanvas, 0, 0);
+  drawWater(now, cam);
+  drawSoilAndCrops(cam);
+  drawFestivalDecor(ctx, 0, 0);
+  drawFestObjects(now, cam);
+  drawCharacters();
+  drawParticles();
+  ctx.restore();
+  drawLighting(cam);
+  drawWeather(now);
+  updateFadeEl();
+}
+
+function updateFadeEl() {
+  const el = document.getElementById('fade');
+  if (el) el.style.opacity = String(STATE.fade || 0);
+}
+
+/* ---------------- 水面 ---------------- */
+function drawWater(now, cam) {
+  const m = currentMap();
+  const frame = Math.floor(now / 420) % 2;
+  const x0 = Math.floor(cam.x / TS), x1 = Math.ceil((cam.x + W) / TS);
+  const y0 = Math.floor(cam.y / TS), y1 = Math.ceil((cam.y + H) / TS);
+  for (let y = Math.max(0, y0); y <= Math.min(m.h - 1, y1); y++) {
+    for (let x = Math.max(0, x0); x <= Math.min(m.w - 1, x1); x++) {
+      if (m.base[y][x] !== 'w') continue;
+      ctx.drawImage(ART.ground[STATE.season].water[frame], x * TS, y * TS);
+    }
+  }
+}
+
+/* ---------------- 田地与作物 ---------------- */
+function drawSoilAndCrops(cam) {
+  if (STATE.map !== 'farm') return;
+  const x0 = Math.floor(cam.x / TS), x1 = Math.ceil((cam.x + W) / TS);
+  const y0 = Math.floor(cam.y / TS), y1 = Math.ceil((cam.y + H) / TS);
+  for (const key of Object.keys(STATE.soil)) {
+    const [sx, sy] = key.split(',').map(Number);
+    if (sx < x0 - 1 || sx > x1 + 1 || sy < y0 - 1 || sy > y1 + 1) continue;
+    const soil = STATE.soil[key];
+    if (!soil || !soil.till) continue;
+    const px = sx * TS, py = sy * TS;
+    ctx.drawImage(soil.wet ? ART.soil.wet : ART.soil.dry, px, py);
+    const crop = soil.crop;
+    if (crop) {
+      const st = cropStage(crop);
+      const img = ART.crops[crop.id][st];
+      if (crop.dead) {
+        ctx.globalAlpha = 0.55;
+        ctx.drawImage(img, px, py + 16 - 22);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'rgba(90,70,40,0.45)';
+        ctx.fillRect(px, py, 16, 16);
+      } else {
+        shadowEllipse(ctx, px + 8, py + 15, 5, 2);
+        ctx.drawImage(img, px, py + 16 - 22);
+        if (crop.ready) {
+          const bob = Math.sin(performance.now() / 400 + sx + sy) * 1;
+          ctx.fillStyle = 'rgba(255,240,160,0.85)';
+          ctx.fillRect(px + 7, py - 2 + bob, 2, 2);
+          ctx.fillRect(px + 4, py + bob, 1, 1);
+          ctx.fillRect(px + 11, py + 1 + bob, 1, 1);
+        }
+      }
+    }
+  }
+}
+
+/* ---------------- 节日临时物 ---------------- */
+function drawFestObjects(now, cam) {
+  const f = STATE.festival;
+  if (!f) return;
+  if (f.id === 'luau') {
+    const img = ART.objects.pot;
+    ctx.drawImage(img, 16 * TS + 8 - 12, 16 * TS - 20 + 2);
+    const bob = Math.sin(now / 500) * 1;
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillRect(16 * TS + 6, 16 * TS - 26 + bob, 6, 1);
+  }
+  if (f.id === 'winter') {
+    const img = ART.objects.gift;
+    const bob = Math.sin(now / 600) * 1;
+    ctx.drawImage(img, 18 * TS + 8 - 8, 17 * TS + 16 - 16 + bob);
+  }
+  if (f.id === 'dance') {
+    const t = performance.now() / 300;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + t;
+      const xx = 20 * TS + 8 + Math.cos(a) * 26;
+      const yy = 14 * TS + 6 + Math.sin(a) * 10;
+      ctx.fillStyle = i % 2 ? '#f2e05a' : '#f0a0b0';
+      ctx.fillRect(Math.round(xx), Math.round(yy), 2, 2);
+    }
+  }
+}
+
+/* ---------------- 角色 ---------------- */
+function drawCharacters() {
+  const list = [];
+  for (const n of NPCS) {
+    if (n.hidden || n.map !== STATE.map) continue;
+    list.push({ y: n.py, kind: 'npc', n });
+  }
+  list.push({ y: STATE.player.y, kind: 'player' });
+  list.sort((a, b) => a.y - b.y);
+  for (const it of list) {
+    if (it.kind === 'npc') drawNPC(ctx, it.n);
+    else drawPlayer();
+  }
+}
+
+function drawPlayer() {
+  const p = STATE.player;
+  let img;
+  if (p.busy > 0) {
+    const f = p.actT < 0.1 ? 0 : p.actT < 0.2 ? 1 : 2;
+    img = ART.chars.player.act[p.dir][f];
+  } else {
+    img = ART.chars.player.walk[p.dir][p.moving ? (p.frame % 3) + 1 : 0];
+  }
+  shadowEllipse(ctx, p.x, p.y - 1, 6, 3);
+  ctx.drawImage(img, Math.round(p.x - 8), Math.round(p.y - 24));
+  // 挥动工具的拖影
+  if (p.busy > 0) {
+    const f = facingTile();
+    const tx = f.x * TS + 8, ty = f.y * TS + 8;
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    const dir = p.dir;
+    if (dir === 'down') { ctx.fillRect(tx - 5, ty + 2, 10, 1); ctx.fillRect(tx - 3, ty + 4, 6, 1); }
+    if (dir === 'up') { ctx.fillRect(tx - 5, ty - 4, 10, 1); }
+    if (dir === 'left') { ctx.fillRect(tx - 8, ty - 2, 1, 8); }
+    if (dir === 'right') { ctx.fillRect(tx + 7, ty - 2, 1, 8); }
+  }
+}
+
+/* ---------------- 粒子 ---------------- */
+function drawParticles() {
+  for (const pt of STATE.particles) {
+    const a = Math.max(0, pt.life / pt.maxLife);
+    if (pt.text) {
+      ctx.globalAlpha = Math.min(1, a * 1.4);
+      ctx.font = '8px "PingFang SC","Microsoft YaHei",sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#1a1008';
+      ctx.fillText(pt.text, Math.round(pt.x + 1), Math.round(pt.y + 1));
+      ctx.fillStyle = pt.color;
+      ctx.fillText(pt.text, Math.round(pt.x), Math.round(pt.y));
+      ctx.globalAlpha = 1;
+      ctx.textAlign = 'left';
+    } else {
+      ctx.globalAlpha = a;
+      ctx.fillStyle = pt.color;
+      ctx.fillRect(Math.round(pt.x), Math.round(pt.y), pt.size, pt.size);
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+/* ---------------- 光照 ---------------- */
+function drawLighting(cam) {
+  const m = currentMap();
+  const indoor = STATE.map === 'house' || STATE.map === 'shop';
+  if (indoor) {
+    ctx.fillStyle = 'rgba(255,210,150,0.05)';
+    ctx.fillRect(0, 0, W, H);
+    return;
+  }
+  const info = lightingInfo();
+  ctx.fillStyle = info.color;
+  ctx.fillRect(0, 0, W, H);
+  // 灯光/角色光晕
+  const night = STATE.hour >= 19 || STATE.hour < 5;
+  if (night) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const lamps = m.objs.filter(o => !o.dead && (o.type === 'lamp' || (STATE.festival && o.type === 'stall')));
+    for (const o of lamps) {
+      const x = o.x * TS + 8 - cam.x, y = o.y * TS - cam.y;
+      if (x < -80 || x > W + 80 || y < -80 || y > H + 80) continue;
+      const g = ctx.createRadialGradient(x, y, 2, x, y, 54);
+      g.addColorStop(0, 'rgba(255,214,140,0.42)');
+      g.addColorStop(1, 'rgba(255,214,140,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - 54, y - 54, 108, 108);
+    }
+    const px = STATE.player.x - cam.x, py = STATE.player.y - 12 - cam.y;
+    const g2 = ctx.createRadialGradient(px, py, 2, px, py, 48);
+    g2.addColorStop(0, 'rgba(255,230,180,0.22)');
+    g2.addColorStop(1, 'rgba(255,230,180,0)');
+    ctx.fillStyle = g2;
+    ctx.fillRect(px - 48, py - 48, 96, 96);
+    ctx.restore();
+  }
+}
+
+/* ---------------- 天气 ---------------- */
+let rainDrops = null;
+let snowFlakes = null;
+
+function updateWeatherFx(dt) {
+  if (!STATE) return;
+  if (!rainDrops) {
+    rainDrops = [];
+    for (let i = 0; i < 60; i++) rainDrops.push({ x: Math.random() * W, y: Math.random() * H, s: 260 + Math.random() * 220, l: 4 + Math.random() * 4 });
+    snowFlakes = [];
+    for (let i = 0; i < 46; i++) snowFlakes.push({ x: Math.random() * W, y: Math.random() * H, s: 30 + Math.random() * 40, p: Math.random() * 6 });
+  }
+  const indoor = STATE.map === 'house' || STATE.map === 'shop';
+  if (indoor || STATE.screen !== 'play') return;
+  if (STATE.weather === 'rain') {
+    for (const d of rainDrops) {
+      d.y += d.s * dt; d.x -= 30 * dt;
+      if (d.y > H) { d.y = -6; d.x = Math.random() * (W + 40); }
+      if (d.x < -10) d.x = W + 10;
+    }
+  } else if (STATE.weather === 'snow') {
+    for (const f of snowFlakes) {
+      f.y += f.s * dt;
+      f.x += Math.sin((performance.now() / 900) + f.p) * 6 * dt;
+      if (f.y > H) { f.y = -6; f.x = Math.random() * W; }
+    }
+  }
+}
+
+function drawWeather(now) {
+  if (!STATE || STATE.screen !== 'play') return;
+  const indoor = STATE.map === 'house' || STATE.map === 'shop';
+  if (indoor) return;
+  if (STATE.weather === 'rain' && rainDrops) {
+    ctx.strokeStyle = 'rgba(180,215,240,0.55)';
+    ctx.lineWidth = 1;
+    for (const d of rainDrops) {
+      ctx.beginPath();
+      ctx.moveTo(d.x, d.y);
+      ctx.lineTo(d.x + 1, d.y + d.l);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(40,70,110,0.12)';
+    ctx.fillRect(0, 0, W, H);
+  } else if (STATE.weather === 'snow' && snowFlakes) {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    for (const f of snowFlakes) ctx.fillRect(Math.round(f.x), Math.round(f.y), 1, 1);
+    ctx.fillStyle = 'rgba(200,225,245,0.08)';
+    ctx.fillRect(0, 0, W, H);
+  } else if (STATE.weather === 'cloud') {
+    ctx.fillStyle = 'rgba(120,140,160,0.05)';
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+/* ---------------- 标题场景 ---------------- */
+function renderTitleScene(now) {
+  const m = MAPS.farm;
+  if (!m) return;
+  if (!m.staticCanvas) buildStatic(m);
+  const maxX = Math.max(0, m.w * TS - W);
+  const camX = (Math.sin(now / 14000) * 0.5 + 0.5) * Math.min(maxX, 150);
+  const camY = 0;
+  ctx.drawImage(m.staticCanvas, Math.round(-camX), Math.round(-camY));
+  // 水面动画
+  const frame = Math.floor(now / 420) % 2;
+  for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+    if (m.base[y][x] === 'w') ctx.drawImage(ART.ground[STATE.season].water[frame], x * TS - Math.round(camX), y * TS - Math.round(camY));
+  }
+  // 飘落的光斑
+  ctx.fillStyle = 'rgba(255,235,170,0.5)';
+  for (let i = 0; i < 14; i++) {
+    const x = (i * 97 + Math.sin(now / 4000 + i) * 30) % W;
+    const y = (i * 53 + Math.cos(now / 5000 + i) * 20) % H;
+    ctx.fillRect(Math.round(x), Math.round(y), 1, 1);
+  }
+  ctx.fillStyle = 'rgba(20,14,10,0.18)';
+  ctx.fillRect(0, 0, W, H);
+}
+
+
+/* ===== 14_main.js ===== */
+'use strict';
+
+/* ============================================================
+   启动、标题页、主循环、调试接口
+   ============================================================ */
+let lastTime = 0;
+
+function boot() {
+  initArt();
+  buildAllMaps();
+  STATE = newState();
+  initNPCs();
+  initRender();
+  bindInput();
+  wireTitle();
+  showTitle();
+  requestAnimationFrame(loop);
+}
+
+function wireTitle() {
+  document.getElementById('btn-new').addEventListener('click', () => {
+    Audio.resume();
+    if (hasSave()) {
+      UI.openConfirm('新游戏', '已有存档，开始新游戏会覆盖旧进度。要继续吗？', () => {
+        UI.closeModal(); startNewGame();
+      });
+    } else startNewGame();
+  });
+  document.getElementById('btn-continue').addEventListener('click', () => {
+    Audio.resume();
+    if (!continueGame()) UI.toast('没有找到存档。');
+  });
+  document.getElementById('btn-help-title').addEventListener('click', () => {
+    UI.openHelp();
+  });
+  document.getElementById('modal-close').addEventListener('click', () => {
+    if (!UI.locked) UI.closeModal();
+  });
+}
+
+function showTitle() {
+  if (!STATE) return;
+  UI.closeModal();
+  UI.setFestivalStatus(null);
+  STATE.screen = 'title';
+  STATE.paused = false;
+  STATE.festival = null;
+  const t = document.getElementById('title');
+  if (t) t.classList.remove('hidden');
+  UI.hideHUD(true);
+  const cont = document.getElementById('btn-continue');
+  if (cont) cont.disabled = !hasSave();
+}
+
+function preparePlay() {
+  const m = currentMap();
+  if (m.staticDirty) buildStatic(m);
+  STATE.screen = 'play';
+  STATE.paused = false;
+  document.getElementById('title').classList.add('hidden');
+  UI.hideHUD(false);
+  placeNPCs(true);
+  STATE.camera.x = clamp(STATE.player.x - W / 2, 0, Math.max(0, m.w * TS - W));
+  STATE.camera.y = clamp(STATE.player.y - H / 2 - 8, 0, Math.max(0, m.h * TS - H));
+  UI.setArea(m.name);
+  UI.updateHUD();
+  UI.updateClock(true);
+  Audio.resume();
+  Audio.startBGM();
+}
+
+function startNewGame() {
+  buildAllMaps();
+  STATE = newState();
+  initNPCs();
+  spawnForage();
+  rebuildAllStatic();
+  STATE.player.x = 4 * TS + 8;
+  STATE.player.y = 7 * TS + 14;
+  STATE.player.dir = 'down';
+  preparePlay();
+  saveGame();
+  UI.toast('欢迎来到小农场！按 H 查看操作。', 3.5);
+}
+
+function continueGame() {
+  buildAllMaps();
+  const ok = loadGame();
+  if (!ok) {
+    STATE = newState();
+    initNPCs();
+    rebuildAllStatic();
+    preparePlay();
+    return false;
+  }
+  rebuildAllStatic();
+  preparePlay();
+  UI.toast('读档成功，欢迎回来。', 2.4);
+  return true;
+}
+
+/* ---------------- 主循环 ---------------- */
+function loop(t) {
+  if (!lastTime) lastTime = t;
+  let dt = (t - lastTime) / 1000;
+  lastTime = t;
+  if (dt > 0.06) dt = 0.06;
+  update(dt);
+  render(t);
+  requestAnimationFrame(loop);
+}
+
+function update(dt) {
+  if (!STATE) return;
+  if (STATE.screen === 'play') {
+    const frozen = STATE.transition || (STATE.festival && STATE.festival.phase !== 'play');
+    if (!STATE.paused && !UI.modalOpen && !frozen) {
+      updatePlayer(dt);
+      updateNPCMovement(dt);
+      updateFestival(dt);
+    }
+    updateClock(dt);
+    updateWeatherFx(dt);
+  }
+  updateParticles(dt);
+}
+
+function updateParticles(dt) {
+  if (!STATE || !STATE.particles) return;
+  const f = dt * 60;
+  for (const pt of STATE.particles) {
+    pt.life -= f;
+    if (pt.text) {
+      pt.y += pt.vy * f;
+    } else {
+      pt.x += pt.vx * f;
+      pt.y += pt.vy * f;
+      pt.vy += 0.08 * f * 3;
+    }
+  }
+  STATE.particles = STATE.particles.filter(p => p.life > 0);
+}
+
+/* ---------------- 调试接口（供自动化验证使用） ---------------- */
+window.__farm = {
+  audio: Audio,
+  get state() { return STATE; },
+  maps: MAPS,
+  npcs: NPCS,
+  ui: UI,
+  art: ART,
+  startNewGame,
+  continueGame,
+  showTitle,
+  skipDay() { advanceDay(false); },
+  sleepNow() { sleepNow(false); advanceDay(false); },
+  setTime(h, m) { STATE.hour = h; STATE.minute = m || 0; updateNPCs(true); UI.updateHUD(); },
+  setMoney(v) { STATE.money = v; UI.updateHUD(); },
+  setEnergy(v) { STATE.energy = v; UI.updateHUD(); },
+  addItem(id, n) { invAdd(id, n || 1); UI.updateHUD(); },
+  teleport(map, x, y) {
+    STATE.map = map; STATE.player.x = x * TS + 8; STATE.player.y = y * TS + 14;
+    const m = currentMap(); if (m.staticDirty) buildStatic(m);
+    placeNPCs(true); UI.setArea(m.name);
+    STATE.camera.x = clamp(STATE.player.x - W / 2, 0, Math.max(0, m.w * TS - W));
+    STATE.camera.y = clamp(STATE.player.y - H / 2 - 8, 0, Math.max(0, m.h * TS - H));
+  },
+  setSeason(s) { STATE.season = s; rebuildAllStatic(); UI.updateHUD(); },
+  setDay(d) { STATE.day = d; UI.updateHUD(); },
+  startFestivalById(id) {
+    const f = FESTIVALS.find(x => x.id === id);
+    if (f) { STATE.season = f.season; STATE.day = f.day; startFestival(f); }
+  },
+  growAll() {
+    for (const key of Object.keys(STATE.soil)) {
+      const s = STATE.soil[key];
+      if (s.crop) { s.crop.g = 99; s.crop.ready = true; }
+    }
+  },
+  waterAll() {
+    for (const key of Object.keys(STATE.soil)) {
+      const s = STATE.soil[key];
+      if (s.till) { s.wet = true; if (s.crop) s.crop.watered = true; }
+    }
+  },
+  interact() { interact(); },
+  action() { doAction(); },
+  closeModal() { UI.closeModal(); }
+};
+
+boot();
+
+</script>
+</body>
+</html>
