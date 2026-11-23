@@ -564,7 +564,7 @@ function newRun(chStart){
 function contRun(){
   var s=lj(SAVE_KEY);
   if(!s){newRun();return;}
-  PROG.char=(s.char&&hasChar(s.char))?s.char:PROG.char;
+  PROG.char=(s.char&&hasChar(s.char))?s.char:PROG.char; progSave();
   level=s.level||1;xp=s.xp||0;xpNext=s.xpNext||xpFor(level);
   ultCharge=Math.max(0,Math.min(ULT_MAX,s.ult||0));
   UP=s.up||{};POOL.forEach(function(p){if(!(p.id in UP))UP[p.id]=0;});
