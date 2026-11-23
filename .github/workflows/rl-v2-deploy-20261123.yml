@@ -1,0 +1,28 @@
+name: rl-v2-deploy
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: fetch-and-verify
+        run: |
+          curl -sL --retry 4 -o /tmp/rl.zip https://aka.doubaocdn.com/s/paqFZF8TUf
+          echo "d51ee9f101d8715c7a736c06777d5082a11a8c8aed06ab1bdab557d6f8d30314  /tmp/rl.zip" | sha256sum -c -
+          unzip -oq /tmp/rl.zip -d "$GITHUB_WORKSPACE"
+          echo "bbf8091f17b3a436dbe2fdab84e0600a586be513611bb68e4f97bd8d7a6146c2  games/roguelike.html" | sha256sum -c -
+          echo "2ac38f117e37bf64ff6b25844d8884f2dd32faee8419b7d5856cd455a30e0df8  games/games.json" | sha256sum -c -
+      - name: commit
+        run: |
+          git config user.name mobfit-bot
+          git config user.email bot@users.noreply.github.com
+          git add games/roguelike.html games/games.json
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git commit -m "deploy: 萤原潮生 v2 棱角UI/定时BOSS/无限模式"
+          git push origin HEAD:main
