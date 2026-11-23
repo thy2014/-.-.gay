@@ -1,0 +1,42 @@
+name: rl3-deploy
+on:
+  push:
+    paths:
+      - '.github/workflows/rl3-deploy.yml'
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Download zip
+        run: |
+          curl -sL --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o /tmp/x.zip "https://aka.doubaocdn.com/s/7nUB9xklbV"
+      - name: Verify zip hash
+        run: |
+          echo "59fc7d08d41e1995ea5e84f20c7789c19f5b167428373fdf01bbb6a63420c9cb  /tmp/x.zip" | sha256sum -c
+      - name: Unzip into workspace
+        run: |
+          unzip -oq /tmp/x.zip -d "$GITHUB_WORKSPACE"
+      - name: Verify file hashes
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          echo "90a4516992334bd943afbae4b5efedb6443d8472a5d7245d98973bafc0ab95e5  games/roguelike.html" | sha256sum -c
+          echo "cbe8cec285e0e9651340bd48ff50e1c0a6b263241cf5a844128684ff91451eb7  games/games.json" | sha256sum -c
+          echo "ae6c20f343e1990a72cca2428e08a868a13eeabaa3b79fc7f087f136c35a5905  index.html" | sha256sum -c
+      - name: Commit and push
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "mobfit-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "feat: roguelike v3 enemies dash ult characters"
+            git push origin HEAD:main
+          fi
