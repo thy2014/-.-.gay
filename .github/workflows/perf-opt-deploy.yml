@@ -1,0 +1,33 @@
+name: perf-opt-deploy
+on:
+  push:
+    paths:
+      - .github/workflows/perf-opt-deploy.yml
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: download and verify
+        run: |
+          set -e
+          curl -L --fail --retry 3 --retry-delay 1 -o /tmp/deploy.zip "https://aka.doubaocdn.com/s/HZacI7c18c"
+          echo "b336ac53b6ad7ce6258bf815b127519a35cc13c77cd2250a5bb96673074688f9  /tmp/deploy.zip" | sha256sum -c -
+          rm -rf /tmp/perfopt && mkdir -p /tmp/perfopt
+          unzip -q /tmp/deploy.zip -d /tmp/perfopt
+          echo "30c7585f4e32d0219db922b67fcd486532b0c45ec98bb909748211c016f7f90f  /tmp/perfopt/games/farm-story.html" | sha256sum -c -
+          echo "ec4f89b375a49d7556596c53582c72b4998f78a64367948ba7d8384595fe2e63  /tmp/perfopt/games/roguelike.html" | sha256sum -c -
+      - name: commit
+        run: |
+          set -e
+          cp /tmp/perfopt/games/farm-story.html games/farm-story.html
+          cp /tmp/perfopt/games/roguelike.html games/roguelike.html
+          git config user.name "mobfit-bot"
+          git config user.email "mobfit-bot@users.noreply.github.com"
+          git add games/farm-story.html games/roguelike.html
+          git commit -m "perf: speed up farm and roguelike startup/menu"
+          git push
