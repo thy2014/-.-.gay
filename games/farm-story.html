@@ -18,7 +18,7 @@
     overflow:hidden;user-select:none;
   }
   #app{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-  #stage-wrap{position:relative;width:480px;height:270px;filter:drop-shadow(0 0 40px rgba(0,0,0,.6))}
+  #stage-wrap{position:relative;width:480px;height:270px;box-shadow:0 0 40px rgba(0,0,0,.55)}
   #stage{position:absolute;left:0;top:0;width:480px;height:270px;transform-origin:0 0}
   #game{display:block;width:480px;height:270px;image-rendering:pixelated;image-rendering:crisp-edges;background:#000}
   #fade{position:absolute;left:0;top:0;width:480px;height:270px;background:#0d0a07;opacity:0;pointer-events:none}
@@ -1767,14 +1767,10 @@ function initArt() {
   ART.icons.winterroot = miscIcon('winterroot');
   ART.icons.sap = miscIcon('wood');
   ART.icons._unknown = miscIcon('stone');
-
-  // 图标 dataURL 缓存
-  ART.iconUrl = {};
-  for (const [k, v] of Object.entries(ART.icons)) ART.iconUrl[k] = v.toDataURL();
 }
 
 function iconFor(id) { return ART.icons[id] || ART.icons._unknown; }
-function iconUrl(id) { return ART.iconUrl[id] || ART.iconUrl._unknown; }
+function iconUrl(id) { return iconFor(id).toDataURL(); }
 
 
 /* ===== 05_maps.js ===== */
@@ -2141,6 +2137,7 @@ function buildStatic(map) {
     items.push({ img: a.img, x: b.x * TS, y: (b.y + b.h) * TS - a.ay, sort: (b.y + b.h) * TS });
   }
   for (const o of map.objs) {
+    if (o.type === 'forage') continue;
     const a = objectArt(o);
     if (!a) continue;
     items.push({ img: a.img, x: o.x * TS + TS / 2 - a.ax, y: (o.y + 1) * TS - a.ay, sort: (o.y + 1) * TS + (a.ay > 16 ? 4 : 0) });
@@ -2151,8 +2148,8 @@ function buildStatic(map) {
   map.staticDirty = false;
 }
 
-function rebuildStatic(map) { map.staticDirty = true; buildStatic(map); }
-function rebuildAllStatic() { for (const m of Object.values(MAPS)) buildStatic(m); }
+function rebuildStatic(map) { map.staticDirty = true; }
+function rebuildAllStatic() { for (const m of Object.values(MAPS)) m.staticDirty = true; }
 
 /* ---------------- 采集物 ---------------- */
 function spawnForage() {
@@ -2171,7 +2168,6 @@ function spawnForage() {
       addObj(m, 'forage', x, y, { item: pick(ids), solid: false });
       count++; placed++;
     }
-    if (placed) rebuildStatic(m);
   }
 }
 
@@ -2181,7 +2177,6 @@ function pickupForage(o) {
   o.dead = true;
   if (m.objAt[o.y]) m.objAt[o.y][o.x] = null;
   m.objs = m.objs.filter(x => x !== o);
-  rebuildStatic(m);
   UI.updateHUD();
   Audio.sfx('pick');
   addParticles(o.x * TS + 8, o.y * TS + 10, '#e8d5a8', 6, 6);
@@ -4218,7 +4213,7 @@ let canvas, ctx, VIEW = { k: 1 };
 
 function initRender() {
   canvas = document.getElementById('game');
-  ctx = canvas.getContext('2d');
+  ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
   ctx.imageSmoothingEnabled = false;
   resizeView();
   window.addEventListener('resize', resizeView);
@@ -4259,6 +4254,7 @@ function render(now) {
   const m = currentMap();
   if (m.staticDirty) buildStatic(m);
   if (m.staticCanvas) ctx.drawImage(m.staticCanvas, 0, 0);
+  drawForageObjects();
   drawWater(now, cam);
   drawSoilAndCrops(cam);
   drawFestivalDecor(ctx, 0, 0);
@@ -4274,6 +4270,16 @@ function render(now) {
 function updateFadeEl() {
   const el = document.getElementById('fade');
   if (el) el.style.opacity = String(STATE.fade || 0);
+}
+
+/* ---------------- 采集物 ---------------- */
+function drawForageObjects() {
+  const m = currentMap();
+  for (const o of m.objs) {
+    if (o.dead || o.type !== 'forage') continue;
+    const a = objectArt(o);
+    if (a) ctx.drawImage(a.img, Math.round(o.x * TS + TS / 2 - a.ax), Math.round((o.y + 1) * TS - a.ay));
+  }
 }
 
 /* ---------------- 水面 ---------------- */
@@ -4512,8 +4518,7 @@ function drawWeather(now) {
 /* ---------------- 标题场景 ---------------- */
 function renderTitleScene(now) {
   const m = MAPS.farm;
-  if (!m) return;
-  if (!m.staticCanvas) buildStatic(m);
+  if (!m || !m.staticCanvas) { drawTitleBackdrop(now); return; }
   const maxX = Math.max(0, m.w * TS - W);
   const camX = (Math.sin(now / 14000) * 0.5 + 0.5) * Math.min(maxX, 150);
   const camY = 0;
@@ -4534,6 +4539,23 @@ function renderTitleScene(now) {
   ctx.fillRect(0, 0, W, H);
 }
 
+function drawTitleBackdrop(now) {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#1c3226');
+  g.addColorStop(0.55, '#294432');
+  g.addColorStop(1, '#18251c');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(170,205,145,0.10)';
+  for (let i = 0; i < 34; i++) {
+    const x = (i * 71 + Math.sin(now / 3500 + i) * 22) % W;
+    const y = (i * 47 + Math.cos(now / 4500 + i) * 18) % H;
+    ctx.fillRect(Math.round(x), Math.round(y), 2, 2);
+  }
+  ctx.fillStyle = 'rgba(10,16,12,0.20)';
+  ctx.fillRect(0, 0, W, H);
+}
+
 
 /* ===== 14_main.js ===== */
 'use strict';
@@ -4542,10 +4564,27 @@ function renderTitleScene(now) {
    启动、标题页、主循环、调试接口
    ============================================================ */
 let lastTime = 0;
+let worldHasPlayed = false;
+let worldReady = false;
+let worldInitQueued = false;
 
-function boot() {
+function ensureWorld() {
+  if (worldReady) return;
   initArt();
   buildAllMaps();
+  worldReady = true;
+  if (MAPS.farm) buildStatic(MAPS.farm);
+}
+
+function queueWorldInit() {
+  if (worldReady || worldInitQueued) return;
+  worldInitQueued = true;
+  const run = () => { worldInitQueued = false; ensureWorld(); };
+  if (window.requestIdleCallback) window.requestIdleCallback(run, { timeout: 1000 });
+  else setTimeout(run, 60);
+}
+
+function boot() {
   STATE = newState();
   initNPCs();
   initRender();
@@ -4553,6 +4592,7 @@ function boot() {
   wireTitle();
   showTitle();
   requestAnimationFrame(loop);
+  queueWorldInit();
 }
 
 function wireTitle() {
@@ -4608,11 +4648,12 @@ function preparePlay() {
 }
 
 function startNewGame() {
-  buildAllMaps();
+  ensureWorld();
+  if (worldHasPlayed) buildAllMaps();
+  worldHasPlayed = true;
   STATE = newState();
   initNPCs();
   spawnForage();
-  rebuildAllStatic();
   STATE.player.x = 4 * TS + 8;
   STATE.player.y = 7 * TS + 14;
   STATE.player.dir = 'down';
@@ -4622,7 +4663,9 @@ function startNewGame() {
 }
 
 function continueGame() {
-  buildAllMaps();
+  ensureWorld();
+  if (worldHasPlayed) buildAllMaps();
+  worldHasPlayed = true;
   const ok = loadGame();
   if (!ok) {
     STATE = newState();

@@ -388,20 +388,29 @@ html.mob-touch body{-webkit-user-select:none;user-select:none;overscroll-behavio
 (function(){
 "use strict";
 
-var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d", { alpha: false, desynchronized: true });
 var W=0,H=0,DPR=1;
 var MOBILE=(window.matchMedia&&window.matchMedia("(pointer:coarse)").matches)||Math.min(window.innerWidth,window.innerHeight)<700;
+var resizePending=false;
+function queueResize(){
+  if(resizePending) return;
+  resizePending=true;
+  requestAnimationFrame(function(){ resizePending=false; resize(); });
+}
 function resize(){
   var vv=window.visualViewport;
-  W=(vv&&vv.width)?Math.round(vv.width):window.innerWidth;
-  H=(vv&&vv.height)?Math.round(vv.height):window.innerHeight;
-  DPR=Math.min(window.devicePixelRatio||1, MOBILE?1.5:2);
+  var nw=(vv&&vv.width)?Math.round(vv.width):window.innerWidth;
+  var nh=(vv&&vv.height)?Math.round(vv.height):window.innerHeight;
+  var ndpr=Math.min(window.devicePixelRatio||1, MOBILE?1.5:2);
+  if(nw===W&&nh===H&&ndpr===DPR) return;
+  W=nw;H=nh;DPR=ndpr;
   cv.width=Math.floor(W*DPR); cv.height=Math.floor(H*DPR);
   ctx.setTransform(DPR,0,0,DPR,0,0);
+  menuDirty=true;
 }
-window.addEventListener("resize",resize);
-window.addEventListener("orientationchange",function(){setTimeout(resize,180);});
-if(window.visualViewport) window.visualViewport.addEventListener("resize",function(){resize();});
+window.addEventListener("resize",queueResize);
+window.addEventListener("orientationchange",function(){setTimeout(queueResize,180);});
+if(window.visualViewport) window.visualViewport.addEventListener("resize",queueResize);
 
 function qs(n){var m=location.search.match(new RegExp("[?&]"+n+"=([^&]*)"));return m?decodeURIComponent(m[1]):"";}
 var user=qs("user")||localStorage.getItem("gstation_session")||"guest";
@@ -1326,7 +1335,32 @@ function update(dt){
 }
 
 // ================= 渲染 =================
+var menuGrad=null,menuGW=0,menuGH=0,menuDirty=true;
+function drawMenuBackdrop(){
+  if(!menuGrad||menuGW!==W||menuGH!==H){
+    var p=CHAPTERS[0].bg;
+    menuGrad=ctx.createLinearGradient(0,0,W,H);
+    menuGrad.addColorStop(0,p[0]);menuGrad.addColorStop(.5,p[1]);menuGrad.addColorStop(1,p[2]);
+    menuGW=W;menuGH=H;
+  }
+  ctx.fillStyle=menuGrad;ctx.fillRect(0,0,W,H);
+  var gs=84;
+  ctx.strokeStyle=CHAPTERS[0].grid;ctx.lineWidth=1;
+  ctx.beginPath();
+  for(var x=(W/2)%gs;x<W;x+=gs){ctx.moveTo(x,0);ctx.lineTo(x,H);}
+  for(var y=(H/2)%gs;y<H;y+=gs){ctx.moveTo(0,y);ctx.lineTo(W,y);}
+  ctx.stroke();
+}
+
 function render(){
+  if(state==="menu"){
+    if(menuDirty){
+      ctx.setTransform(DPR,0,0,DPR,0,0);
+      drawMenuBackdrop();
+      menuDirty=false;
+    }
+    return;
+  }
   ctx.setTransform(DPR,0,0,DPR,0,0);
 
   var bgpal=CHAPTERS[curChapter].bg, gridcol=CHAPTERS[curChapter].grid;
